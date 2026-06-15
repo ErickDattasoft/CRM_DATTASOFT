@@ -1,0 +1,1073 @@
+---
+import fs from "fs";
+import path from "path";
+
+const listaSistemasOpciones = [
+  "COMPONENTES", "CONTABILIDAD", "BANCOS", "NOMINAS", "XML EN LINEA",
+  "SERVIDOR DE LICENCIAS COMUN", "RESPALDOS", "COMERCIAL PRO", "COMERCIAL PREMIUM", "FACTURA ELECTRONICA"
+];
+
+const CONFIG_CRM = {
+  CORREO_SOPORTE_PRINCIPAL: "erick.casas@dattasoft.mx"
+};
+
+const esProduccion = process.env.NODE_ENV === 'production' || !fs.existsSync('./src');
+const rutaDatos = esProduccion 
+  ? path.join(process.cwd(), 'data', 'clientes_.json')
+  : path.join(process.cwd(), 'src', 'data', 'clientes_.json');
+
+let datosIniciales = [];
+try {
+  if (fs.existsSync(rutaDatos)) {
+    const rawData = fs.readFileSync(rutaDatos, "utf-8");
+    datosIniciales = JSON.parse(rawData);
+  }
+} catch (error) {
+  console.error("Error al leer el archivo JSON portátil:", error);
+}
+---
+
+<head>
+  <meta charset="UTF-8">
+  <title>Panel de Control - Versiones de Sistemas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-heading: 'Outfit', sans-serif;
+      --font-body: 'Plus Jakarta Sans', sans-serif;
+
+      --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      --bg-card: rgba(255, 255, 255, 0.95);
+      
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-light: #94a3b8;
+      
+      --brand-primary: #4f46e5;
+      --brand-primary-hover: #4338ca;
+      --brand-secondary: #0ea5e9;
+      --brand-success: #10b981;
+      --brand-success-hover: #059669;
+      --brand-danger: #ef4444;
+      --brand-danger-hover: #dc2626;
+      --brand-warning: #f59e0b;
+      
+      --border-color: #e2e8f0;
+      --border-focus: #818cf8;
+      
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.04), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+      --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.05);
+      
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --radius-full: 9999px;
+      
+      --transition-base: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body {
+      font-family: var(--font-body);
+      margin: 0;
+      padding: 40px;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Header Styling */
+    .header-section {
+      margin-bottom: 35px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+      padding-bottom: 20px;
+    }
+    .header-title-area h1 {
+      font-family: var(--font-heading);
+      font-weight: 800;
+      font-size: 2.2rem;
+      background: linear-gradient(to right, #1e1b4b, #4f46e5);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin: 0 0 5px 0;
+      letter-spacing: -0.025em;
+    }
+    .header-title-area p.sub {
+      color: var(--text-muted);
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+
+    .flex-layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 30px;
+      align-items: start;
+    }
+
+    /* Card Panels */
+    .panel {
+      border: 1px solid rgba(226, 232, 240, 0.8);
+      padding: 24px;
+      border-radius: var(--radius-lg);
+      background: var(--bg-card);
+      backdrop-filter: blur(10px);
+      box-shadow: var(--shadow-lg);
+      margin-bottom: 25px;
+      transition: var(--transition-base);
+    }
+    .panel:hover {
+      box-shadow: var(--shadow-xl);
+      border-color: rgba(99, 102, 241, 0.25);
+    }
+
+    /* Market versions list */
+    .market-title {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: var(--text-main);
+      margin-top: 0;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .market-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .market-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: #f8fafc;
+      padding: 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      transition: var(--transition-base);
+    }
+    .market-row:hover {
+      border-color: #cbd5e1;
+      background: #ffffff;
+      box-shadow: var(--shadow-sm);
+    }
+    .market-row label {
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: #334155;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .market-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .market-input-group input {
+      padding: 6px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      width: 100%;
+      box-sizing: border-box;
+      transition: var(--transition-base);
+    }
+    .market-input-group input:focus {
+      background-color: #ffffff;
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+      outline: none;
+    }
+
+    /* Controls */
+    .main-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+    .search-input {
+      padding: 10px 18px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      width: 280px;
+      font-size: 0.9rem;
+      background: #ffffff;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition-base);
+    }
+    .search-input:focus {
+      width: 320px;
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+      outline: none;
+    }
+
+    /* Tables */
+    .table-container {
+      overflow-x: auto;
+      overflow-y: auto;
+      max-height: 72vh;
+      background: #ffffff;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-color);
+      transition: var(--transition-base);
+    }
+    .table-container:hover {
+      box-shadow: var(--shadow-xl);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.85rem;
+    }
+    th, td {
+      padding: 16px 20px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background-color: #f8fafc;
+      color: var(--text-muted);
+      font-family: var(--font-heading);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.7rem;
+      letter-spacing: 0.05em;
+      z-index: 10;
+      box-shadow: inset 0 -1px 0 var(--border-color);
+    }
+    tr {
+      transition: var(--transition-base);
+    }
+    tr:hover {
+      background-color: #f8fafc;
+    }
+
+    /* Buttons */
+    button {
+      padding: 10px 20px;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--brand-primary) 0%, #3730a3 100%);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 0.85rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition-base);
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+      background: linear-gradient(135deg, var(--brand-primary-hover) 0%, #312e81 100%);
+    }
+    button:active {
+      transform: translateY(1px);
+    }
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 0.75rem;
+      border-radius: var(--radius-sm);
+    }
+    .btn-danger {
+      background: linear-gradient(135deg, var(--brand-danger) 0%, #be123c 100%);
+    }
+    .btn-danger:hover {
+      background: linear-gradient(135deg, var(--brand-danger-hover) 0%, #9f1239 100%);
+    }
+    .btn-success {
+      background: linear-gradient(135deg, var(--brand-success) 0%, #047857 100%);
+    }
+    .btn-success:hover {
+      background: linear-gradient(135deg, var(--brand-success-hover) 0%, #065f46 100%);
+    }
+    .btn-secondary {
+      background: linear-gradient(135deg, #475569 0%, #1e293b 100%);
+    }
+    .btn-secondary:hover {
+      background: linear-gradient(135deg, #334155 0%, #0f172a 100%);
+    }
+
+    /* Specific Action Buttons in table */
+    .btn-action-whatsapp {
+      background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+    }
+    .btn-action-whatsapp:hover {
+      background: linear-gradient(135deg, #20ba5a 0%, #0e7568 100%);
+    }
+    .btn-action-email {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    }
+    .btn-action-email:hover {
+      background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    }
+
+    /* Forms */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-group label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+    input, textarea, select {
+      padding: 10px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      font-size: 0.9rem;
+      color: var(--text-main);
+      background: #f8fafc;
+      transition: var(--transition-base);
+      font-family: var(--font-body);
+    }
+    input:focus, textarea:focus, select:focus {
+      background: #ffffff;
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+      outline: none;
+    }
+
+    .sys-client-section {
+      border-top: 1px dashed var(--border-color);
+      margin-top: 25px;
+      padding-top: 20px;
+    }
+    .sys-client-section h4 {
+      font-family: var(--font-heading);
+      font-size: 1rem;
+      color: var(--brand-primary);
+      margin-top: 0;
+      margin-bottom: 15px;
+    }
+    .sys-client-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 14px;
+    }
+    .sys-client-grid label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.025em;
+    }
+    .sys-client-grid input {
+      padding: 8px 10px;
+      font-size: 0.8rem;
+    }
+
+    .contenedor-campos-extras {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+      margin-top: 10px;
+    }
+    .extra-field-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .panel-plantilla-grid {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 20px;
+    }
+
+    /* Badges */
+    .badge-status {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-align: center;
+      transition: var(--transition-base);
+    }
+    .badge-na {
+      background-color: #f1f5f9;
+      color: #94a3b8;
+    }
+    .badge-updated {
+      background-color: #dcfce7;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+    }
+    .badge-outdated {
+      background-color: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+    .badge-unknown {
+      background-color: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+    }
+
+    .campo-extra-badge {
+      background: #f1f5f9;
+      color: #475569;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      margin-right: 6px;
+      margin-top: 4px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid #e2e8f0;
+      transition: var(--transition-base);
+    }
+    .campo-extra-badge:hover {
+      background: #e2e8f0;
+      color: #1e293b;
+    }
+
+    .btn-toggle-favorito {
+      cursor: pointer;
+      font-size: 1.25rem;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: inline-block;
+    }
+    .btn-toggle-favorito:hover {
+      transform: scale(1.2);
+    }
+
+    /* Floating Status Indicator */
+    #loading-status {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      position: fixed;
+      top: 25px;
+      right: 25px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      padding: 12px 22px;
+      border-radius: var(--radius-full);
+      font-size: 0.85rem;
+      font-weight: 600;
+      box-shadow: var(--shadow-xl);
+      backdrop-filter: blur(10px);
+      z-index: 10000;
+      transition: var(--transition-base);
+      animation: pulseGlow 2s infinite ease-in-out;
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 4px 20px rgba(79, 70, 229, 0.15); }
+      50% { box-shadow: 0 4px 25px rgba(79, 70, 229, 0.4); }
+    }
+
+    /* Toast Notification */
+    .toast-notificacion {
+      position: fixed;
+      bottom: 25px;
+      right: 25px;
+      background-color: var(--brand-success);
+      color: white;
+      padding: 12px 24px;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      font-size: 0.85rem;
+      box-shadow: var(--shadow-xl);
+      z-index: 9999;
+      animation: slideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes slideIn {
+      from { transform: translateY(100px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+  </style>
+</head>
+
+<div id="loading-status">
+  <span>🔄 Conectando a Firebase...</span>
+</div>
+
+<div class="header-section">
+  <div class="header-title-area">
+    <h1>📊 Control de Versiones de Sistemas</h1>
+    <p class="sub">Soporte CONTPAQi — CRM Técnico.</p>
+  </div>
+</div>
+
+<div class="flex-layout">
+  <div class="panel">
+    <h3 class="market-title">🚀 Versiones Oficiales y Cartas</h3>
+    <div class="market-grid">
+      {listaSistemasOpciones.map(sistema => (
+        <div class="market-row">
+          <label>{sistema}</label>
+          <div class="market-input-group">
+            <input type="text" class="input-version-oficial click-select" data-sistema={sistema} placeholder="Versión oficial actual" style="margin-bottom: 2px;" />
+            <input type="text" class="input-carta-tecnica click-select" data-sistema={sistema} placeholder="🔗 Link Carta Técnica" style="font-size: 0.75rem; border-color: #e2e8f0;" />
+          </div>
+        </div>
+      ))}
+    </div>
+    <button id="btnGuardarVersionesOficiales" class="btn-success btn-sm" style="width: 100%; margin-top: 15px; justify-content: center;">💾 Guardar Todo</button>
+  </div>
+
+  <div>
+    <div class="panel" style="background-color: #f8fafc; border: 1px solid #e2e8f0;">
+      <h3 style="margin-top:0; font-size:0.95rem; color:#1e293b;">📝 Plantilla de Notificación</h3>
+      <div class="panel-plantilla-grid">
+        <div class="form-group">
+          <label style="font-weight: bold; color: #0284c7;">📢 Comodines:</label>
+          <div style="margin-top: 4px; font-size: 0.75rem; color: #64748b; line-height: 1.4;">
+            • <strong>[contacto]</strong> -> Nombre<br>
+            • <strong>[empresa]</strong> -> Razón Social<br>
+            • <strong>[sistemas_pendientes]</strong> -> Lista de sistemas desactualizados.
+          </div>
+        </div>
+        <div class="form-group">
+          <textarea id="txtPlantillaMensaje" rows="7" style="width: 98%; font-family:inherit; font-size:0.85rem; resize: vertical;"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-controls">
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <input type="text" id="txtBuscar" class="search-input" placeholder="🔍 Buscar empresa o contacto...">
+        <select id="selectFiltroSistema">
+          <option value="">🎯 Todos los Sistemas</option>
+          {listaSistemasOpciones.map(sistema => <option value={sistema}>{sistema}</option>)}
+        </select>
+        <button id="btnFiltroFavoritos" style="background: #f59e0b;"><span id="icono-filtro-fav">☆</span> <span id="texto-filtro-fav">Ver Favoritos</span></button>
+      </div>
+      
+      <div style="display:flex; gap:8px;">
+        <button id="btnExportarJSON" class="btn-secondary" style="background-color: #475569;">📥 Exportar JSON</button>
+        <button id="btnWspMasivo" class="btn-success" style="background-color: #059669;">📢 WhatsApp (<span class="lblCountSeleccionados">0</span>)</button>
+        <button id="btnMailMasivo" style="background-color: #2563eb;">✉️ Abrir Zoho Mail (<span class="lblCountSeleccionados">0</span>)</button>
+        <button id="btnNuevo">➕ Registrar Empresa</button>
+      </div>
+    </div>
+
+    <form id="formulario" class="panel" onsubmit="event.preventDefault();" style="display:none; border: 1px solid #bae6fd; background-color: #f0f9ff;">
+      <h3 id="form-titulo" style="margin-top: 0; color: #0369a1;">Registrar Empresa</h3>
+      <input type="hidden" id="edit-index">
+      
+      <div class="form-grid">
+        <div class="form-group"><label>Empresa / Razón Social *</label><input id="form-empresa" required></div>
+        <div class="form-group"><label>Contacto Principal</label><input id="form-contacto"></div>
+        <div class="form-group"><label>Correo Electrónico</label><input id="form-correo" type="email"></div>
+        <div class="form-group"><label>Teléfono 1</label><input id="form-telefono1"></div>
+        <div class="form-group"><label>Teléfono 2</label><input id="form-telefono2"></div>
+      </div>
+
+      <div style="border-top: 1px dashed #cbd5e1; margin-top:15px; padding-top:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h4 style="margin:0; font-size:0.85rem; color:#0369a1;">⚙️ Especificaciones Técnicas</h4>
+          <button type="button" id="btnAgregarCampoExtra" class="btn-sm btn-secondary">➕ Añadir campo extra</button>
+        </div>
+        <div id="contenedorCamposExtras" class="contenedor-campos-extras"></div>
+      </div>
+
+      <div class="sys-client-section">
+        <h4 style="margin-top: 0; margin-bottom: 10px; font-size: 0.9rem; color: #0369a1;">Sistemas Instalados:</h4>
+        <div class="sys-client-grid">
+          {listaSistemasOpciones.map(sistema => (
+            <div class="form-group">
+              <label style="color:#0284c7; font-size: 0.75rem;">{sistema}</label>
+              <input id={`sys-${sistema.replace(/\s+/g, '_')}`} class="sistema-version-input" data-sistema={sistema} placeholder="No aplica" style="padding: 5px 8px; font-size: 0.8rem;">
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; display: flex; gap: 10px;">
+        <button type="button" id="btnGuardar">💾 Guardar Cambios</button>
+        <button type="button" id="btnCancelar" class="btn-secondary">Cancelar</button>
+      </div>
+    </form>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 40px; text-align: center;"><input type="checkbox" id="chkSeleccionarTodo" style="cursor:pointer;"></th>
+            <th>Empresa</th>
+            <th>Contacto</th>
+            {listaSistemasOpciones.map(sistema => (
+              <th style="text-align: center; font-size:0.7rem;">{sistema.replace("COMERCIAL ", "COM. ").replace("SERVIDOR DE LICENCIAS COMUN", "SERV. LIC.")}</th>
+            ))}
+            <th style="text-align: center;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-clientes-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
+
+<script id="crm-frontend-logic">
+import { cargarDatosCRM, guardarClientes, guardarConfiguracion, guardarPlantilla } from "../data/firebase.js";
+
+document.addEventListener("DOMContentLoaded", () => {
+  const bridge = document.getElementById("data-bridge");
+  const datosInicialesCliente = JSON.parse(bridge?.dataset.iniciales || "[]");
+  const listaSistemas = JSON.parse(bridge?.dataset.sistemas || "[]");
+
+  let clientes = [];
+  let versionesMercado = {};
+  let cartasTecnicas = {};
+
+  let plantillaMensaje = "Hola [contacto] de [empresa]...";
+  let filtrarSoloFavoritos = false; 
+  let seleccionadosIdx = []; 
+
+  const statusEl = document.getElementById("loading-status");
+  
+  function mostrarEstado(mensaje, duracion = 0) {
+    if (statusEl) {
+      statusEl.style.display = "flex";
+      statusEl.innerHTML = mensaje;
+      if (duracion > 0) {
+        setTimeout(() => {
+          statusEl.style.display = "none";
+        }, duracion);
+      }
+    }
+  }
+
+  function ocultarEstado() {
+    if (statusEl) statusEl.style.display = "none";
+  }
+
+  function unificarDatosIniciales() {
+    const unificado = {};
+    datosInicialesCliente.forEach(item => {
+      if (!item.EMPRESA) return;
+      const empNombre = item.EMPRESA.trim().toUpperCase();
+      if (!unificado[empNombre]) {
+        unificado[empNombre] = {
+          EMPRESA: empNombre, 
+          CONTACTO: item.CONTACTO || "", 
+          CORREO: item.CORREO || "",
+          TELEFONO_1: item.TELEFONO || item.TELEFONO_1 || "", 
+          TELEFONO_2: item.TELEFONO_2 || "",
+          FAVORITO: false, 
+          CAMPOS_EXTRAS: {}, 
+          SISTEMAS: {}
+        };
+      }
+    });
+    return Object.values(unificado);
+  }
+
+  async function inicializarApp() {
+    mostrarEstado("🔄 Conectando a Firebase...");
+    try {
+      const datos = await cargarDatosCRM();
+      if (datos) {
+        clientes = datos.clientes || [];
+        versionesMercado = datos.versionesMercado || {};
+        cartasTecnicas = datos.cartasTecnicas || {};
+        plantillaMensaje = datos.plantillaMensaje || "Hola [contacto] de [empresa]...";
+      } else {
+        mostrarEstado("⚠️ Firestore vacío. Sembrando datos iniciales...");
+        clientes = unificarDatosIniciales();
+        listaSistemas.forEach(s => {
+          const sysKey = s.toUpperCase().trim();
+          if (versionesMercado[sysKey] === undefined) versionesMercado[sysKey] = "";
+          if (cartasTecnicas[sysKey] === undefined) cartasTecnicas[sysKey] = "";
+        });
+        await guardarClientes(clientes);
+        await guardarConfiguracion(versionesMercado, cartasTecnicas);
+        await guardarPlantilla(plantillaMensaje);
+      }
+
+      listaSistemas.forEach(s => {
+        const sysKey = s.toUpperCase().trim();
+        if (versionesMercado[sysKey] === undefined) versionesMercado[sysKey] = "";
+        if (cartasTecnicas[sysKey] === undefined) cartasTecnicas[sysKey] = "";
+      });
+
+      document.getElementById("txtPlantillaMensaje").value = plantillaMensaje;
+      inicializarFormulariosMercado();
+      render();
+      ocultarEstado();
+    } catch (error) {
+      console.error("Error al conectar con Firestore, usando fallback local:", error);
+      mostrarEstado("❌ Error de conexión. Usando almacenamiento local.", 4000);
+      
+      clientes = JSON.parse(localStorage.getItem("matriz_clientes_crm")) || unificarDatosIniciales();
+      versionesMercado = JSON.parse(localStorage.getItem("versiones_market_crm")) || {};
+      cartasTecnicas = JSON.parse(localStorage.getItem("cartas_tecnicas_crm")) || {};
+      plantillaMensaje = localStorage.getItem("plantilla_notif_crm") || "Hola [contacto] de [empresa]...";
+      
+      listaSistemas.forEach(s => {
+        const sysKey = s.toUpperCase().trim();
+        if (versionesMercado[sysKey] === undefined) versionesMercado[sysKey] = "";
+        if (cartasTecnicas[sysKey] === undefined) cartasTecnicas[sysKey] = "";
+      });
+
+      document.getElementById("txtPlantillaMensaje").value = plantillaMensaje;
+      inicializarFormulariosMercado();
+      render();
+    }
+  }
+
+  function esVersionMenor(vC, vO) {
+    vC = String(vC).toLowerCase().trim(); vO = String(vO).toLowerCase().trim();
+    if (!vC || vC === "" || vC === "no aplica" || !vO || vO === "") return false;
+    if (vC === vO) return false;
+    const partesC = vC.split("sp")[0].replace(/[^0-9.]/g, '').split('.').map(Number);
+    const partesO = vO.split("sp")[0].replace(/[^0-9.]/g, '').split('.').map(Number);
+    const maxLen = Math.max(partesC.length, partesO.length);
+    while (partesC.length < maxLen) partesC.push(0);
+    while (partesO.length < maxLen) partesO.push(0);
+    for (let i = 0; i < maxLen; i++) {
+      if (partesC[i] < partesO[i]) return true;
+      if (partesC[i] > partesO[i]) return false;
+    }
+    return false;
+  }
+
+  function inicializarFormulariosMercado() {
+    listaSistemas.forEach(sistema => {
+      const sysKey = sistema.toUpperCase().trim();
+      const inputVersion = document.querySelector(`.input-version-oficial[data-sistema="${sistema}"]`);
+      const inputCarta = document.querySelector(`.input-carta-tecnica[data-sistema="${sistema}"]`);
+      if(inputVersion) inputVersion.value = versionesMercado[sysKey] || "";
+      if(inputCarta) inputCarta.value = cartasTecnicas[sysKey] || "";
+    });
+  }
+
+  function mostrarToastExito(mensaje) {
+    const toast = document.createElement("div");
+    toast.className = "toast-notificacion";
+    toast.innerText = mensaje;
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.remove(); }, 2000);
+  }
+
+  document.getElementById("btnGuardarVersionesOficiales").addEventListener("click", async () => {
+    listaSistemas.forEach(sistema => {
+      const sysKey = sistema.toUpperCase().trim();
+      versionesMercado[sysKey] = document.querySelector(`.input-version-oficial[data-sistema="${sistema}"]`).value.trim();
+      cartasTecnicas[sysKey] = document.querySelector(`.input-carta-tecnica[data-sistema="${sistema}"]`).value.trim();
+    });
+    
+    mostrarEstado("💾 Guardando versiones...");
+    const ok = await guardarConfiguracion(versionesMercado, cartasTecnicas);
+    if (ok) {
+      mostrarToastExito("💾 Configuración Guardada");
+      ocultarEstado();
+    } else {
+      mostrarEstado("⚠️ Error al guardar. Guardado en Local Storage.", 3000);
+      localStorage.setItem("versiones_market_crm", JSON.stringify(versionesMercado));
+      localStorage.setItem("cartas_tecnicas_crm", JSON.stringify(cartasTecnicas));
+    }
+    render();
+  });
+
+  document.getElementById("btnAgregarCampoExtra").addEventListener("click", () => {
+    const nombreCampo = prompt("¿Qué campo extra deseas registrar? (Ej: Servidor, Terminales, Contraseña, etc.):");
+    if (!nombreCampo) return;
+    crearInputCampoExtra(nombreCampo.trim(), "");
+  });
+
+  function crearInputCampoExtra(nombre, valor) {
+    const contenedor = document.getElementById("contenedorCamposExtras");
+    const div = document.createElement("div");
+    div.className = "form-group extra-field-row";
+    div.innerHTML = `
+      <div style="flex:1; display:flex; flex-direction:column; gap:2px;">
+        <label style="font-size:0.75rem; font-weight:bold; color:#475569;">${nombre}</label>
+        <input class="input-campo-extra" data-campo="${nombre}" value="${valor}">
+      </div>
+      <button type="button" class="btn-sm btn-danger" style="margin-top:14px;">🗑️</button>
+    `;
+    div.querySelector("button").addEventListener("click", () => div.remove());
+    contenedor.appendChild(div);
+  }
+
+  function actualizarContadores() {
+    document.querySelectorAll(".lblCountSeleccionados").forEach(lbl => lbl.innerText = seleccionadosIdx.length);
+  }
+
+  function obtenerClientesFiltradosYVisibles() {
+    const busqueda = document.getElementById("txtBuscar").value.toLowerCase().trim();
+    const sistemaFiltrado = document.getElementById("selectFiltroSistema").value;
+    return clientes.map((c, i) => ({ ...c, originalIdx: i })).filter(item => {
+      if (filtrarSoloFavoritos && !item.FAVORITO) return false;
+      if (sistemaFiltrado !== "") {
+        const vSys = item.SISTEMAS ? item.SISTEMAS[sistemaFiltrado.toUpperCase().trim()] : "";
+        if (!vSys || vSys === "" || vSys.toUpperCase() === "NO APLICA") return false; 
+      }
+      if (busqueda !== "" && !(item.EMPRESA || "").toLowerCase().includes(busqueda) && !(item.CONTACTO || "").toLowerCase().includes(busqueda)) return false;
+      return true;
+    });
+  }
+
+  function render() {
+    const tbody = document.getElementById("tabla-clientes-body");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    
+    const visibles = obtenerClientesFiltradosYVisibles();
+
+    visibles.forEach((cliente) => {
+      const indexGlobal = cliente.originalIdx;
+      const tr = document.createElement("tr");
+      const estaCheckeado = seleccionadosIdx.includes(indexGlobal) ? "checked" : "";
+      
+      let htmlCamposExtras = "";
+      if (cliente.CAMPOS_EXTRAS) {
+        Object.entries(cliente.CAMPOS_EXTRAS).forEach(([llave, valor]) => {
+          if(valor) htmlCamposExtras += `<span class="campo-extra-badge">💻 ${llave}: ${valor}</span>`;
+        });
+      }
+
+      let html = `
+        <td style="text-align: center;"><input type="checkbox" class="chk-cliente" data-idx="${indexGlobal}" ${estaCheckeado}></td>
+        <td>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="btn-toggle-favorito" data-idx="${indexGlobal}" style="cursor:pointer; font-size:1.2rem; ${cliente.FAVORITO ? 'color:#f59e0b;' : 'color:#cbd5e1;'}">${cliente.FAVORITO ? '⭐' : '☆'}</span>
+            <strong style="color: #0f172a;">${cliente.EMPRESA}</strong>
+          </div>
+        </td>
+        <td>
+          <span style="display:block; font-weight: 600;">👤 ${cliente.CONTACTO || 'Sin nombre'}</span>
+          <span style="display:block; font-size: 0.75rem; color:#64748b;">📞 ${cliente.TELEFONO_1 || ''}</span>
+          ${cliente.CORREO ? `<span style="display:block; font-size: 0.75rem; color:#0284c7;">✉️ ${cliente.CORREO}</span>` : ''}
+          <div>${htmlCamposExtras}</div>
+        </td>
+      `;
+
+      listaSistemas.forEach(sistema => {
+        const sysKey = sistema.toUpperCase().trim();
+        let vCliente = String(cliente.SISTEMAS ? cliente.SISTEMAS[sysKey] || "" : "").trim();
+        const vOficial = String(versionesMercado[sysKey] || "").trim();
+        
+        let badgeClass = "badge-status badge-na";
+        let textoBadge = "-";
+
+        if (vCliente && vCliente !== "" && vCliente.toUpperCase() !== "NO APLICA") {
+          textoBadge = vCliente;
+          if (vCliente.toLowerCase() === vOficial.toLowerCase() && vOficial !== "") {
+            badgeClass = "badge-status badge-updated";
+          } else if (esVersionMenor(vCliente, vOficial)) {
+            badgeClass = "badge-status badge-outdated";
+          } else {
+            badgeClass = "badge-status badge-unknown";
+          }
+        }
+        html += `<td style="text-align: center;"><span class="${badgeClass}">${textoBadge}</span></td>`;
+      });
+
+      html += `
+        <td style="text-align: center; vertical-align: middle;">
+          <div style="display:inline-flex; gap:4px;">
+            <button class="btn-sm btn-secondary btn-editar-especifico" data-idx="${indexGlobal}">✏️ Editar</button>
+            <button class="btn-sm btn-success btn-whatsapp btn-action-whatsapp" data-idx="${indexGlobal}">💬</button>
+            <button class="btn-sm btn-editar btn-email-ind btn-action-email" data-idx="${indexGlobal}">✉️</button>
+            <button class="btn-sm btn-danger btn-eliminar" data-idx="${indexGlobal}">🗑️</button>
+          </div>
+        </td>
+      `;
+      tr.innerHTML = html; tbody.appendChild(tr);
+    });
+
+    document.querySelectorAll(".btn-editar-especifico").forEach(b => b.addEventListener("click", prepararEdicion));
+    document.querySelectorAll(".btn-eliminar").forEach(b => b.addEventListener("click", eliminarCliente));
+    document.querySelectorAll(".btn-whatsapp").forEach(b => b.addEventListener("click", dispararWhatsApp));
+    document.querySelectorAll(".btn-email-ind").forEach(b => b.addEventListener("click", abrirZohoNativo));
+    document.querySelectorAll(".btn-toggle-favorito").forEach(b => b.addEventListener("click", alternarFavorito));
+    
+    document.querySelectorAll(".chk-cliente").forEach(b => {
+      b.addEventListener("change", function() {
+        const idx = parseInt(this.getAttribute("data-idx"));
+        if (this.checked) { if (!seleccionadosIdx.includes(idx)) seleccionadosIdx.push(idx); }
+        else { seleccionadosIdx = seleccionadosIdx.filter(i => i !== idx); }
+        actualizarContadores();
+      });
+    });
+    actualizarContadores();
+  }
+
+  function abrirZohoNativo() {
+    window.open("https://mail.zoho.com/zm/#mail", "_blank");
+  }
+
+  function dispararWhatsApp(e) {
+    const idx = parseInt(e.target.closest("button").getAttribute("data-idx"));
+    const cliente = clientes[idx];
+    const tel = cliente.TELEFONO_1 || cliente.TELEFONO_2;
+    if(!tel) return alert("No tiene teléfono.");
+    window.open(`https://web.whatsapp.com/send?phone=${tel}`, "_blank");
+  }
+
+  function prepararEdicion(e) {
+    const idx = parseInt(e.target.closest("button").getAttribute("data-idx"));
+    const c = clientes[idx];
+    document.getElementById("form-titulo").innerText = "✏️ Editar Empresa";
+    document.getElementById("edit-index").value = idx;
+    document.getElementById("form-empresa").value = c.EMPRESA;
+    document.getElementById("form-contacto").value = c.CONTACTO || "";
+    document.getElementById("form-correo").value = c.CORREO || "";
+    document.getElementById("form-telefono1").value = c.TELEFONO_1 || "";
+    document.getElementById("form-telefono2").value = c.TELEFONO_2 || "";
+    document.getElementById("contenedorCamposExtras").innerHTML = "";
+    if (c.CAMPOS_EXTRAS) {
+      Object.entries(c.CAMPOS_EXTRAS).forEach(([k, v]) => crearInputCampoExtra(k, v));
+    }
+    listaSistemas.forEach(sistema => {
+      const sysKey = sistema.toUpperCase().trim();
+      let valSistema = c.SISTEMAS ? c.SISTEMAS[sysKey] || "" : "";
+      if (valSistema === "No aplica") valSistema = "";
+      const inputSistema = document.getElementById(`sys-${sistema.replace(/\s+/g, '_')}`);
+      if (inputSistema) inputSistema.value = valSistema; 
+    });
+    document.getElementById("formulario").style.display = "block";
+  }
+
+  async function alternarFavorito(e) {
+    const idx = parseInt(e.target.getAttribute("data-idx"));
+    clientes[idx].FAVORITO = !clientes[idx].FAVORITO;
+    render();
+    const ok = await guardarClientes(clientes);
+    if (!ok) {
+      localStorage.setItem("matriz_clientes_crm", JSON.stringify(clientes));
+    }
+  }
+
+  async function eliminarCliente(e) {
+    const idx = parseInt(e.target.closest("button").getAttribute("data-idx"));
+    if (confirm("¿Eliminar?")) {
+      clientes.splice(idx, 1);
+      render();
+      const ok = await guardarClientes(clientes);
+      if (!ok) {
+        localStorage.setItem("matriz_clientes_crm", JSON.stringify(clientes));
+      }
+    }
+  }
+
+  function cerrarFormulario() {
+    document.getElementById("formulario").reset();
+    document.getElementById("formulario").style.display = "none";
+    document.getElementById("edit-index").value = "";
+    document.getElementById("contenedorCamposExtras").innerHTML = "";
+  }
+
+  document.getElementById("btnNuevo").addEventListener("click", () => {
+    cerrarFormulario();
+    document.getElementById("form-titulo").innerText = "➕ Registrar Empresa";
+    document.getElementById("formulario").style.display = "block";
+  });
+
+  document.getElementById("btnGuardar").addEventListener("click", async () => {
+    const idx = document.getElementById("edit-index").value;
+    let nombreEmpresa = document.getElementById("form-empresa").value.trim().toUpperCase();
+    if (!nombreEmpresa) return;
+
+    const camposExtras = {};
+    document.querySelectorAll(".input-campo-extra").forEach(inp => {
+      camposExtras[inp.getAttribute("data-campo")] = inp.value.trim();
+    });
+
+    const nuevo = {
+      EMPRESA: nombreEmpresa,
+      CONTACTO: document.getElementById("form-contacto").value.trim(),
+      CORREO: document.getElementById("form-correo").value.trim(),
+      TELEFONO_1: document.getElementById("form-telefono1").value.trim(),
+      TELEFONO_2: document.getElementById("form-telefono2").value.trim(),
+      FAVORITO: idx !== "" ? clientes[parseInt(idx)].FAVORITO : false,
+      CAMPOS_EXTRAS: camposExtras,
+      SISTEMAS: {}
+    };
+
+    listaSistemas.forEach(sistema => {
+      const inputSistema = document.getElementById(`sys-${sistema.replace(/\s+/g, '_')}`);
+      const val = inputSistema ? inputSistema.value.trim() : "";
+      nuevo.SISTEMAS[sistema.toUpperCase().trim()] = val === "" ? "No aplica" : val;
+    });
+
+    if (idx === "") clientes.push(nuevo);
+    else clientes[parseInt(idx)] = nuevo;
+
+    mostrarEstado("💾 Guardando cliente...");
+    const ok = await guardarClientes(clientes);
+    if (ok) {
+      mostrarToastExito("💾 Guardado");
+      ocultarEstado();
+    } else {
+      mostrarEstado("⚠️ Error al guardar. Guardado en Local Storage.", 3000);
+      localStorage.setItem("matriz_clientes_crm", JSON.stringify(clientes));
+    }
+    cerrarFormulario(); 
+    render();
+  });
+
+  document.getElementById("btnCancelar").addEventListener("click", cerrarFormulario);
+  document.getElementById("txtBuscar").addEventListener("input", render);
+  document.getElementById("selectFiltroSistema").addEventListener("change", render);
+  document.getElementById("btnMailMasivo").addEventListener("click", abrirZohoNativo);
+
+  document.getElementById("btnFiltroFavoritos").addEventListener("click", () => {
+    filtrarSoloFavoritos = !filtrarSoloFavoritos;
+    document.getElementById("icono-filtro-fav").innerText = filtrarSoloFavoritos ? "⭐" : "☆";
+    render();
+  });
+
+  document.getElementById("btnExportarJSON").addEventListener("click", () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(clientes, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", "clientes_crm.json");
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    mostrarToastExito("📥 JSON Exportado");
+  });
+
+  document.getElementById("txtPlantillaMensaje").addEventListener("change", async (e) => {
+    plantillaMensaje = e.target.value;
+    mostrarEstado("💾 Guardando plantilla...");
+    const ok = await guardarPlantilla(plantillaMensaje);
+    if (ok) {
+      mostrarToastExito("💾 Plantilla Guardada");
+      ocultarEstado();
+    } else {
+      mostrarEstado("⚠️ Error al guardar plantilla. Guardado en Local Storage.", 3000);
+      localStorage.setItem("plantilla_notif_crm", plantillaMensaje);
+    }
+  });
+
+  inicializarApp();
+});
+</script>

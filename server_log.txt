@@ -1,0 +1,20 @@
+
+> agenda-clientes@0.0.1 dev
+> astro dev --open
+
+[2m20:26:27[22m [34m[@astrojs/node][39m Enabling sessions with filesystem storage
+[vite] connected.
+[2m20:26:28[22m [34m[types][39m Generated [2m1ms[22m
+[2m20:26:28[22m [34m[vite][39m Re-optimizing dependencies because vite config has changed
+[42m[1m astro [22m[49m [32mv6.3.3[39m [2mready in[22m 1746 [2mms[22m
+[2m┃[22m Local    [36mhttp://localhost:4321/[39m
+[2m┃[22m Network  [2muse --host to expose[22m
+[2m20:26:28[22m [32mwatching for file changes...[39m
+[INFOXPERT] Se detectaron 11 registros listos en el JSON local.
+[2m20:26:29[22m [34m[200][39m / [2m113ms[22m
+[INFOXPERT] Se detectaron 11 registros listos en el JSON local.
+[2m20:26:29[22m [34m[200][39m / [2m8ms[22m
+[INFOXPERT] Se detectaron 11 registros listos en el JSON local.
+[2m20:26:51[22m [34m[200][39m / [2m7ms[22m
+[INFOXPERT] Se detectaron 11 registros listos en el JSON local.
+[2m20:26:56[22m [34m[200][39m / [2m8ms[22m

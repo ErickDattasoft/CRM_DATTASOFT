@@ -1,0 +1,19 @@
+{
+  "name": "agenda-clientes",
+  "type": "module",
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev --open",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "astro": "^6.3.3",
+    "firebase": "^12.14.0",
+    "xlsx": "^0.18.5"
+  }
+}
