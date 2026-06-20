@@ -2232,9 +2232,7 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
       initStickyHeaders();
     } catch (err) {
       console.error("Error Firebase, fallback local:", err);
-      crmLocalOnly = true;
-      localStorage.setItem("crm_local_only", "true");
-      mostrarEstado("⚠️ Error de conexión. Activando local mode y usando Local Storage.", 4000);
+      mostrarEstado("⚠️ Error de conexión a Firebase. Reintentando en la próxima carga.", 4000);
       cargarDesdeLocalStorage();
     }
   }
