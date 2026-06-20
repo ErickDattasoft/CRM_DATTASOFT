@@ -40,8 +40,16 @@ exports.handler = async (event) => {
   });
 
   const data = await resp.json();
+  if (!resp.ok) {
+    console.error("[send-email] Resend error", resp.status, JSON.stringify(data));
+    return {
+      statusCode: resp.status,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: data.message || data.name || JSON.stringify(data) }),
+    };
+  }
   return {
-    statusCode: resp.ok ? 200 : resp.status,
+    statusCode: 200,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   };
