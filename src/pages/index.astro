@@ -3190,7 +3190,6 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
 
       const enviarCorreo = document.getElementById("chk-enviar-correo")?.checked;
       const mailTo = contactoCorreo || contactos.find(c => c.nombre === contacto)?.correo || "";
-      console.log("[email debug]", { enviarCorreo, contactoCorreo, contacto, mailTo });
       if (enviarCorreo && mailTo) {
         const mailCC = [configTickets.correoSoporte || "", cc].filter(Boolean).join(",");
         const mailSubject = `[Ticket #${num}] ${asunto}`;
