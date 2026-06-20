@@ -122,8 +122,10 @@ try {
       border-right: 1px solid var(--border-color);
       display: flex;
       flex-direction: column;
-      transition: var(--transition-base);
+      transition: width 0.25s ease, min-width 0.25s ease;
       z-index: 100;
+      overflow: hidden;
+      flex-shrink: 0;
     }
 
     .sidebar-brand {
@@ -1123,6 +1125,96 @@ try {
       margin-top: 2px;
     }
 
+    /* ===== SIDEBAR COLLAPSE ===== */
+    .sidebar.collapsed {
+      width: var(--sidebar-collapsed);
+      min-width: var(--sidebar-collapsed);
+      overflow: visible;
+    }
+    .sidebar.collapsed .sidebar-brand {
+      justify-content: center;
+      padding: 14px 8px;
+      gap: 0;
+    }
+    .sidebar.collapsed .sidebar-brand > div:not(.sidebar-brand-logo) { display: none; }
+    .sidebar.collapsed .sidebar-section-label { display: none; }
+    .sidebar.collapsed .nav-label { display: none; }
+    .sidebar.collapsed .nav-badge { display: none; }
+    .sidebar.collapsed .nav-item {
+      justify-content: center;
+      padding: 10px 0;
+      gap: 0;
+      overflow: visible;
+    }
+    .sidebar.collapsed .nav-icon {
+      font-size: 1.3rem;
+      text-align: center;
+    }
+    .sidebar.collapsed .nav-item::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      left: calc(100% + 8px);
+      top: 50%;
+      transform: translateY(-50%);
+      background: #1e2235;
+      color: #e2e8f0;
+      padding: 5px 12px;
+      border-radius: var(--radius-md);
+      white-space: nowrap;
+      font-size: 0.8rem;
+      z-index: 9999;
+      border: 1px solid rgba(99,102,241,0.3);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      box-shadow: var(--shadow-md);
+    }
+    .sidebar.collapsed .nav-item:hover::after { opacity: 1; }
+    .sidebar.collapsed .btn-sidebar-toggle { margin-left: 0; }
+
+    .sidebar-footer { display: none; }
+
+    .btn-sidebar-toggle {
+      position: fixed;
+      top: 72px;
+      left: 246px; /* 260px sidebar - 14px para centrar en borde */
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #1e2235;
+      border: 2px solid #6366f1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #a5b4fc;
+      font-size: 1rem;
+      font-weight: bold;
+      z-index: 300;
+      transition: left 0.25s ease, background 0.2s, color 0.2s;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+      line-height: 1;
+      padding: 0;
+    }
+    .btn-sidebar-toggle:hover {
+      background: #6366f1;
+      color: #fff;
+    }
+    .toggle-icon { display: none; }
+    .toggle-label { display: none; }
+
+    /* ===== SORT ARROWS ===== */
+    .th-sortable { cursor: pointer; user-select: none; }
+    .th-sortable:hover { color: var(--text-main); }
+    .sort-arrow {
+      font-size: 0.75rem;
+      opacity: 0.4;
+      margin-left: 3px;
+      display: inline-block;
+      transition: opacity 0.15s, color 0.15s;
+    }
+    .sort-arrow.active { opacity: 1; color: var(--brand-primary-hover); }
+
     /* ===== HIDDEN ===== */
     .hidden { display: none !important; }
 
@@ -1139,7 +1231,7 @@ try {
 
 <div class="app-layout">
   <!-- ===== SIDEBAR ===== -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="main-sidebar">
     <div class="sidebar-brand">
       <div class="sidebar-brand-logo">📊</div>
       <div>
@@ -1149,33 +1241,36 @@ try {
     </div>
     <nav class="sidebar-nav">
       <div class="sidebar-section-label">Principal</div>
-      <div class="nav-item active" data-section="dashboard">
+      <div class="nav-item active" data-section="dashboard" data-tooltip="Dashboard">
         <span class="nav-icon">📊</span>
-        <span>Dashboard</span>
+        <span class="nav-label">Dashboard</span>
       </div>
-      <div class="nav-item" data-section="empresas">
+      <div class="nav-item" data-section="empresas" data-tooltip="Empresas">
         <span class="nav-icon">🏢</span>
-        <span>Empresas</span>
+        <span class="nav-label">Empresas</span>
         <span class="nav-badge" id="badge-empresas">0</span>
       </div>
-      <div class="nav-item" data-section="contactos">
+      <div class="nav-item" data-section="contactos" data-tooltip="Contactos">
         <span class="nav-icon">📇</span>
-        <span>Contactos</span>
+        <span class="nav-label">Contactos</span>
         <span class="nav-badge" id="badge-contactos">0</span>
       </div>
       <div class="sidebar-section-label">Soporte</div>
-      <div class="nav-item" data-section="tickets">
+      <div class="nav-item" data-section="tickets" data-tooltip="Tickets">
         <span class="nav-icon">🎫</span>
-        <span>Tickets</span>
+        <span class="nav-label">Tickets</span>
         <span class="nav-badge" id="badge-tickets-abiertos">0</span>
       </div>
       <div class="sidebar-section-label">Sistema</div>
-      <div class="nav-item" data-section="configuracion">
+      <div class="nav-item" data-section="configuracion" data-tooltip="Configuración">
         <span class="nav-icon">⚙️</span>
-        <span>Configuración</span>
+        <span class="nav-label">Configuración</span>
       </div>
     </nav>
   </aside>
+
+  <!-- Botón colapsar sidebar: fuera del aside para no ser recortado por overflow -->
+  <button id="btnToggleSidebar" class="btn-sidebar-toggle" title="Colapsar menú">&#8249;</button>
 
   <!-- ===== MAIN CONTENT ===== -->
   <div class="main-content">
@@ -1308,19 +1403,24 @@ try {
               <input type="hidden" id="edit-emp-index">
               <div class="form-grid">
                 <div class="form-group"><label>Empresa <span class="required">*</span></label><input id="form-empresa" required></div>
-                <div class="form-group"><label>Contacto Principal</label><input id="form-contacto"></div>
+                <div class="form-group" id="form-emp-contacto-group">
+                  <label>Contacto Principal</label>
+                  <select id="form-emp-contacto-select" class="hidden"></select>
+                  <input id="form-contacto" placeholder="Nombre del contacto">
+                </div>
                 <div class="form-group"><label>Correo Electrónico</label><input id="form-correo" type="email"></div>
-                <div class="form-group"><label>Teléfono 1</label><input id="form-telefono1"></div>
-                <div class="form-group"><label>Teléfono 2</label><input id="form-telefono2"></div>
+                <div class="form-group"><label>RFC</label><input id="form-empresa-rfc" placeholder="Ej: XAXX010101000"></div>
+                <div class="form-group form-emp-extras"><label>Teléfono 1</label><input id="form-telefono1"></div>
+                <div class="form-group form-emp-extras"><label>Teléfono 2</label><input id="form-telefono2"></div>
               </div>
-              <div style="border-top:1px dashed rgba(255,255,255,0.06); margin-top:10px; padding-top:12px;">
+              <div id="form-emp-campos-extra-section" style="border-top:1px dashed rgba(255,255,255,0.06); margin-top:10px; padding-top:12px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                   <h4 style="font-size:0.85rem; color:var(--brand-secondary); font-family:var(--font-heading);">⚙️ Campos Extra</h4>
                   <button type="button" class="btn btn-ghost btn-xs" id="btnAgregarCampoExtra">➕ Añadir campo</button>
                 </div>
                 <div id="contenedorCamposExtras" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px;"></div>
               </div>
-              <div style="border-top:1px dashed rgba(255,255,255,0.06); margin-top:14px; padding-top:14px;">
+              <div id="form-emp-sistemas-section" style="border-top:1px dashed rgba(255,255,255,0.06); margin-top:14px; padding-top:14px;">
                 <h4 style="font-size:0.85rem; color:var(--brand-secondary); font-family:var(--font-heading); margin-bottom:10px;">💻 Sistemas Instalados</h4>
                 <div class="sys-grid">
                   {listaSistemasOpciones.map(sistema => (
@@ -1346,7 +1446,7 @@ try {
                 <thead>
                   <tr>
                     <th style="width:40px; min-width:40px; text-align:center;"><input type="checkbox" id="chkSeleccionarTodo" style="cursor:pointer;"></th>
-                    <th style="min-width:190px; width:200px;">Empresa</th>
+                    <th class="th-sortable" id="th-sort-emp" style="min-width:190px; width:200px;">Empresa <span class="sort-arrow active" id="sort-arrow-emp">↑</span></th>
                     <th style="min-width:180px; width:190px;">Contacto</th>
                     {listaSistemasOpciones.map(sistema => (
                       <th style="text-align:center; font-size:0.62rem; min-width:95px; width:100px; white-space:normal; line-height:1.2;">{sistema}</th>
@@ -1423,7 +1523,7 @@ try {
           <table style="table-layout: fixed;">
             <thead>
               <tr>
-                <th style="width:170px; min-width:170px;">Nombre</th>
+                <th class="th-sortable" id="th-sort-ct" style="width:170px; min-width:170px;">Nombre <span class="sort-arrow active" id="sort-arrow-ct">↑</span></th>
                 <th style="width:220px; min-width:220px;">Correo</th>
                 <th style="width:130px; min-width:130px;">Teléfono 1</th>
                 <th style="width:130px; min-width:130px;">Teléfono 2</th>
@@ -1856,7 +1956,7 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
   let crmLocalOnly = localStorage.getItem("crm_local_only") === "true";
 
   let configTickets = {
-    tipos: ["General", "Soporte Técnico", "Consultoría Sitio", "Consultoría Remoto", "Instalación"],
+    tipos: ["General", "Soporte Técnico", "Consultoría Sitio", "Consultoría Remoto", "Instalación", "Correo Electrónico"],
     estados: ["Abierto", "Pendiente", "Resuelto", "Cerrado"],
     prioridades: ["Baja", "Media", "Alta", "Urgente"],
     grupos: ["Ventas", "Soporte", "Marketing", "Otros"],
@@ -1866,6 +1966,8 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
 
   let filtrarSoloFavoritos = false;
   let seleccionadosIdx = [];
+  let sortEmpresasDir = 'asc';
+  let sortContactosDir = 'asc';
   let importCSVTarget = "empresas"; // or "contactos"
   let csvParsedData = [];
 
@@ -1881,6 +1983,17 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     if (dur > 0) setTimeout(() => { statusEl.style.display = "none"; }, dur);
   }
   function ocultarEstado() { if (statusEl) statusEl.style.display = "none"; }
+
+  function updateBrowserTabTitle() {
+    const count = tickets.filter(t =>
+      (t.tipo || "").toLowerCase().includes("correo") &&
+      t.estado !== "Resuelto" &&
+      t.estado !== "Cerrado"
+    ).length;
+    document.title = count > 0
+      ? `(${count} sin leer) — DATTASOFT CRM`
+      : 'DATTASOFT BY INFOXPERT CRM — Panel de Control';
+  }
 
   function toast(msg, type = "success") {
     const el = document.createElement("div");
@@ -2062,6 +2175,53 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
   navItems.forEach(n => n.addEventListener("click", () => navegarA(n.dataset.section)));
 
   // ============================================================
+  // SIDEBAR TOGGLE
+  // ============================================================
+  let sidebarCollapsed = localStorage.getItem('crm_sidebar_collapsed') === 'true';
+  const mainSidebar = document.getElementById('main-sidebar');
+  const toggleBtn = document.getElementById('btnToggleSidebar');
+
+  const SIDEBAR_W = 260;
+  const SIDEBAR_COLLAPSED_W = 68;
+
+  function applySidebarState() {
+    if (sidebarCollapsed) {
+      mainSidebar?.classList.add('collapsed');
+      if (toggleBtn) {
+        toggleBtn.textContent = '›';
+        toggleBtn.title = 'Expandir menú';
+        toggleBtn.style.left = (SIDEBAR_COLLAPSED_W - 14) + 'px';
+      }
+    } else {
+      mainSidebar?.classList.remove('collapsed');
+      if (toggleBtn) {
+        toggleBtn.textContent = '‹';
+        toggleBtn.title = 'Colapsar menú';
+        toggleBtn.style.left = (SIDEBAR_W - 14) + 'px';
+      }
+    }
+  }
+  applySidebarState();
+
+  toggleBtn?.addEventListener('click', () => {
+    sidebarCollapsed = !sidebarCollapsed;
+    localStorage.setItem('crm_sidebar_collapsed', String(sidebarCollapsed));
+    applySidebarState();
+  });
+
+  // ============================================================
+  // SORT HEADERS
+  // ============================================================
+  document.getElementById('th-sort-emp')?.addEventListener('click', () => {
+    sortEmpresasDir = sortEmpresasDir === 'asc' ? 'desc' : 'asc';
+    renderEmpresas();
+  });
+  document.getElementById('th-sort-ct')?.addEventListener('click', () => {
+    sortContactosDir = sortContactosDir === 'asc' ? 'desc' : 'asc';
+    renderContactos();
+  });
+
+  // ============================================================
   // INITIALIZATION
   // ============================================================
   function unificarDatosIniciales() {
@@ -2194,26 +2354,55 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
         if (datos.configTickets) {
           configTickets = { ...configTickets, ...datos.configTickets };
         }
+        // Siempre respaldar en localStorage después de cargar de Firebase
+        guardarLocal("crm_clientes", clientes);
+        guardarLocal("crm_contactos", contactos);
+        guardarLocal("crm_tickets", tickets);
+        guardarLocal("crm_versiones", versionesMercado);
+        guardarLocal("crm_cartas", cartasTecnicas);
+        if (plantillaMensaje) localStorage.setItem("crm_plantilla", plantillaMensaje);
         console.log("[CRM DEBUG] inicializarApp => datos desde Firebase: clientes=", clientes.length, "contactos=", contactos.length);
         mostrarEstado(`🔌 Cargados ${clientes.length} empresas desde Firebase`, 2500);
       } else {
-        mostrarEstado("⚠️ Firestore vacío. Sembrando datos...");
-        clientes = unificarDatosIniciales();
-        tickets = [];
-        contactos = unificarContactosIniciales();
-        listaSistemas.forEach(s => {
-          const k = s.toUpperCase().trim();
-          if (!versionesMercado[k]) versionesMercado[k] = "";
-          if (!cartasTecnicas[k]) cartasTecnicas[k] = "";
-        });
-        await guardarClientes(clientes);
-        await guardarConfiguracion(versionesMercado, cartasTecnicas);
-        await guardarPlantilla(plantillaMensaje);
-        await guardarTickets(tickets);
-        await guardarContactos(contactos);
-        await guardarConfigTickets(configTickets);
-        console.log("[CRM DEBUG] inicializarApp => Firestore vacío, seeded datos: clientes=", clientes.length, "contactos=", contactos.length);
-        mostrarEstado(`🔧 Sembrados ${clientes.length} empresas (Firestore vacío)`, 2500);
+        // Firestore vacío — antes de sembrar, revisar si hay datos en localStorage
+        const localClientes = safeParseLocal("crm_clientes", null);
+        const localContactos = safeParseLocal("crm_contactos", null);
+        const localTickets = safeParseLocal("crm_tickets", null);
+
+        if (localClientes && localClientes.length > 0) {
+          // Recuperar datos de localStorage y migrarlos a Firebase
+          mostrarEstado("📦 Restaurando datos desde respaldo local...");
+          clientes = localClientes;
+          contactos = localContactos || [];
+          tickets = localTickets || [];
+          versionesMercado = safeParseLocal("crm_versiones", {});
+          cartasTecnicas = safeParseLocal("crm_cartas", {});
+          plantillaMensaje = localStorage.getItem("crm_plantilla") || plantillaMensaje;
+          await guardarClientes(clientes);
+          await guardarContactos(contactos);
+          await guardarTickets(tickets);
+          await guardarConfiguracion(versionesMercado, cartasTecnicas);
+          await guardarPlantilla(plantillaMensaje);
+          mostrarEstado(`✅ ${clientes.length} empresas restauradas de respaldo local`, 3000);
+        } else {
+          // Sin datos en ningún lado — sembrar con datos iniciales del JSON
+          mostrarEstado("⚠️ Base de datos vacía. Iniciando...");
+          clientes = unificarDatosIniciales();
+          tickets = [];
+          contactos = unificarContactosIniciales();
+          listaSistemas.forEach(s => {
+            const k = s.toUpperCase().trim();
+            if (!versionesMercado[k]) versionesMercado[k] = "";
+            if (!cartasTecnicas[k]) cartasTecnicas[k] = "";
+          });
+          await guardarClientes(clientes);
+          await guardarConfiguracion(versionesMercado, cartasTecnicas);
+          await guardarPlantilla(plantillaMensaje);
+          await guardarTickets(tickets);
+          await guardarContactos(contactos);
+          await guardarConfigTickets(configTickets);
+          mostrarEstado(`🔧 Sembrados ${clientes.length} empresas`, 2500);
+        }
       }
 
       listaSistemas.forEach(s => {
@@ -2339,6 +2528,7 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     el("badge-contactos").textContent = contactos.length;
     const abiertos = tickets.filter(t => t.estado === "Abierto" || t.estado === "Pendiente").length;
     el("badge-tickets-abiertos").textContent = abiertos;
+    updateBrowserTabTitle();
 
     // Recent tickets
     const tbody = el("dash-tickets-recientes");
@@ -2389,6 +2579,12 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     if (avisoEl) avisoEl.style.display = hayVersionesOficiales ? "none" : "flex";
 
     const vis = obtenerEmpresasFiltradas();
+    vis.sort((a, b) => sortEmpresasDir === 'asc'
+      ? (a.EMPRESA || '').localeCompare(b.EMPRESA || '', 'es', { sensitivity: 'base' })
+      : (b.EMPRESA || '').localeCompare(a.EMPRESA || '', 'es', { sensitivity: 'base' })
+    );
+    const arrowEmp = document.getElementById('sort-arrow-emp');
+    if (arrowEmp) { arrowEmp.textContent = sortEmpresasDir === 'asc' ? '↑' : '↓'; arrowEmp.className = 'sort-arrow active'; }
     vis.forEach(c => {
       const idx = c._idx;
       const tr = document.createElement("tr");
@@ -2499,9 +2695,16 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     document.getElementById("form-empresa").value = "";
     document.getElementById("form-contacto").value = "";
     document.getElementById("form-correo").value = "";
+    document.getElementById("form-empresa-rfc").value = "";
     document.getElementById("form-telefono1").value = "";
     document.getElementById("form-telefono2").value = "";
     document.getElementById("contenedorCamposExtras").innerHTML = "";
+    const sel = document.getElementById("form-emp-contacto-select");
+    if (sel) { sel.innerHTML = ""; sel.classList.add("hidden"); }
+    document.getElementById("form-contacto")?.classList.remove("hidden");
+    document.querySelectorAll(".form-emp-extras").forEach(el => el.classList.remove("hidden"));
+    document.getElementById("form-emp-campos-extra-section")?.classList.remove("hidden");
+    document.getElementById("form-emp-sistemas-section")?.classList.remove("hidden");
     listaSistemas.forEach(s => {
       const inp = document.getElementById(`sys-${s.replace(/\s+/g, '_')}`);
       if (inp) inp.value = "";
@@ -2511,6 +2714,36 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
   document.getElementById("btnNuevoEmpresa")?.addEventListener("click", () => {
     cerrarFormEmpresa();
     document.getElementById("form-emp-titulo").textContent = "➕ Registrar Empresa";
+
+    // Modo simplificado: ocultar campos no esenciales
+    document.querySelectorAll(".form-emp-extras").forEach(el => el.classList.add("hidden"));
+    document.getElementById("form-emp-campos-extra-section")?.classList.add("hidden");
+    document.getElementById("form-emp-sistemas-section")?.classList.add("hidden");
+
+    // Usar select de contactos en lugar de input de texto
+    const sel = document.getElementById("form-emp-contacto-select");
+    const inputCt = document.getElementById("form-contacto");
+    if (sel && inputCt) {
+      sel.innerHTML = '<option value="">— Seleccionar contacto —</option>';
+      contactos.slice().sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es')).forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c.nombre || "";
+        opt.dataset.correo = c.correo || "";
+        opt.textContent = c.nombre + (c.empresa ? ` (${c.empresa})` : "");
+        sel.appendChild(opt);
+      });
+      sel.classList.remove("hidden");
+      inputCt.classList.add("hidden");
+
+      sel.onchange = () => {
+        const opt = sel.options[sel.selectedIndex];
+        if (opt && opt.value) {
+          const correoInput = document.getElementById("form-correo");
+          if (correoInput) correoInput.value = opt.dataset.correo || "";
+        }
+      };
+    }
+
     formEmp?.classList.remove("hidden");
   });
 
@@ -2546,8 +2779,15 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     document.getElementById("form-empresa").value = c.EMPRESA;
     document.getElementById("form-contacto").value = c.CONTACTO || "";
     document.getElementById("form-correo").value = c.CORREO || "";
+    document.getElementById("form-empresa-rfc").value = c.RFC || "";
     document.getElementById("form-telefono1").value = c.TELEFONO_1 || "";
     document.getElementById("form-telefono2").value = c.TELEFONO_2 || "";
+    // En modo edición mostrar todos los campos
+    document.querySelectorAll(".form-emp-extras").forEach(el => el.classList.remove("hidden"));
+    document.getElementById("form-emp-campos-extra-section")?.classList.remove("hidden");
+    document.getElementById("form-emp-sistemas-section")?.classList.remove("hidden");
+    document.getElementById("form-emp-contacto-select")?.classList.add("hidden");
+    document.getElementById("form-contacto")?.classList.remove("hidden");
     if (c.CAMPOS_EXTRAS) {
       Object.entries(c.CAMPOS_EXTRAS).forEach(([k, v]) => crearInputCampoExtra(k, v));
     }
@@ -2572,10 +2812,16 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
       extras[inp.dataset.campo] = inp.value.trim();
     });
 
+    // En modo nuevo, el contacto viene del select; en edición, del input de texto
+    const selCt = document.getElementById("form-emp-contacto-select");
+    const useSelect = selCt && !selCt.classList.contains("hidden");
+    const contactoVal = useSelect ? selCt.value.trim() : document.getElementById("form-contacto").value.trim();
+
     const nuevo = {
       EMPRESA: nombre,
-      CONTACTO: document.getElementById("form-contacto").value.trim(),
+      CONTACTO: contactoVal,
       CORREO: document.getElementById("form-correo").value.trim(),
+      RFC: document.getElementById("form-empresa-rfc").value.trim(),
       TELEFONO_1: document.getElementById("form-telefono1").value.trim(),
       TELEFONO_2: document.getElementById("form-telefono2").value.trim(),
       FAVORITO: idx !== "" ? clientes[parseInt(idx)]?.FAVORITO || false : false,
@@ -2604,8 +2850,8 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
       }
     }
 
+    guardarLocal("crm_clientes", clientes); // respaldo local siempre primero
     if (crmLocalOnly) {
-      guardarLocal("crm_clientes", clientes);
       toast("💾 Empresa guardada (Local)");
       cerrarFormEmpresa();
       renderEmpresas();
@@ -2615,7 +2861,7 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     mostrarEstado("💾 Guardando...");
     const ok = await guardarClientes(clientes);
     if (ok) { toast("💾 Empresa guardada"); ocultarEstado(); }
-    else { guardarLocal("crm_clientes", clientes); mostrarEstado("⚠️ Guardado localmente", 3000); }
+    else { mostrarEstado("⚠️ Guardado localmente (sin conexión)", 3000); }
     cerrarFormEmpresa();
     renderEmpresas();
     renderDashboard();
@@ -2625,15 +2871,14 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     const idx = parseInt(e.target.closest("button").dataset.idx);
     if (!confirm("¿Eliminar esta empresa?")) return;
     clientes.splice(idx, 1);
+    guardarLocal("crm_clientes", clientes);
     if (crmLocalOnly) {
-      guardarLocal("crm_clientes", clientes);
       toast("🗑️ Empresa eliminada (Local)");
       renderEmpresas();
       renderDashboard();
       return;
     }
-    const ok = await guardarClientes(clientes);
-    if (!ok) guardarLocal("crm_clientes", clientes);
+    await guardarClientes(clientes);
     renderEmpresas();
     renderDashboard();
   }
@@ -2642,12 +2887,8 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     const idx = parseInt(e.target.dataset.idx);
     clientes[idx].FAVORITO = !clientes[idx].FAVORITO;
     renderEmpresas();
-    if (crmLocalOnly) {
-      guardarLocal("crm_clientes", clientes);
-      return;
-    }
-    const ok = await guardarClientes(clientes);
-    if (!ok) guardarLocal("crm_clientes", clientes);
+    guardarLocal("crm_clientes", clientes);
+    if (!crmLocalOnly) await guardarClientes(clientes);
   }
 
   function enviarWhatsApp(e) {
@@ -2773,6 +3014,12 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
              (c.correo || "").toLowerCase().includes(busq) ||
              (c.empresa || "").toLowerCase().includes(busq);
     });
+    filtrados.sort((a, b) => sortContactosDir === 'asc'
+      ? (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' })
+      : (b.nombre || '').localeCompare(a.nombre || '', 'es', { sensitivity: 'base' })
+    );
+    const arrowCt = document.getElementById('sort-arrow-ct');
+    if (arrowCt) { arrowCt.textContent = sortContactosDir === 'asc' ? '↑' : '↓'; arrowCt.className = 'sort-arrow active'; }
 
     filtrados.forEach((c, _) => {
       const idx = contactos.indexOf(c);
@@ -2915,8 +3162,8 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     if (idx === "") contactos.push(obj);
     else contactos[parseInt(idx)] = obj;
 
+    guardarLocal("crm_contactos", contactos);
     if (crmLocalOnly) {
-      guardarLocal("crm_contactos", contactos);
       toast("💾 Contacto guardado (Local)");
       cerrarFormContacto();
       renderContactos();
@@ -2926,7 +3173,7 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     mostrarEstado("💾 Guardando contacto...");
     const ok = await guardarContactos(contactos);
     if (ok) { toast("💾 Contacto guardado"); ocultarEstado(); }
-    else { guardarLocal("crm_contactos", contactos); mostrarEstado("⚠️ Guardado localmente", 3000); }
+    else { mostrarEstado("⚠️ Guardado localmente (sin conexión)", 3000); }
     cerrarFormContacto();
     renderContactos();
     renderDashboard();
@@ -2936,15 +3183,14 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     const idx = parseInt(e.target.closest("button").dataset.idx);
     if (!confirm("¿Eliminar este contacto?")) return;
     contactos.splice(idx, 1);
+    guardarLocal("crm_contactos", contactos);
     if (crmLocalOnly) {
-      guardarLocal("crm_contactos", contactos);
       toast("🗑️ Contacto eliminado (Local)");
       renderContactos();
       renderDashboard();
       return;
     }
-    const ok = await guardarContactos(contactos);
-    if (!ok) guardarLocal("crm_contactos", contactos);
+    await guardarContactos(contactos);
     renderContactos();
     renderDashboard();
   }
@@ -3107,6 +3353,8 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     tbody.querySelectorAll(".btn-edit-tk").forEach(b => b.addEventListener("click", prepararEdicionTicket));
     tbody.querySelectorAll(".btn-del-tk").forEach(b => b.addEventListener("click", eliminarTicket));
 
+    updateBrowserTabTitle();
+
     // Update counters
     const el = id => document.getElementById(id);
     el("tk-count-total").textContent = tickets.length;
@@ -3218,8 +3466,8 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
         fechaActualizacion: new Date().toISOString() });
     }
 
+    guardarLocal("crm_tickets", tickets);
     if (crmLocalOnly) {
-      guardarLocal("crm_tickets", tickets);
       toast("💾 Ticket guardado (Local)");
       cerrarFormTicket();
       renderTickets();
@@ -3229,7 +3477,7 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     mostrarEstado("💾 Guardando ticket...");
     const ok = await guardarTickets(tickets);
     if (ok) { toast("💾 Ticket guardado"); ocultarEstado(); }
-    else { guardarLocal("crm_tickets", tickets); mostrarEstado("⚠️ Guardado localmente", 3000); }
+    else { mostrarEstado("⚠️ Guardado localmente (sin conexión)", 3000); }
     cerrarFormTicket();
     renderTickets();
     renderDashboard();
@@ -3261,15 +3509,14 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     const idx = parseInt(e.target.closest("button").dataset.idx);
     if (!confirm("¿Eliminar este ticket?")) return;
     tickets.splice(idx, 1);
+    guardarLocal("crm_tickets", tickets);
     if (crmLocalOnly) {
-      guardarLocal("crm_tickets", tickets);
       toast("🗑️ Ticket eliminado (Local)");
       renderTickets();
       renderDashboard();
       return;
     }
-    const ok = await guardarTickets(tickets);
-    if (!ok) guardarLocal("crm_tickets", tickets);
+    await guardarTickets(tickets);
     renderTickets();
     renderDashboard();
   }
@@ -3364,8 +3611,8 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     }
 
     t.fechaActualizacion = new Date().toISOString();
+    guardarLocal("crm_tickets", tickets);
     if (crmLocalOnly) {
-      guardarLocal("crm_tickets", tickets);
       toast("💬 Nota agregada (Local)");
       renderNotasTicket(t);
       renderTickets();
@@ -3375,7 +3622,7 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     mostrarEstado("💬 Posteando...");
     const ok = await guardarTickets(tickets);
     if (ok) { toast("💬 Nota agregada"); ocultarEstado(); }
-    else { guardarLocal("crm_tickets", tickets); mostrarEstado("⚠️ Guardado localmente", 2000); }
+    else { mostrarEstado("⚠️ Guardado localmente (sin conexión)", 2000); }
     renderNotasTicket(t);
     renderTickets();
     renderDashboard();
