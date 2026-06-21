@@ -2734,10 +2734,15 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     if (avisoEl) avisoEl.style.display = hayVersionesOficiales ? "none" : "flex";
 
     const vis = obtenerEmpresasFiltradas();
-    vis.sort((a, b) => sortEmpresasDir === 'asc'
-      ? (a.EMPRESA || '').localeCompare(b.EMPRESA || '', 'es', { sensitivity: 'base' })
-      : (b.EMPRESA || '').localeCompare(a.EMPRESA || '', 'es', { sensitivity: 'base' })
-    );
+    vis.sort((a, b) => {
+      // Favoritos siempre al tope, sin importar el orden A-Z
+      if (a.FAVORITO && !b.FAVORITO) return -1;
+      if (!a.FAVORITO && b.FAVORITO) return 1;
+      // Entre sí, respetan el orden alfabético seleccionado
+      return sortEmpresasDir === 'asc'
+        ? (a.EMPRESA || '').localeCompare(b.EMPRESA || '', 'es', { sensitivity: 'base' })
+        : (b.EMPRESA || '').localeCompare(a.EMPRESA || '', 'es', { sensitivity: 'base' });
+    });
     const arrowEmp = document.getElementById('sort-arrow-emp');
     if (arrowEmp) { arrowEmp.textContent = sortEmpresasDir === 'asc' ? '↑' : '↓'; arrowEmp.className = 'sort-arrow active'; }
     vis.forEach(c => {
