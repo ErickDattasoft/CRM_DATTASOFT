@@ -4423,7 +4423,16 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       });
       document.getElementById("import-csv-preview")?.classList.remove("hidden");
     };
-    reader.readAsText(file);
+    // Leer primero como binario para detectar encoding Windows-1252 (Excel) vs UTF-8
+    const sniff = new FileReader();
+    sniff.onload = ev => {
+      const bytes = new Uint8Array(ev.target.result.slice(0, 4));
+      // BOM UTF-8: EF BB BF — si está presente, es UTF-8 seguro
+      const enc = (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF)
+        ? 'UTF-8' : 'windows-1252';
+      reader.readAsText(file, enc);
+    };
+    sniff.readAsArrayBuffer(file);
   }
 
   document.getElementById("btnConfirmarImport")?.addEventListener("click", async () => {
@@ -4539,7 +4548,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         alert("Error al leer el archivo JSON. Asegúrate de que sea un JSON válido exportado desde esta aplicación.");
       }
     };
-    reader.readAsText(file);
+    reader.readAsText(file, 'UTF-8');
   }
 
   document.getElementById("btnConfirmarImportJSON")?.addEventListener("click", async () => {
@@ -4654,6 +4663,30 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   // ============================================================
   // COLUMN RESIZE (drag borde de columna como Excel)
   // ============================================================
+  function saveColWidths(tableId) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const widths = Array.from(table.querySelectorAll('thead th')).map(th => th.offsetWidth);
+    localStorage.setItem('crm_colw_' + tableId, JSON.stringify(widths));
+  }
+
+  function restoreColWidths(tableId) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const saved = localStorage.getItem('crm_colw_' + tableId);
+    if (!saved) return;
+    try {
+      const widths = JSON.parse(saved);
+      const ths = table.querySelectorAll('thead th');
+      widths.forEach((w, i) => {
+        if (ths[i] && w > 0) {
+          ths[i].style.width = w + 'px';
+          ths[i].style.minWidth = w + 'px';
+        }
+      });
+    } catch {}
+  }
+
   function initColResize(tableId) {
     const table = document.getElementById(tableId);
     if (!table) return;
@@ -4675,6 +4708,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           handle.classList.remove('resizing');
           document.body.style.cursor = '';
           document.body.style.userSelect = '';
+          saveColWidths(tableId);
           document.removeEventListener('mousemove', onMove);
           document.removeEventListener('mouseup', onUp);
         };
@@ -4686,6 +4720,8 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   }
   initColResize('tabla-empresas');
   initColResize('tabla-contactos');
+  restoreColWidths('tabla-empresas');
+  restoreColWidths('tabla-contactos');
 
   // ============================================================
   // MOBILE SIDEBAR MENU
