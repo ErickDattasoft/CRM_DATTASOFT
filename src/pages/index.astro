@@ -36,6 +36,13 @@ try {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DATTASOFT BY INFOXPERT CRM — Panel de Control</title>
   <meta name="description" content="CRM Técnico para gestión de empresas, versiones de sistemas CONTPAQi y soporte técnico.">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DATTASOFT CRM">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -100,6 +107,7 @@ try {
 
     body {
       font-family: var(--font-body);
+      font-size: 13px;
       background: var(--bg-app);
       color: var(--text-main);
       min-height: 100vh;
@@ -1203,6 +1211,18 @@ try {
     .toggle-icon { display: none; }
     .toggle-label { display: none; }
 
+    /* ===== CONTACT ROWS ===== */
+    .ct-row {
+      cursor: pointer;
+      border-bottom: 1px solid rgba(99,102,241,0.12);
+      transition: background 0.12s;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .ct-row:last-child { border-bottom: none; }
+    .ct-row:hover td { background: rgba(255,255,255,0.06) !important; }
+    .ct-row td { background: transparent; transition: background 0.1s; }
+
     /* ===== SORT ARROWS ===== */
     .th-sortable { cursor: pointer; user-select: none; }
     .th-sortable:hover { color: var(--text-main); }
@@ -1219,10 +1239,150 @@ try {
     .hidden { display: none !important; }
 
     /* ===== SCROLLBAR ===== */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.2); border-radius: 10px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.4); }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.55); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.85); border: 2px solid transparent; background-clip: padding-box; }
+    ::-webkit-scrollbar-corner { background: transparent; }
+
+    /* Col resize handle */
+    .col-resize-handle {
+      position: absolute;
+      right: 0; top: 0; bottom: 0;
+      width: 5px;
+      cursor: col-resize;
+      background: transparent;
+      z-index: 10;
+    }
+    .col-resize-handle:hover, .col-resize-handle.resizing {
+      background: rgba(99,102,241,0.6);
+    }
+    th { position: relative; }
+
+    /* ===================================================
+       RESPONSIVE / MOBILE-FIRST  (@media ≤ 768px)
+    =================================================== */
+    .btn-mobile-menu {
+      display: none;
+      background: transparent;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      padding: 6px 10px;
+      cursor: pointer;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 99;
+      backdrop-filter: blur(2px);
+    }
+    .sidebar-overlay.active { display: block; }
+
+    @media (max-width: 768px) {
+      /* Sidebar como overlay deslizable */
+      .btn-mobile-menu { display: flex; align-items: center; }
+      .btn-sidebar-toggle { display: none; }
+
+      .sidebar {
+        position: fixed;
+        top: 0; left: 0; bottom: 0;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        z-index: 100;
+        width: 260px !important;
+        min-width: 260px !important;
+        overflow: hidden !important;
+      }
+      .sidebar.mobile-open {
+        transform: translateX(0);
+      }
+      .sidebar.collapsed {
+        width: 260px !important;
+        min-width: 260px !important;
+        overflow: hidden !important;
+      }
+      .sidebar.collapsed .sidebar-brand > div:not(.sidebar-brand-logo),
+      .sidebar.collapsed .sidebar-section-label,
+      .sidebar.collapsed .nav-label,
+      .sidebar.collapsed .nav-badge { display: revert; }
+      .sidebar.collapsed .sidebar-brand { padding: 24px 20px; gap: 12px; justify-content: flex-start; }
+      .sidebar.collapsed .nav-item { justify-content: flex-start; padding: 11px 14px; gap: 12px; }
+      .sidebar.collapsed .sidebar-footer { padding: 12px; }
+      .sidebar.collapsed .btn-sidebar-toggle { display: none; }
+      .sidebar.collapsed .toggle-label { display: block; }
+
+      /* Main content ocupa toda la pantalla */
+      .main-content { width: 100%; }
+
+      /* Topbar más compacto */
+      .topbar { padding: 12px 16px; }
+      .topbar-actions .btn { display: none; }
+
+      /* Content scroll con padding menor */
+      .content-scroll { padding: 12px; }
+
+      /* Stats grid: 2 columnas en móvil */
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+      .stat-card { padding: 14px 12px; }
+      .stat-value { font-size: 1.6rem; }
+      .stat-label { font-size: 0.65rem; }
+
+      /* Controls bar apilado */
+      .controls-bar { flex-direction: column; align-items: stretch; gap: 8px; }
+      .controls-left, .controls-right { width: 100%; }
+      .search-bar input { width: 100%; }
+
+      /* Tablas: scroll horizontal */
+      .table-wrap {
+        max-height: calc(100vh - 220px);
+        border-radius: var(--radius-md);
+      }
+      table { font-size: 0.75rem; }
+      th, td { padding: 8px 10px; }
+
+      /* Formularios a pantalla completa */
+      .form-card {
+        position: fixed !important;
+        inset: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        border-radius: 0 !important;
+        z-index: 200;
+        overflow-y: auto;
+        margin: 0 !important;
+      }
+
+      /* Modales full screen */
+      .modal-overlay .modal-box {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100vh;
+        border-radius: 0;
+        overflow-y: auto;
+      }
+
+      /* Botones más grandes para touch */
+      .btn { min-height: 38px; padding: 8px 14px; }
+      .btn-xs { min-height: 32px; padding: 5px 10px; font-size: 0.75rem; }
+
+      /* Sección de dashboard tickets */
+      .tickets-recientes table { font-size: 0.72rem; }
+    }
+
+    @media (max-width: 480px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .topbar-title { font-size: 0.95rem; }
+      .topbar-subtitle { font-size: 0.65rem; }
+    }
   </style>
 </head>
 <body>
@@ -1272,12 +1432,18 @@ try {
   <!-- Botón colapsar sidebar: fuera del aside para no ser recortado por overflow -->
   <button id="btnToggleSidebar" class="btn-sidebar-toggle" title="Colapsar menú">&#8249;</button>
 
+  <!-- Overlay para cerrar sidebar en móvil -->
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
   <!-- ===== MAIN CONTENT ===== -->
   <div class="main-content">
     <div class="topbar">
-      <div>
-        <div class="topbar-title" id="topbar-title">Dashboard</div>
-        <div class="topbar-subtitle" id="topbar-subtitle">Resumen general del CRM</div>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button id="btnMobileMenu" class="btn-mobile-menu" aria-label="Menú">☰</button>
+        <div>
+          <div class="topbar-title" id="topbar-title">Dashboard</div>
+          <div class="topbar-subtitle" id="topbar-subtitle">Resumen general del CRM</div>
+        </div>
       </div>
       <div class="topbar-actions">
         <button class="btn btn-ghost btn-sm" id="btnImportarJSON">📤 Importar JSON</button>
@@ -1441,17 +1607,17 @@ try {
               ⚠️ <strong>Sin versiones oficiales.</strong>&nbsp; Ve a <strong>Versiones Oficiales</strong> (panel izquierdo) y captura la versión actual de cada sistema CONTPAQi (ej: <code style="background:rgba(0,0,0,0.2); padding:1px 5px; border-radius:4px;">18.1.0</code>) para ver los colores de actualización.
             </div>
 
-            <div class="table-wrap">
-              <table>
+            <div class="table-wrap" id="table-wrap-empresas">
+              <table id="tabla-empresas" style="table-layout:fixed;">
                 <thead>
                   <tr>
                     <th style="width:40px; min-width:40px; text-align:center;"><input type="checkbox" id="chkSeleccionarTodo" style="cursor:pointer;"></th>
-                    <th class="th-sortable" id="th-sort-emp" style="min-width:190px; width:200px;">Empresa <span class="sort-arrow active" id="sort-arrow-emp">↑</span></th>
-                    <th style="min-width:180px; width:190px;">Contacto</th>
+                    <th class="th-sortable" id="th-sort-emp" style="min-width:130px; width:180px;">Empresa <span class="sort-arrow active" id="sort-arrow-emp">↑</span><div class="col-resize-handle"></div></th>
+                    <th style="min-width:130px; width:160px;">Contacto<div class="col-resize-handle"></div></th>
                     {listaSistemasOpciones.map(sistema => (
-                      <th style="text-align:center; font-size:0.62rem; min-width:95px; width:100px; white-space:normal; line-height:1.2;">{sistema}</th>
+                      <th style="text-align:center; font-size:0.62rem; min-width:80px; width:90px; white-space:normal; line-height:1.2;">{sistema}<div class="col-resize-handle"></div></th>
                     ))}
-                    <th style="text-align:center; min-width:120px; width:120px;">Acciones</th>
+                    <th style="text-align:center; min-width:100px; width:110px;">Acciones</th>
                   </tr>
                 </thead>
                 <tbody id="tabla-empresas-body"></tbody>
@@ -1519,16 +1685,16 @@ try {
           </div>
         </div>
 
-        <div class="table-wrap">
-          <table style="table-layout: fixed;">
+        <div class="table-wrap" id="table-wrap-contactos">
+          <table id="tabla-contactos" style="table-layout: fixed;">
             <thead>
               <tr>
-                <th class="th-sortable" id="th-sort-ct" style="width:170px; min-width:170px;">Nombre <span class="sort-arrow active" id="sort-arrow-ct">↑</span></th>
-                <th style="width:220px; min-width:220px;">Correo</th>
-                <th style="width:130px; min-width:130px;">Teléfono 1</th>
-                <th style="width:130px; min-width:130px;">Teléfono 2</th>
-                <th style="width:200px; min-width:200px;">Empresa</th>
-                <th style="width:90px; min-width:90px; text-align:center;">Acciones</th>
+                <th class="th-sortable" id="th-sort-ct" style="width:170px; min-width:130px;">Nombre <span class="sort-arrow active" id="sort-arrow-ct">↑</span><div class="col-resize-handle"></div></th>
+                <th style="width:220px; min-width:130px;">Correo<div class="col-resize-handle"></div></th>
+                <th style="width:130px; min-width:90px;">Teléfono 1<div class="col-resize-handle"></div></th>
+                <th style="width:130px; min-width:90px;">Teléfono 2<div class="col-resize-handle"></div></th>
+                <th style="width:200px; min-width:130px;">Empresa<div class="col-resize-handle"></div></th>
+                <th style="width:90px; min-width:80px; text-align:center;">Acciones</th>
               </tr>
             </thead>
             <tbody id="tabla-contactos-body"></tbody>
@@ -2385,23 +2551,12 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
           await guardarPlantilla(plantillaMensaje);
           mostrarEstado(`✅ ${clientes.length} empresas restauradas de respaldo local`, 3000);
         } else {
-          // Sin datos en ningún lado — sembrar con datos iniciales del JSON
-          mostrarEstado("⚠️ Base de datos vacía. Iniciando...");
-          clientes = unificarDatosIniciales();
+          // Sin datos locales ni en Firebase — NO sembrar automáticamente
+          // Esto evita sobreescribir Firebase con datos de ejemplo por error de conexión
+          clientes = [];
+          contactos = [];
           tickets = [];
-          contactos = unificarContactosIniciales();
-          listaSistemas.forEach(s => {
-            const k = s.toUpperCase().trim();
-            if (!versionesMercado[k]) versionesMercado[k] = "";
-            if (!cartasTecnicas[k]) cartasTecnicas[k] = "";
-          });
-          await guardarClientes(clientes);
-          await guardarConfiguracion(versionesMercado, cartasTecnicas);
-          await guardarPlantilla(plantillaMensaje);
-          await guardarTickets(tickets);
-          await guardarContactos(contactos);
-          await guardarConfigTickets(configTickets);
-          mostrarEstado(`🔧 Sembrados ${clientes.length} empresas`, 2500);
+          mostrarEstado("⚠️ Firebase vacío y sin respaldo local. Ve a Configuración → Importar datos.", 6000);
         }
       }
 
@@ -3024,6 +3179,8 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     filtrados.forEach((c, _) => {
       const idx = contactos.indexOf(c);
       const tr = document.createElement("tr");
+      tr.className = "ct-row";
+      tr.dataset.idx = idx;
       const tdStyle = "overflow:hidden; white-space:nowrap; text-overflow:ellipsis; max-width:0;";
       tr.innerHTML = `
         <td style="${tdStyle}"><strong title="${c.nombre || ''}">${c.nombre || "—"}</strong></td>
@@ -3132,6 +3289,21 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
 
   document.getElementById("btnCancelarContacto")?.addEventListener("click", cerrarFormContacto);
 
+  function editarContactoDirecto(idx) {
+    const c = contactos[idx];
+    if (!c) return;
+    cerrarFormContacto();
+    document.getElementById("form-ct-titulo").textContent = "✏️ Editar Contacto";
+    editCtIdx.value = idx;
+    document.getElementById("form-ct-nombre").value = c.nombre || "";
+    document.getElementById("form-ct-correo").value = c.correo || "";
+    document.getElementById("form-ct-tel1").value = c.telefono1 || "";
+    document.getElementById("form-ct-tel2").value = c.telefono2 || "";
+    setEmpresaContacto(c.empresa || "");
+    formCt?.classList.remove("hidden");
+    formCt?.scrollIntoView({ behavior: "smooth" });
+  }
+
   function prepararEdicionContacto(e) {
     const idx = parseInt(e.target.closest("button").dataset.idx);
     const c = contactos[idx];
@@ -3196,6 +3368,47 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
   }
 
   document.getElementById("txtBuscarContacto")?.addEventListener("input", renderContactos);
+
+  // Delegación de eventos en tabla contactos — click selecciona, doble click edita
+  const tbodyCt = document.getElementById("tabla-contactos-body");
+
+  function clearCtSelection() {
+    tbodyCt?.querySelectorAll(".ct-row").forEach(r => {
+      r.classList.remove("ct-selected");
+      r.querySelectorAll("td").forEach((td, i) => {
+        td.style.background = "";
+        td.style.borderLeft = "";
+        td.style.paddingLeft = "";
+      });
+    });
+  }
+
+  function selectCtRow(row) {
+    clearCtSelection();
+    row.classList.add("ct-selected");
+    row.querySelectorAll("td").forEach((td, i) => {
+      td.style.background = "rgba(34,211,238,0.22)";
+      if (i === 0) {
+        td.style.borderLeft = "4px solid #22d3ee";
+        td.style.paddingLeft = "14px";
+      }
+    });
+  }
+
+  tbodyCt?.addEventListener("click", (e) => {
+    if (e.target.closest("button")) return;
+    const row = e.target.closest(".ct-row");
+    if (!row) return;
+    selectCtRow(row);
+  });
+  tbodyCt?.addEventListener("dblclick", (e) => {
+    e.preventDefault();
+    if (e.target.closest("button")) return;
+    const row = e.target.closest(".ct-row");
+    if (!row) return;
+    selectCtRow(row);
+    editarContactoDirecto(parseInt(row.dataset.idx));
+  });
 
   // ============================================================
   // TICKETS
@@ -4432,6 +4645,71 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   // INIT
   // ============================================================
   inicializarApp();
+
+  // ============================================================
+  // COLUMN RESIZE (drag borde de columna como Excel)
+  // ============================================================
+  function initColResize(tableId) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    table.querySelectorAll('.col-resize-handle').forEach(handle => {
+      let startX, startW, th;
+      handle.addEventListener('mousedown', e => {
+        th = handle.closest('th');
+        startX = e.pageX;
+        startW = th.offsetWidth;
+        handle.classList.add('resizing');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        const onMove = ev => {
+          const w = Math.max(60, startW + (ev.pageX - startX));
+          th.style.width = w + 'px';
+          th.style.minWidth = w + 'px';
+        };
+        const onUp = () => {
+          handle.classList.remove('resizing');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+        };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+        e.preventDefault();
+      });
+    });
+  }
+  initColResize('tabla-empresas');
+  initColResize('tabla-contactos');
+
+  // ============================================================
+  // MOBILE SIDEBAR MENU
+  // ============================================================
+  const mobileMenuBtn = document.getElementById('btnMobileMenu');
+  const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+  function openMobileSidebar() {
+    mainSidebar?.classList.add('mobile-open');
+    sidebarOverlay?.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeMobileSidebar() {
+    mainSidebar?.classList.remove('mobile-open');
+    sidebarOverlay?.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+  mobileMenuBtn?.addEventListener('click', openMobileSidebar);
+  sidebarOverlay?.addEventListener('click', closeMobileSidebar);
+
+  // Cerrar sidebar al navegar en móvil
+  navItems.forEach(n => n.addEventListener('click', () => {
+    if (window.innerWidth <= 768) closeMobileSidebar();
+  }));
+
+  // PWA — registrar service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
 })();
 </script>
 </body>
