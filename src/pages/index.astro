@@ -3434,7 +3434,7 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
           // Empresa SIN versión registrada
           if (vO && vOTieneNumero) {
             txt = "Sin versión"; debugTitle = `Empresa: sin datos | Oficial: ${vO}`;
-            badgeStyle = `${pillBase} background:#0369a1; color:#ffffff;`; // AZUL
+            badgeStyle = `${pillBase} background:#0369a1; color:#ffffff;`;
           } else {
             txt = "—"; debugTitle = "Sin datos";
             badgeStyle = "color:#475569; font-size:0.85rem;";
@@ -3444,16 +3444,31 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
           txt = vC;
           if (!vO || !vOTieneNumero) {
             debugTitle = `Empresa: ${vC} | Sin versión oficial`;
-            badgeStyle = `${pillBase} background:#0369a1; color:#ffffff;`; // AZUL - sin oficial
+            badgeStyle = `${pillBase} background:#0369a1; color:#ffffff;`;
           } else {
             const cmp = compararVersiones(vC, vO);
             debugTitle = `Empresa: ${vC} | Oficial: ${vO} | cmp: ${cmp}`;
             badgeStyle = cmp < 0
-              ? `${pillBase} background:#dc2626; color:#ffffff;`  // ROJO - menor
-              : `${pillBase} background:#16a34a; color:#ffffff;`; // VERDE - igual o mayor
+              ? `${pillBase} background:#dc2626; color:#ffffff;`
+              : `${pillBase} background:#16a34a; color:#ffffff;`;
           }
         }
-        html += `<td style="${tdBase} text-align:center;"><span style="${badgeStyle}" title="${debugTitle}">${txt}</span></td>`;
+
+        // Fecha de vencimiento de licencia para este sistema
+        const vencFecha = c.VENCIMIENTOS?.[sKey] || "";
+        let vencHtml = "";
+        if (vencFecha) {
+          const hoyV = new Date(); hoyV.setHours(0,0,0,0);
+          const diasV = Math.ceil((new Date(vencFecha + "T00:00:00") - hoyV) / 86400000);
+          const [vy, vm, vd] = vencFecha.split("-");
+          const fechaCorta = `${vd}/${vm}/${vy.slice(2)}`;
+          const colorV = diasV < 0 ? "#f87171" : diasV <= 30 ? "#fbbf24" : "#6ee7b7";
+          const iconV = diasV < 0 ? "🔴" : diasV <= 30 ? "⚠️" : "📅";
+          vencHtml = `<span style="display:block; font-size:0.6rem; color:${colorV}; margin-top:3px; white-space:nowrap;" title="Vencimiento: ${fechaCorta}${diasV < 0 ? ' (VENCIDA)' : ` (${diasV}d)`}">${iconV} ${fechaCorta}</span>`;
+        }
+
+        html += `<td style="${tdBase} text-align:center;">\
+<span style="${badgeStyle}" title="${debugTitle}">${txt}</span>${vencHtml}</td>`;
       });
 
       html += `
