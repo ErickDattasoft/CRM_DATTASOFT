@@ -1490,9 +1490,75 @@ try {
       .topbar-title { font-size: 0.95rem; }
       .topbar-subtitle { font-size: 0.65rem; }
     }
+  /* ── Login overlay ── */
+  #login-overlay {
+    position: fixed; inset: 0; background: #0b0e16;
+    z-index: 9999; display: flex; align-items: center; justify-content: center;
+  }
+  #login-overlay.hidden { display: none !important; }
+  #login-box {
+    background: rgba(26,30,41,0.98);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 40px 36px;
+    width: 360px; max-width: 92%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  #login-box .login-icon { font-size: 3rem; margin-bottom: 10px; }
+  #login-box .login-title { font-size: 1.15rem; font-weight: 800; color: #fff; margin-bottom: 4px; }
+  #login-box .login-sub { font-size: 0.8rem; color: #8b95a8; margin-bottom: 28px; }
+  #login-pass-input {
+    width: 100%; background: #1e2231; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 12px 16px; color: #e2e8f0; font-size: 0.95rem;
+    font-family: inherit; outline: none; margin-bottom: 10px; text-align: center;
+    letter-spacing: 0.1em;
+  }
+  #login-pass-input:focus { border-color: #6366f1; }
+  #login-error { font-size: 0.8rem; color: #f87171; min-height: 20px; margin-bottom: 8px; }
+  #login-btn {
+    width: 100%; background: #6366f1; color: #fff; border: none; border-radius: 10px;
+    padding: 12px; font-size: 0.95rem; font-weight: 700; cursor: pointer; font-family: inherit;
+    transition: background 0.2s, transform 0.1s;
+  }
+  #login-btn:hover { background: #4f46e5; transform: translateY(-1px); }
+  #login-btn:active { transform: translateY(0); }
+
+  /* ── Botón portal en sidebar ── */
+  .sidebar-portal-btn {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px; margin: 6px 10px 2px;
+    background: rgba(99,102,241,0.1); border: 1px dashed rgba(99,102,241,0.35);
+    border-radius: var(--radius-md); color: #818cf8; font-size: 0.78rem; font-weight: 600;
+    cursor: pointer; text-decoration: none; transition: var(--transition-base);
+  }
+  .sidebar-portal-btn:hover { background: rgba(99,102,241,0.2); border-color: rgba(99,102,241,0.6); }
+  .sidebar.collapsed .sidebar-portal-btn .portal-label { display: none; }
+  .sidebar-logout-btn {
+    display: flex; align-items: center; gap: 10px; padding: 9px 14px; margin: 2px 10px 8px;
+    background: transparent; border: 1px solid rgba(239,68,68,0.2);
+    border-radius: var(--radius-md); color: #f87171; font-size: 0.75rem; font-weight: 600;
+    cursor: pointer; transition: var(--transition-base);
+  }
+  .sidebar-logout-btn:hover { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.4); }
+  .sidebar.collapsed .sidebar-logout-btn .logout-label { display: none; }
   </style>
 </head>
 <body>
+
+<!-- ============================== -->
+<!-- LOGIN OVERLAY                  -->
+<!-- ============================== -->
+<div id="login-overlay">
+  <div id="login-box">
+    <div class="login-icon">📊</div>
+    <div class="login-title">DATTASOFT CRM</div>
+    <div class="login-sub">Acceso restringido — ingresa tu contraseña</div>
+    <input id="login-pass-input" type="password" placeholder="Contraseña" autocomplete="current-password">
+    <div id="login-error"></div>
+    <button id="login-btn">Ingresar →</button>
+  </div>
+</div>
+
 
 <div id="loading-status"><span>🔄 Conectando a Firebase...</span></div>
 
@@ -1545,6 +1611,13 @@ try {
         <span class="nav-icon">ℹ️</span>
         <span class="nav-label">Acerca de</span>
       </div>
+      <div style="flex:1;"></div>
+      <a href="/ticket-publico/" target="_blank" class="sidebar-portal-btn" title="Abrir portal de tickets para clientes">
+        <span>🔗</span><span class="portal-label">Portal Clientes</span>
+      </a>
+      <button id="btnLogout" class="sidebar-logout-btn" title="Cerrar sesión">
+        <span>🔓</span><span class="logout-label">Cerrar sesión</span>
+      </button>
     </nav>
   </aside>
 
@@ -2120,6 +2193,23 @@ try {
             <button class="btn btn-ghost btn-sm" id="btnToggleTema" style="min-width:150px;">🌙 Modo Oscuro (activo)</button>
           </div>
         </div>
+
+        <div class="card" style="margin-top:20px;">
+          <div class="card-title">🔐 Contraseña de acceso al CRM</div>
+          <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">La contraseña protege el acceso al CRM. Se guarda localmente en este navegador. La contraseña predeterminada inicial es <strong style="color:var(--brand-primary-hover);">datta2025</strong>.</p>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; max-width:440px;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label>Nueva contraseña</label>
+              <input id="cfg-pass-nueva" type="password" placeholder="Mín. 6 caracteres">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label>Confirmar contraseña</label>
+              <input id="cfg-pass-confirmar" type="password" placeholder="Repite la contraseña">
+            </div>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="btnCambiarPass" style="margin-top:12px;">🔐 Cambiar contraseña</button>
+          <span id="cfg-pass-msg" style="font-size:0.78rem; margin-left:10px;"></span>
+        </div>
       </div>
 
       <!-- ============================== -->
@@ -2417,6 +2507,58 @@ try {
 
 <script>
 import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico } from "../data/firebase.js";
+
+// ── Auth ──────────────────────────────────────────────────────
+async function sha256(str: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+const DEFAULT_PASS = "datta2025";
+const HASH_KEY = "crm_auth_hash";
+const SESSION_KEY = "crm_session";
+
+async function getStoredHash(): Promise<string> {
+  return localStorage.getItem(HASH_KEY) || await sha256(DEFAULT_PASS);
+}
+
+async function verificarSesion() {
+  if (sessionStorage.getItem(SESSION_KEY) === "1") {
+    document.getElementById("login-overlay")?.classList.add("hidden");
+    return;
+  }
+  // Overlay ya visible por defecto
+}
+
+async function intentarLogin() {
+  const pass = (document.getElementById("login-pass-input") as HTMLInputElement)?.value;
+  const errEl = document.getElementById("login-error");
+  if (!pass) { if (errEl) errEl.textContent = "Ingresa tu contraseña."; return; }
+  const hash = await sha256(pass);
+  const stored = await getStoredHash();
+  if (hash === stored) {
+    sessionStorage.setItem(SESSION_KEY, "1");
+    document.getElementById("login-overlay")?.classList.add("hidden");
+    if (errEl) errEl.textContent = "";
+  } else {
+    if (errEl) { errEl.textContent = "Contraseña incorrecta."; }
+    const inp = document.getElementById("login-pass-input") as HTMLInputElement;
+    if (inp) { inp.value = ""; inp.focus(); }
+  }
+}
+
+document.getElementById("login-btn")?.addEventListener("click", intentarLogin);
+document.getElementById("login-pass-input")?.addEventListener("keydown", (e) => {
+  if ((e as KeyboardEvent).key === "Enter") intentarLogin();
+});
+document.getElementById("btnLogout")?.addEventListener("click", () => {
+  if (!confirm("¿Cerrar sesión?")) return;
+  sessionStorage.removeItem(SESSION_KEY);
+  location.reload();
+});
+
+verificarSesion();
+// ──────────────────────────────────────────────────────────────
 
 (() => {
   // ============================================================
@@ -4744,6 +4886,22 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const ok = await guardarConfigTickets(configTickets);
     if (ok) { toast("💾 Configuración guardada"); ocultarEstado(); }
     else { guardarLocal("crm_config_tickets", configTickets); mostrarEstado("⚠️ Guardado localmente", 3000); }
+  });
+
+  document.getElementById("btnCambiarPass")?.addEventListener("click", async () => {
+    const nueva = (document.getElementById("cfg-pass-nueva") as HTMLInputElement)?.value;
+    const confirmar = (document.getElementById("cfg-pass-confirmar") as HTMLInputElement)?.value;
+    const msg = document.getElementById("cfg-pass-msg");
+    if (!nueva || nueva.length < 6) { if (msg) { msg.textContent = "⚠️ Mínimo 6 caracteres."; msg.style.color = "#f87171"; } return; }
+    if (nueva !== confirmar) { if (msg) { msg.textContent = "⚠️ Las contraseñas no coinciden."; msg.style.color = "#f87171"; } return; }
+    const hash = await sha256(nueva);
+    localStorage.setItem(HASH_KEY, hash);
+    sessionStorage.setItem(SESSION_KEY, "1");
+    if (msg) { msg.textContent = "✅ Contraseña actualizada."; msg.style.color = "#34d399"; }
+    (document.getElementById("cfg-pass-nueva") as HTMLInputElement).value = "";
+    (document.getElementById("cfg-pass-confirmar") as HTMLInputElement).value = "";
+    setTimeout(() => { if (msg) msg.textContent = ""; }, 4000);
+    toast("🔐 Contraseña de acceso actualizada");
   });
 
   // ============================================================
