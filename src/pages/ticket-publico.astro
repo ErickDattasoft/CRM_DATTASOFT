@@ -126,6 +126,69 @@
     .spinner { display: none; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    .img-drop-zone {
+      position: relative;
+      border: 2px dashed rgba(99,102,241,0.35);
+      border-radius: 10px;
+      padding: 18px;
+      text-align: center;
+      color: #8b95a8;
+      font-size: 0.83rem;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      background: rgba(99,102,241,0.04);
+    }
+    .img-drop-zone:hover, .img-drop-zone.drag-over {
+      border-color: #6366f1;
+      background: rgba(99,102,241,0.1);
+    }
+    .img-drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      border: none;
+      background: none;
+    }
+    .img-preview-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .img-thumb {
+      position: relative;
+      width: 72px;
+      height: 72px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: #1e2231;
+      flex-shrink: 0;
+    }
+    .img-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .img-thumb-del {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      background: rgba(239,68,68,0.85);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 11px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+    }
+
     #success-view {
       display: none;
       text-align: center;
@@ -230,6 +293,16 @@
         <textarea id="pub-descripcion" placeholder="Describe con el mayor detalle posible: ¿qué estabas haciendo cuando ocurrió el error?, ¿qué mensaje de error apareció?, ¿cuándo inició el problema?" required></textarea>
       </div>
 
+      <div class="form-group">
+        <label>Imágenes adjuntas <span style="color:#8b95a8; text-transform:none; font-weight:400; letter-spacing:0;">(opcional · máx. 3 fotos o capturas)</span></label>
+        <div class="img-drop-zone" id="img-drop-zone">
+          <span style="font-size:1.4rem; display:block; margin-bottom:4px;">🖼️</span>
+          <span id="img-drop-text">Haz clic aquí o arrastra imágenes</span>
+          <input type="file" id="pub-imagenes" accept="image/*" multiple>
+        </div>
+        <div class="img-preview-wrap" id="img-previews"></div>
+      </div>
+
       <button class="btn btn-primary" id="btnEnviarTicket">
         <div class="spinner" id="spinner"></div>
         <span id="btn-text">Enviar solicitud de soporte</span>
@@ -244,13 +317,95 @@
   <script>
   (() => {
     const FIREBASE_PROJECT = "agenda-crm-netlify";
-    // Las reglas de Firestore permiten create sin autenticación en tickets_publicos
 
     const btn = document.getElementById("btnEnviarTicket");
     const spinner = document.getElementById("spinner");
     const btnText = document.getElementById("btn-text");
     const alertError = document.getElementById("alert-error");
 
+    // ── Imágenes adjuntas ─────────────────────────────────────
+    const MAX_IMG = 3;
+    const MAX_PX = 900;
+    const QUALITY = 0.70;
+    type ImgData = { nombre: string; tipo: string; data: string };
+    let imagenesAdjuntas: ImgData[] = [];
+
+    function comprimirImagen(file: File): Promise<ImgData> {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = reject;
+        reader.onload = e => {
+          const result = (e.target as FileReader).result as string;
+          const img = new Image();
+          img.onerror = reject;
+          img.onload = () => {
+            let w = img.naturalWidth, h = img.naturalHeight;
+            if (w > MAX_PX || h > MAX_PX) {
+              const r = Math.min(MAX_PX / w, MAX_PX / h);
+              w = Math.round(w * r);
+              h = Math.round(h * r);
+            }
+            const canvas = document.createElement("canvas");
+            canvas.width = w; canvas.height = h;
+            canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+            resolve({ nombre: file.name, tipo: "image/jpeg", data: canvas.toDataURL("image/jpeg", QUALITY) });
+          };
+          img.src = result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function renderPreviews() {
+      const wrap = document.getElementById("img-previews");
+      const txt = document.getElementById("img-drop-text");
+      if (!wrap || !txt) return;
+      wrap.innerHTML = "";
+      txt.textContent = imagenesAdjuntas.length >= MAX_IMG
+        ? `Máximo ${MAX_IMG} imágenes alcanzado`
+        : `Haz clic aquí o arrastra imágenes (${imagenesAdjuntas.length}/${MAX_IMG})`;
+      imagenesAdjuntas.forEach((img, i) => {
+        const div = document.createElement("div");
+        div.className = "img-thumb";
+        div.innerHTML = `<img src="${img.data}" alt="${img.nombre}"><button class="img-thumb-del" data-i="${i}" title="Quitar">×</button>`;
+        div.querySelector(".img-thumb-del")!.addEventListener("click", () => {
+          imagenesAdjuntas.splice(i, 1);
+          renderPreviews();
+        });
+        wrap.appendChild(div);
+      });
+    }
+
+    async function procesarArchivos(files: FileList | null) {
+      if (!files) return;
+      const libres = MAX_IMG - imagenesAdjuntas.length;
+      if (libres <= 0) return;
+      const seleccionados = Array.from(files).filter((f: File) => f.type.startsWith("image/")).slice(0, libres);
+      for (const f of seleccionados) {
+        try {
+          imagenesAdjuntas.push(await comprimirImagen(f));
+        } catch { /* ignorar imagen inválida */ }
+      }
+      renderPreviews();
+    }
+
+    const dropZone = document.getElementById("img-drop-zone");
+    const fileInput = document.getElementById("pub-imagenes") as HTMLInputElement | null;
+
+    fileInput?.addEventListener("change", e => {
+      const inp = e.target as HTMLInputElement;
+      procesarArchivos(inp.files);
+      inp.value = "";
+    });
+    dropZone?.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
+    dropZone?.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+    dropZone?.addEventListener("drop", e => {
+      e.preventDefault();
+      dropZone.classList.remove("drag-over");
+      procesarArchivos((e as DragEvent).dataTransfer?.files ?? null);
+    });
+
+    // ── Envío del formulario ──────────────────────────────────
     function showError(msg) {
       alertError.textContent = msg;
       alertError.style.display = "block";
@@ -285,25 +440,25 @@
       setLoading(true);
 
       const folio = `PUB-${Date.now()}`;
-      const ticket = {
-        folioPub: folio,
-        fuente: "publico",
-        estado: "Pendiente",
-        prioridad,
-        asunto,
-        contacto: nombre,
-        contactoCorreo: correo,
-        empresa,
-        telefono,
-        sistema,
-        descripcion,
-        notas: [],
-        fechaCreacion: new Date().toISOString(),
-        fechaActualizacion: new Date().toISOString()
-      };
+
+      // Construir campo adjuntos en formato REST de Firestore
+      const adjuntosField = imagenesAdjuntas.length > 0
+        ? {
+            arrayValue: {
+              values: imagenesAdjuntas.map(img => ({
+                mapValue: {
+                  fields: {
+                    nombre: { stringValue: img.nombre },
+                    tipo: { stringValue: img.tipo },
+                    data: { stringValue: img.data }
+                  }
+                }
+              }))
+            }
+          }
+        : { arrayValue: {} };
 
       try {
-        // Guardar en Firestore colección tickets_publicos (sin autenticación)
         const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/tickets_publicos`;
         const resp = await fetch(url, {
           method: "POST",
@@ -312,7 +467,7 @@
             fields: {
               folioPub: { stringValue: folio },
               fuente: { stringValue: "publico" },
-              estado: { stringValue: ticket.estado },
+              estado: { stringValue: "Pendiente" },
               prioridad: { stringValue: prioridad },
               asunto: { stringValue: asunto },
               contacto: { stringValue: nombre },
@@ -321,8 +476,9 @@
               telefono: { stringValue: telefono || "" },
               sistema: { stringValue: sistema || "" },
               descripcion: { stringValue: descripcion },
-              fechaCreacion: { stringValue: ticket.fechaCreacion },
-              revisado: { booleanValue: false }
+              fechaCreacion: { stringValue: new Date().toISOString() },
+              revisado: { booleanValue: false },
+              adjuntos: adjuntosField
             }
           })
         });

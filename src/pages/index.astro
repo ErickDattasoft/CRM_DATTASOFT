@@ -5528,6 +5528,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
             </div>
             <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">⚡ Prioridad: <strong>${t.prioridad || "Media"}</strong> · 📅 ${t.fechaCreacion ? new Date(t.fechaCreacion).toLocaleString('es-MX') : "—"}</div>
             <div style="margin-top:8px; font-size:0.82rem; background:var(--bg-card); padding:10px 12px; border-radius:var(--radius-sm); border-left:3px solid var(--brand-warning); color:var(--text-main);">${(t.descripcion || "").replace(/\n/g,"<br>")}</div>
+            ${(t.adjuntos && t.adjuntos.length > 0) ? `<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">${t.adjuntos.map((a: any) => `<a href="${a.data}" target="_blank" title="${a.nombre}"><img src="${a.data}" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:1px solid var(--border-color); cursor:pointer;"></a>`).join("")}</div>` : ""}
           </div>
           <div style="display:flex; flex-direction:column; gap:6px; flex-shrink:0;">
             <button class="btn btn-success btn-xs btn-aceptar-pub" data-i="${i}" style="white-space:nowrap;">✅ Aceptar ticket</button>
@@ -5550,7 +5551,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           grupo: "", agente: "",
           descripcion: (tp.descripcion || "").replace(/\n/g, "<br>"),
           referido: "Portal Público", solicitado: "", canalizado: "", realizado: "",
-          adjuntos: [],
+          adjuntos: tp.adjuntos || [],
           notas: [{ autor: "Sistema", fecha: new Date().toISOString(), texto: `Ticket importado del portal público. Folio original: ${tp.folioPub || "—"}` }],
           fechaCreacion: tp.fechaCreacion || new Date().toISOString(),
           fechaActualizacion: new Date().toISOString()
