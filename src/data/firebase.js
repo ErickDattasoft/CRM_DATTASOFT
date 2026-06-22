@@ -132,6 +132,20 @@ export async function cargarTicketsPublicos() {
 }
 
 /**
+ * Guarda la lista de usuarios del CRM en Firestore.
+ */
+export async function guardarUsuarios(usuarios) {
+  try {
+    const docRef = doc(db, "agenda", "datos");
+    await setDoc(docRef, { usuarios }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error al guardar usuarios:", error);
+    return false;
+  }
+}
+
+/**
  * Elimina un ticket del área pública (tras ser importado al CRM o rechazado).
  */
 export async function eliminarTicketPublico(fbId) {

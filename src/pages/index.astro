@@ -1523,6 +1523,32 @@ try {
   }
   #login-btn:hover { background: #4f46e5; transform: translateY(-1px); }
   #login-btn:active { transform: translateY(0); }
+  #login-back-btn {
+    background: rgba(255,255,255,0.06); color: #8b95a8; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 11px 16px; font-size: 0.88rem; font-weight: 600;
+    cursor: pointer; font-family: inherit; transition: all 0.2s; white-space: nowrap;
+  }
+  #login-back-btn:hover { background: rgba(255,255,255,0.1); }
+  #login-user-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; margin-bottom: 4px;
+  }
+  .login-user-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 14px 8px; background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
+    cursor: pointer; transition: all 0.18s; color: #e2e8f0; font-family: inherit;
+  }
+  .login-user-btn:hover { background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.4); transform: translateY(-1px); }
+  .login-user-admin { border-color: rgba(99,102,241,0.25); }
+  .login-user-avatar {
+    width: 38px; height: 38px; border-radius: 50%; background: rgba(99,102,241,0.18);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; font-weight: 800; color: #818cf8;
+  }
+  .login-user-btn:not(.login-user-admin) .login-user-avatar { background: rgba(255,255,255,0.07); color: #cbd5e1; }
+  .login-user-name { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; }
+  .login-user-role { font-size: 0.6rem; color: #818cf8; font-weight: 600; background: rgba(99,102,241,0.15); padding: 1px 5px; border-radius: 3px; }
+  #login-selected-name { font-size:0.95rem; font-weight:700; color:#e2e8f0; margin-bottom:14px; }
 
   /* ── Botón portal en sidebar ── */
   .sidebar-portal-btn {
@@ -1552,10 +1578,21 @@ try {
   <div id="login-box">
     <div class="login-icon">📊</div>
     <div class="login-title">DATTASOFT CRM</div>
-    <div class="login-sub">Acceso restringido — ingresa tu contraseña</div>
-    <input id="login-pass-input" type="password" placeholder="Contraseña" autocomplete="current-password">
-    <div id="login-error"></div>
-    <button id="login-btn">Ingresar →</button>
+    <!-- Paso 1: selección de usuario -->
+    <div id="login-step-user">
+      <div class="login-sub">Selecciona tu usuario</div>
+      <div id="login-user-grid"></div>
+    </div>
+    <!-- Paso 2: contraseña -->
+    <div id="login-step-pass" style="display:none;">
+      <div id="login-selected-name"></div>
+      <input id="login-pass-input" type="password" placeholder="Contraseña" autocomplete="current-password">
+      <div id="login-error"></div>
+      <div style="display:flex; gap:8px; margin-top:4px;">
+        <button id="login-back-btn">← Cambiar</button>
+        <button id="login-btn" style="flex:1;">Ingresar →</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2194,21 +2231,17 @@ try {
           </div>
         </div>
 
-        <div class="card" style="margin-top:20px;">
-          <div class="card-title">🔐 Contraseña de acceso al CRM</div>
-          <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">La contraseña protege el acceso al CRM. Se guarda localmente en este navegador. La contraseña predeterminada inicial es <strong style="color:var(--brand-primary-hover);">datta2025</strong>.</p>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; max-width:440px;">
-            <div class="form-group" style="margin-bottom:0;">
-              <label>Nueva contraseña</label>
-              <input id="cfg-pass-nueva" type="password" placeholder="Mín. 6 caracteres">
-            </div>
-            <div class="form-group" style="margin-bottom:0;">
-              <label>Confirmar contraseña</label>
-              <input id="cfg-pass-confirmar" type="password" placeholder="Repite la contraseña">
-            </div>
+        <div class="card" id="cfg-usuarios-panel" style="margin-top:20px;">
+          <div class="card-title">👥 Usuarios del sistema</div>
+          <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">
+            Solo administradores pueden gestionar usuarios y restablecer contraseñas.<br>
+            Contraseña por defecto de todos: <strong style="color:var(--brand-primary-hover);">datta2025</strong>
+          </p>
+          <div id="cfg-usuarios-list" style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;"></div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-ghost btn-sm" id="btnAgregarUsuario">➕ Agregar usuario</button>
+            <button class="btn btn-secondary btn-sm" id="btnCambiarMiPass">🔐 Cambiar mi contraseña</button>
           </div>
-          <button class="btn btn-secondary btn-sm" id="btnCambiarPass" style="margin-top:12px;">🔐 Cambiar contraseña</button>
-          <span id="cfg-pass-msg" style="font-size:0.78rem; margin-left:10px;"></span>
         </div>
       </div>
 
@@ -2506,50 +2539,104 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico } from "../data/firebase.js";
+import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios } from "../data/firebase.js";
 
-// ── Auth ──────────────────────────────────────────────────────
+// ── Multi-user Auth ───────────────────────────────────────────
 async function sha256(str: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-const DEFAULT_PASS = "datta2025";
-const HASH_KEY = "crm_auth_hash";
 const SESSION_KEY = "crm_session";
+const USUARIOS_KEY = "crm_usuarios";
+const PASS_DEFECTO = "datta2025";
 
-async function getStoredHash(): Promise<string> {
-  return localStorage.getItem(HASH_KEY) || await sha256(DEFAULT_PASS);
+interface Usuario { id: string; nombre: string; rol: "admin" | "normal"; passHash: string; activo: boolean; }
+
+function getUsuarioActual(): { nombre: string; rol: string } | null {
+  try { const s = sessionStorage.getItem(SESSION_KEY); return s ? JSON.parse(s) : null; } catch { return null; }
+}
+function getUsuarios(): Usuario[] {
+  try { return JSON.parse(localStorage.getItem(USUARIOS_KEY) || "[]"); } catch { return []; }
+}
+function saveUsuariosLocal(u: Usuario[]) { localStorage.setItem(USUARIOS_KEY, JSON.stringify(u)); }
+
+async function seedUsuariosDefault(): Promise<Usuario[]> {
+  const h = await sha256(PASS_DEFECTO);
+  const defaults: Usuario[] = [
+    { id: "u1", nombre: "ERICK",    rol: "admin",  passHash: h, activo: true },
+    { id: "u2", nombre: "ARTURO",   rol: "admin",  passHash: h, activo: true },
+    { id: "u3", nombre: "GABY",     rol: "normal", passHash: h, activo: true },
+    { id: "u4", nombre: "GELMI",    rol: "normal", passHash: h, activo: true },
+    { id: "u5", nombre: "INVITADO", rol: "normal", passHash: h, activo: true },
+  ];
+  saveUsuariosLocal(defaults);
+  return defaults;
 }
 
-async function verificarSesion() {
-  if (sessionStorage.getItem(SESSION_KEY) === "1") {
-    document.getElementById("login-overlay")?.classList.add("hidden");
-    return;
-  }
-  // Overlay ya visible por defecto
+let selectedUser: Usuario | null = null;
+
+async function initLoginUI() {
+  let usuarios = getUsuarios();
+  if (!usuarios.length) usuarios = await seedUsuariosDefault();
+  const activos = usuarios.filter(u => u.activo);
+  const grid = document.getElementById("login-user-grid");
+  if (!grid) return;
+  grid.innerHTML = activos.map(u => `
+    <button class="login-user-btn ${u.rol === "admin" ? "login-user-admin" : ""}" data-id="${u.id}">
+      <span class="login-user-avatar">${u.nombre[0]}</span>
+      <span class="login-user-name">${u.nombre}</span>
+      ${u.rol === "admin" ? '<span class="login-user-role">Admin</span>' : ""}
+    </button>`).join("");
+  grid.querySelectorAll<HTMLButtonElement>(".login-user-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      selectedUser = activos.find(u => u.id === btn.dataset.id) || null;
+      if (!selectedUser) return;
+      document.getElementById("login-step-user")!.style.display = "none";
+      document.getElementById("login-step-pass")!.style.display = "block";
+      document.getElementById("login-selected-name")!.textContent = `👤 ${selectedUser.nombre}`;
+      const inp = document.getElementById("login-pass-input") as HTMLInputElement;
+      if (inp) { inp.value = ""; inp.focus(); }
+    });
+  });
 }
 
 async function intentarLogin() {
-  const pass = (document.getElementById("login-pass-input") as HTMLInputElement)?.value;
+  if (!selectedUser) return;
+  const inp = document.getElementById("login-pass-input") as HTMLInputElement;
   const errEl = document.getElementById("login-error");
+  const pass = inp?.value;
   if (!pass) { if (errEl) errEl.textContent = "Ingresa tu contraseña."; return; }
   const hash = await sha256(pass);
-  const stored = await getStoredHash();
-  if (hash === stored) {
-    sessionStorage.setItem(SESSION_KEY, "1");
-    document.getElementById("login-overlay")?.classList.add("hidden");
-    if (errEl) errEl.textContent = "";
-  } else {
-    if (errEl) { errEl.textContent = "Contraseña incorrecta."; }
-    const inp = document.getElementById("login-pass-input") as HTMLInputElement;
+  if (hash !== selectedUser.passHash) {
+    if (errEl) errEl.textContent = "Contraseña incorrecta.";
     if (inp) { inp.value = ""; inp.focus(); }
+    return;
+  }
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify({ nombre: selectedUser.nombre, rol: selectedUser.rol }));
+  sessionStorage.setItem("crm_new_login", "1");
+  document.getElementById("login-overlay")?.classList.add("hidden");
+  if (errEl) errEl.textContent = "";
+}
+
+async function verificarSesion() {
+  if (sessionStorage.getItem(SESSION_KEY)) {
+    document.getElementById("login-overlay")?.classList.add("hidden");
+  } else {
+    await initLoginUI();
   }
 }
 
 document.getElementById("login-btn")?.addEventListener("click", intentarLogin);
-document.getElementById("login-pass-input")?.addEventListener("keydown", (e) => {
+document.getElementById("login-pass-input")?.addEventListener("keydown", e => {
   if ((e as KeyboardEvent).key === "Enter") intentarLogin();
+});
+document.getElementById("login-back-btn")?.addEventListener("click", () => {
+  selectedUser = null;
+  document.getElementById("login-step-pass")!.style.display = "none";
+  document.getElementById("login-step-user")!.style.display = "block";
+  const errEl = document.getElementById("login-error");
+  if (errEl) errEl.textContent = "";
 });
 document.getElementById("btnLogout")?.addEventListener("click", () => {
   if (!confirm("¿Cerrar sesión?")) return;
@@ -2808,6 +2895,7 @@ verificarSesion();
     }
     if (sectionId === "configuracion") renderConfig();
     if (sectionId === "bitacora") renderBitacora();
+    if (sectionId === "configuracion") renderUsuariosPanel();
   }
 
   // Click en stat-cards del dashboard
@@ -3001,6 +3089,9 @@ verificarSesion();
         if (datos.configTickets) {
           configTickets = { ...configTickets, ...datos.configTickets };
         }
+        if (datos.usuarios && datos.usuarios.length > 0) {
+          saveUsuariosLocal(datos.usuarios);
+        }
         // Siempre respaldar en localStorage después de cargar de Firebase
         guardarLocal("crm_clientes", clientes);
         guardarLocal("crm_contactos", contactos);
@@ -3056,6 +3147,11 @@ verificarSesion();
       ocultarEstado();
       initStickyHeaders();
       checkLicenciasPorVencer();
+      // Registrar inicio de sesión en bitácora (solo la primera vez, no en recargas normales)
+      if (sessionStorage.getItem("crm_new_login") === "1") {
+        sessionStorage.removeItem("crm_new_login");
+        logBitacora("Sesión iniciada", "🔐");
+      }
     } catch (err) {
       console.error("Error Firebase, fallback local:", err);
       mostrarEstado("⚠️ Error de conexión a Firebase. Reintentando en la próxima carga.", 4000);
@@ -3071,7 +3167,8 @@ verificarSesion();
   // BITÁCORA
   // ============================================================
   function logBitacora(msg, icon = "📌") {
-    const entry = { fecha: new Date().toISOString(), msg, icon };
+    const u = getUsuarioActual();
+    const entry = { fecha: new Date().toISOString(), msg, icon, usuario: u?.nombre || "Sistema" };
     bitacoraLog.unshift(entry);
     if (bitacoraLog.length > 200) bitacoraLog.length = 200;
     guardarLocal("crm_bitacora", bitacoraLog);
@@ -3087,6 +3184,7 @@ verificarSesion();
     cont.innerHTML = bitacoraLog.slice(0, 100).map(e => `
       <div class="bitacora-entry">
         <span class="bitacora-time">${new Date(e.fecha).toLocaleString('es-MX', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</span>
+        ${e.usuario ? `<span style="font-size:0.68rem; color:#818cf8; font-weight:700; background:rgba(99,102,241,0.12); padding:1px 6px; border-radius:3px; white-space:nowrap; flex-shrink:0;">${e.usuario}</span>` : ""}
         <span class="bitacora-msg">${e.icon} ${e.msg}</span>
       </div>`).join("");
   }
@@ -4888,20 +4986,92 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     else { guardarLocal("crm_config_tickets", configTickets); mostrarEstado("⚠️ Guardado localmente", 3000); }
   });
 
-  document.getElementById("btnCambiarPass")?.addEventListener("click", async () => {
-    const nueva = (document.getElementById("cfg-pass-nueva") as HTMLInputElement)?.value;
-    const confirmar = (document.getElementById("cfg-pass-confirmar") as HTMLInputElement)?.value;
-    const msg = document.getElementById("cfg-pass-msg");
-    if (!nueva || nueva.length < 6) { if (msg) { msg.textContent = "⚠️ Mínimo 6 caracteres."; msg.style.color = "#f87171"; } return; }
-    if (nueva !== confirmar) { if (msg) { msg.textContent = "⚠️ Las contraseñas no coinciden."; msg.style.color = "#f87171"; } return; }
-    const hash = await sha256(nueva);
-    localStorage.setItem(HASH_KEY, hash);
-    sessionStorage.setItem(SESSION_KEY, "1");
-    if (msg) { msg.textContent = "✅ Contraseña actualizada."; msg.style.color = "#34d399"; }
-    (document.getElementById("cfg-pass-nueva") as HTMLInputElement).value = "";
-    (document.getElementById("cfg-pass-confirmar") as HTMLInputElement).value = "";
-    setTimeout(() => { if (msg) msg.textContent = ""; }, 4000);
-    toast("🔐 Contraseña de acceso actualizada");
+  function renderUsuariosPanel() {
+    const uActual = getUsuarioActual();
+    const panel = document.getElementById("cfg-usuarios-panel");
+    if (!panel) return;
+    if (!uActual || uActual.rol !== "admin") { panel.style.display = "none"; return; }
+    panel.style.display = "";
+    const usuarios = getUsuarios();
+    const cont = document.getElementById("cfg-usuarios-list");
+    if (!cont) return;
+    cont.innerHTML = usuarios.map((u, i) => `
+      <div style="display:flex; align-items:center; gap:10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px 14px; opacity:${u.activo ? 1 : 0.5};">
+        <div style="width:32px; height:32px; border-radius:50%; background:${u.rol==="admin"?"rgba(99,102,241,0.2)":"rgba(255,255,255,0.06)"}; display:flex; align-items:center; justify-content:center; font-weight:800; color:${u.rol==="admin"?"#818cf8":"var(--text-main)"}; font-size:0.85rem; flex-shrink:0;">${u.nombre[0]}</div>
+        <div style="flex:1; min-width:0;">
+          <div style="font-weight:700; color:var(--text-bright); font-size:0.88rem;">${u.nombre} <span style="font-size:0.68rem; padding:1px 6px; border-radius:3px; background:${u.rol==="admin"?"rgba(99,102,241,0.12)":"rgba(255,255,255,0.06)"}; color:${u.rol==="admin"?"#818cf8":"var(--text-muted)"};">${u.rol==="admin"?"Admin":"Normal"}</span></div>
+          <div style="font-size:0.7rem; color:${u.activo?"#34d399":"#f87171"};">${u.activo?"● Activo":"● Inactivo"}</div>
+        </div>
+        <button class="btn btn-ghost btn-xs btn-reset-pass" data-i="${i}" title="Restablecer contraseña" style="white-space:nowrap;">🔑 Reset</button>
+        <button class="btn btn-ghost btn-xs btn-toggle-user" data-i="${i}" style="color:${u.activo?"#f87171":"#34d399"}; white-space:nowrap;">${u.activo?"🚫 Off":"✅ On"}</button>
+      </div>`).join("");
+    cont.querySelectorAll<HTMLButtonElement>(".btn-reset-pass").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const i = parseInt(btn.dataset.i!);
+        const u = usuarios[i];
+        const nueva = prompt(`Nueva contraseña para ${u.nombre}:\n(vacío = "${PASS_DEFECTO}")`);
+        if (nueva === null) return;
+        const passNueva = nueva.trim() || PASS_DEFECTO;
+        if (passNueva.length < 4) { toast("⚠️ Mínimo 4 caracteres", "error"); return; }
+        usuarios[i].passHash = await sha256(passNueva);
+        saveUsuariosLocal(usuarios);
+        if (!crmLocalOnly) guardarUsuarios(usuarios).catch(() => {});
+        toast(`🔑 Contraseña de ${u.nombre} restablecida`);
+        logBitacora(`Contraseña restablecida: ${u.nombre}`, "🔑");
+      });
+    });
+    cont.querySelectorAll<HTMLButtonElement>(".btn-toggle-user").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const i = parseInt(btn.dataset.i!);
+        const u = usuarios[i];
+        if (u.rol === "admin" && u.activo) {
+          const adminsActivos = usuarios.filter(x => x.rol === "admin" && x.activo);
+          if (adminsActivos.length <= 1) { toast("⚠️ No puedes desactivar el único administrador activo", "error"); return; }
+        }
+        // No permitir desactivarse a uno mismo
+        if (u.nombre === uActual.nombre) { toast("⚠️ No puedes desactivar tu propia cuenta", "error"); return; }
+        usuarios[i].activo = !usuarios[i].activo;
+        saveUsuariosLocal(usuarios);
+        if (!crmLocalOnly) guardarUsuarios(usuarios).catch(() => {});
+        toast(`${usuarios[i].activo ? "✅ Activado" : "🚫 Desactivado"}: ${u.nombre}`);
+        logBitacora(`Usuario ${u.nombre} ${usuarios[i].activo ? "activado" : "desactivado"}`, "👥");
+        renderUsuariosPanel();
+      });
+    });
+  }
+
+  document.getElementById("btnAgregarUsuario")?.addEventListener("click", async () => {
+    const nombre = prompt("Nombre del nuevo usuario (se guardará en MAYÚSCULAS):");
+    if (!nombre?.trim()) return;
+    const nombreLimpio = nombre.trim().toUpperCase();
+    const usuarios = getUsuarios();
+    if (usuarios.find(u => u.nombre === nombreLimpio)) { toast("⚠️ Ya existe un usuario con ese nombre", "error"); return; }
+    const esAdmin = confirm(`¿${nombreLimpio} será administrador?\n\nAceptar = Admin   Cancelar = Normal`);
+    const hashDef = await sha256(PASS_DEFECTO);
+    usuarios.push({ id: `u${Date.now()}`, nombre: nombreLimpio, rol: esAdmin ? "admin" : "normal", passHash: hashDef, activo: true });
+    saveUsuariosLocal(usuarios);
+    if (!crmLocalOnly) guardarUsuarios(usuarios).catch(() => {});
+    toast(`✅ Usuario ${nombreLimpio} creado — contraseña: ${PASS_DEFECTO}`);
+    logBitacora(`Nuevo usuario creado: ${nombreLimpio}`, "👤");
+    renderUsuariosPanel();
+  });
+
+  document.getElementById("btnCambiarMiPass")?.addEventListener("click", async () => {
+    const uActual = getUsuarioActual();
+    if (!uActual) return;
+    const nueva = prompt(`Cambia tu contraseña (${uActual.nombre}):`);
+    if (!nueva?.trim()) return;
+    if (nueva.trim().length < 4) { toast("⚠️ Mínimo 4 caracteres", "error"); return; }
+    const confirmar = prompt("Confirma la nueva contraseña:");
+    if (nueva.trim() !== confirmar?.trim()) { toast("⚠️ Las contraseñas no coinciden", "error"); return; }
+    const usuarios = getUsuarios();
+    const idx = usuarios.findIndex(u => u.nombre === uActual.nombre);
+    if (idx === -1) return;
+    usuarios[idx].passHash = await sha256(nueva.trim());
+    saveUsuariosLocal(usuarios);
+    if (!crmLocalOnly) guardarUsuarios(usuarios).catch(() => {});
+    toast("🔐 Tu contraseña fue actualizada");
+    logBitacora("Contraseña propia actualizada", "🔐");
   });
 
   // ============================================================
