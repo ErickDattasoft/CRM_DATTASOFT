@@ -244,7 +244,7 @@
   <script>
   (() => {
     const FIREBASE_PROJECT = "agenda-crm-netlify";
-    const FIREBASE_API_KEY = ""; // No necesita API key para writes anónimos con las reglas correctas
+    // Las reglas de Firestore permiten create sin autenticación en tickets_publicos
 
     const btn = document.getElementById("btnEnviarTicket");
     const spinner = document.getElementById("spinner");
