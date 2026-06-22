@@ -372,6 +372,85 @@ try {
       text-transform: uppercase;
       letter-spacing: 0.06em;
     }
+    .stat-icon {
+      font-size: 2rem;
+      line-height: 1;
+      opacity: 0.8;
+      margin-bottom: 4px;
+    }
+    .stat-card:active { transform: scale(0.97); }
+
+    /* ===== LIGHT MODE ===== */
+    body.light-mode {
+      --bg-app: #f0f4f8;
+      --bg-sidebar: #ffffff;
+      --bg-main: #f7f9fc;
+      --bg-card: rgba(255,255,255,0.98);
+      --bg-card-hover: rgba(240,245,255,0.98);
+      --bg-input: #edf2f7;
+      --bg-input-focus: #e2e8f0;
+      --bg-table-header: #e8eef7;
+      --bg-table-row-hover: rgba(99,102,241,0.04);
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      --text-bright: #0f172a;
+      --border-color: rgba(0,0,0,0.08);
+      --border-subtle: rgba(0,0,0,0.04);
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+      --shadow-lg: 0 8px 25px rgba(0,0,0,0.12);
+    }
+    body.light-mode .nav-item { color: #374151; }
+    body.light-mode .nav-item:hover, body.light-mode .nav-item.active { background: rgba(99,102,241,0.08); color: #4f46e5; }
+    body.light-mode .nav-item.active::before { background: #6366f1; }
+    body.light-mode .sidebar-section-label { color: #94a3b8; }
+    body.light-mode .sidebar-brand-sub { color: #64748b; }
+    body.light-mode .topbar { background: rgba(255,255,255,0.95); border-bottom-color: rgba(0,0,0,0.08); }
+    body.light-mode .topbar-title { color: #0f172a; }
+    body.light-mode .topbar-subtitle { color: #64748b; }
+    body.light-mode th { color: #475569; }
+    body.light-mode input, body.light-mode select, body.light-mode textarea { color: #1e293b; }
+    body.light-mode .rte-editor { color: #1e293b; }
+    body.light-mode .card-title { color: #1e293b; }
+    body.light-mode .badge { border: 1px solid rgba(0,0,0,0.08); }
+    body.light-mode .btn-sidebar-toggle { background: #fff; border-color: rgba(0,0,0,0.1); color: #374151; }
+
+    /* ===== ATTACHMENT ZONE ===== */
+    .attachment-zone {
+      border: 2px dashed var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      text-align: center;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      transition: var(--transition-base);
+    }
+    .attachment-zone:hover, .attachment-zone.drag-over {
+      border-color: var(--brand-primary);
+      background: rgba(99,102,241,0.05);
+      color: var(--text-main);
+    }
+    .attachment-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .attachment-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2);
+      border-radius: var(--radius-full); padding: 4px 10px 4px 8px;
+      font-size: 0.72rem; color: var(--brand-primary-hover); max-width: 220px;
+    }
+    .attachment-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .attachment-chip button { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 0.9rem; padding: 0; flex-shrink: 0; }
+    .attachment-chip button:hover { color: var(--brand-danger); }
+
+    /* ===== BITÁCORA ===== */
+    .bitacora-entry {
+      display: flex; gap: 10px; padding: 8px 0;
+      border-bottom: 1px solid var(--border-subtle); font-size: 0.78rem;
+    }
+    .bitacora-entry:last-child { border-bottom: none; }
+    .bitacora-time { white-space: nowrap; color: var(--text-light); font-size: 0.7rem; flex-shrink: 0; min-width: 78px; }
+    .bitacora-msg { color: var(--text-main); flex: 1; }
 
     /* ===== BUTTONS ===== */
     .btn {
@@ -676,35 +755,38 @@ try {
 
     /* ===== MARKET VERSIONS PANEL ===== */
     .market-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px;
     }
     .market-row {
       display: flex;
       flex-direction: column;
       gap: 5px;
       background: var(--bg-input);
-      padding: 12px;
+      padding: 10px 12px;
       border-radius: var(--radius-md);
       border: 1px solid var(--border-color);
       transition: var(--transition-base);
     }
     .market-row:hover {
-      border-color: rgba(99, 102, 241, 0.15);
+      border-color: rgba(99, 102, 241, 0.2);
       background: var(--bg-input-focus);
     }
     .market-row label {
-      font-size: 0.7rem;
+      font-size: 0.68rem;
       font-weight: 800;
       color: var(--text-muted);
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.04em;
     }
+    .market-row-inputs { display: flex; align-items: center; gap: 6px; }
     .market-row input {
-      padding: 6px 10px;
+      padding: 5px 8px;
       font-size: 0.78rem;
+      flex: 1;
     }
+    .version-status { font-size: 0.65rem; white-space: nowrap; }
 
     /* ===== LAYOUT: EMPRESAS ===== */
     .empresas-layout {
@@ -1088,16 +1170,17 @@ try {
     /* ===== SISTEMAS CLIENT GRID ===== */
     .sys-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 8px;
     }
+    .sys-grid .form-group { margin-bottom: 0; }
     .sys-grid .form-group label {
       color: var(--brand-secondary);
-      font-size: 0.7rem;
+      font-size: 0.68rem;
     }
     .sys-grid input {
-      padding: 7px 10px;
-      font-size: 0.8rem;
+      padding: 6px 8px;
+      font-size: 0.78rem;
     }
 
     /* ===== CSV IMPORT ===== */
@@ -1428,6 +1511,14 @@ try {
         <span class="nav-icon">⚙️</span>
         <span class="nav-label">Configuración</span>
       </div>
+      <div class="nav-item" data-section="bitacora" data-tooltip="Bitácora">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">Bitácora</span>
+      </div>
+      <div class="nav-item" id="btnAcercaDe" data-tooltip="Acerca de">
+        <span class="nav-icon">ℹ️</span>
+        <span class="nav-label">Acerca de</span>
+      </div>
     </nav>
   </aside>
 
@@ -1448,8 +1539,10 @@ try {
         </div>
       </div>
       <div class="topbar-actions">
-        <button class="btn btn-ghost btn-sm" id="btnImportarJSON">📤 Importar JSON</button>
-        <button class="btn btn-ghost btn-sm" id="btnExportarJSON">📥 Exportar JSON</button>
+        <button class="btn btn-ghost btn-sm" id="btnToggleDarkMode" title="Cambiar tema">🌙</button>
+        <button class="btn btn-ghost btn-sm" id="btnExportarExcel" title="Exportar a Excel">📊 Excel</button>
+        <button class="btn btn-ghost btn-sm" id="btnImportarJSON">📤 Importar</button>
+        <button class="btn btn-ghost btn-sm" id="btnExportarJSON">📥 Exportar</button>
       </div>
     </div>
 
@@ -1460,29 +1553,46 @@ try {
       <!-- ============================== -->
       <div class="section active" id="section-dashboard">
         <div class="stats-grid">
-          <div class="stat-card stat-companies">
+          <div class="stat-card stat-companies" data-nav="empresas" title="Ver Empresas">
+            <div class="stat-icon">🏢</div>
             <span class="stat-value" id="dash-total-empresas">0</span>
             <span class="stat-label">Empresas</span>
           </div>
-          <div class="stat-card stat-contacts">
+          <div class="stat-card stat-contacts" data-nav="contactos" title="Ver Contactos">
+            <div class="stat-icon">👥</div>
             <span class="stat-value" id="dash-total-contactos">0</span>
             <span class="stat-label">Contactos</span>
           </div>
-          <div class="stat-card stat-total">
+          <div class="stat-card stat-total" data-nav="tickets" title="Ver todos los tickets">
+            <div class="stat-icon">🎫</div>
             <span class="stat-value" id="dash-total-tickets">0</span>
             <span class="stat-label">Total Tickets</span>
           </div>
-          <div class="stat-card stat-open">
+          <div class="stat-card stat-open" data-nav="tickets" data-filter-estado="Abierto" title="Ver tickets Abiertos">
+            <div class="stat-icon">🔓</div>
             <span class="stat-value" id="dash-tickets-abiertos">0</span>
             <span class="stat-label">Tickets Abiertos</span>
           </div>
-          <div class="stat-card stat-pending">
+          <div class="stat-card stat-pending" data-nav="tickets" data-filter-estado="Pendiente" title="Ver tickets Pendientes">
+            <div class="stat-icon">⏳</div>
             <span class="stat-value" id="dash-tickets-pendientes">0</span>
             <span class="stat-label">Pendientes</span>
           </div>
-          <div class="stat-card stat-resolved">
+          <div class="stat-card stat-resolved" data-nav="tickets" data-filter-estado="Resuelto" title="Ver tickets Resueltos">
+            <div class="stat-icon">✅</div>
             <span class="stat-value" id="dash-tickets-resueltos">0</span>
             <span class="stat-label">Resueltos / Cerrados</span>
+          </div>
+        </div>
+
+        <!-- Notificación tickets públicos -->
+        <div id="card-tickets-publicos" class="card" style="display:none; border-color:rgba(245,158,11,0.35); background:rgba(245,158,11,0.06);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div>
+              <div style="font-size:0.9rem; font-weight:700; color:#fbbf24;">🌐 Tickets de Clientes (Portal Público)</div>
+              <div style="font-size:0.78rem; color:var(--text-muted); margin-top:3px;"><span id="count-tickets-pub">0</span> solicitud(es) de clientes esperan ser revisadas y asignadas.</div>
+            </div>
+            <button class="btn btn-sm" id="btnRevisarTicketsPub" style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); color:#fbbf24;">👁️ Revisar tickets</button>
           </div>
         </div>
 
@@ -1740,16 +1850,22 @@ try {
               <option value="Resuelto">Resuelto</option>
               <option value="Cerrado">Cerrado</option>
             </select>
-            <select id="selectFiltroPrioridad" style="max-width:160px;">
+            <select id="selectFiltroPrioridad" style="max-width:140px;">
               <option value="">⚡ Prioridad</option>
               <option value="Baja">Baja</option>
               <option value="Media">Media</option>
               <option value="Alta">Alta</option>
               <option value="Urgente">Urgente</option>
             </select>
+            <select id="selectFiltroTipo" style="max-width:140px;">
+              <option value="">📋 Tipo</option>
+            </select>
+            <select id="selectFiltroAgente" style="max-width:140px;">
+              <option value="">🧑‍💼 Agente</option>
+            </select>
           </div>
           <div class="controls-right">
-            <button class="btn btn-ghost btn-sm" id="btnExportarTicketsJSON">📥 Exportar Tickets</button>
+            <button class="btn btn-ghost btn-sm" id="btnVerPapelera" title="Papelera de reciclaje">🗑️ Papelera <span id="badge-papelera" class="nav-badge" style="display:none;">0</span></button>
             <button class="btn btn-primary btn-sm" id="btnNuevoTicket">➕ Crear Ticket</button>
           </div>
         </div>
@@ -1815,6 +1931,15 @@ try {
               <button type="button" data-cmd="fontSize" data-val="2" title="Texto pequeño">A-</button>
             </div>
             <div class="rte-editor" contenteditable="true" id="form-tk-descripcion" data-placeholder="Describe el problema en detalle..."></div>
+          </div>
+          <!-- Adjuntos -->
+          <div class="form-group" style="margin-top:10px;">
+            <label>📎 Adjuntos (PNG, JPG, PDF, XML)</label>
+            <div class="attachment-zone" id="tk-attachment-zone">
+              📎 Arrastra archivos aquí o <strong>haz clic para seleccionar</strong>
+              <input type="file" id="tk-attachment-input" multiple accept=".png,.jpg,.jpeg,.pdf,.xml" style="display:none;">
+            </div>
+            <div class="attachment-list" id="tk-attachment-list"></div>
           </div>
           <!-- Campos opcionales de gestión -->
           <div style="border-top:1px dashed rgba(255,255,255,0.06); margin-top:14px; padding-top:12px;">
@@ -1946,6 +2071,29 @@ try {
         </div>
 
         <button class="btn btn-success" id="btnGuardarConfig" style="margin-top:16px;">💾 Guardar Configuración</button>
+
+        <div class="card" style="margin-top:20px;">
+          <div class="card-title">🎨 Apariencia</div>
+          <div class="form-group" style="flex-direction:row; align-items:center; gap:14px;">
+            <label style="cursor:pointer; font-size:0.9rem; color:var(--text-main); font-weight:500; text-transform:none;">Modo de tema:</label>
+            <button class="btn btn-ghost btn-sm" id="btnToggleTema" style="min-width:150px;">🌙 Modo Oscuro (activo)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================== -->
+      <!-- SECTION: BITÁCORA              -->
+      <!-- ============================== -->
+      <div class="section" id="section-bitacora">
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <div class="card-title" style="margin-bottom:0;">📋 Bitácora de Acciones</div>
+            <button class="btn btn-ghost btn-xs" id="btnLimpiarBitacora">🗑️ Limpiar</button>
+          </div>
+          <div id="bitacora-list" style="max-height:500px; overflow-y:auto;">
+            <div style="text-align:center; color:var(--text-muted); padding:24px; font-size:0.85rem;">Sin actividad registrada.</div>
+          </div>
+        </div>
       </div>
 
     </div><!-- /content-scroll -->
@@ -1990,6 +2138,10 @@ try {
     <div style="border-top:1px solid var(--border-color); padding-top:14px; flex:1; min-height:80px;">
       <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:6px;">📝 Descripción</div>
       <div id="det-tk-descripcion" style="font-size:0.88rem; line-height:1.6; background:var(--bg-input); padding:14px; border-radius:var(--radius-md); border:1px solid var(--border-color); overflow-y:auto; max-height:180px;"></div>
+    </div>
+    <div id="det-tk-adjuntos-section" style="border-top:1px solid var(--border-color); padding-top:12px; display:none;">
+      <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:8px;">📎 Adjuntos</div>
+      <div class="attachment-list" id="det-tk-adjuntos"></div>
     </div>
     <div style="border-top:1px solid var(--border-color); padding-top:14px;">
       <h4 style="font-size:0.88rem; color:var(--brand-primary-hover); font-family:var(--font-heading); margin-bottom:8px;">💬 Bitácora de Soporte</h4>
@@ -2100,10 +2252,130 @@ try {
   </div>
 </div>
 
+<!-- ===== MODAL: Tickets Públicos ===== -->
+<div id="modal-tickets-pub" class="modal-center" style="display:none;">
+  <div class="modal-box" style="width:760px; max-width:96%;">
+    <div class="modal-header">
+      <h2>🌐 Tickets del Portal Público</h2>
+      <button class="modal-close" id="btnCerrarTicketsPub">×</button>
+    </div>
+    <div style="padding:14px 18px;">
+      <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:14px;">Estos tickets fueron enviados por clientes desde el portal público. Revísalos, edita los datos y acéptalos para pasarlos al sistema de tickets.</p>
+      <div id="lista-tickets-pub" style="display:flex; flex-direction:column; gap:14px; max-height:480px; overflow-y:auto;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: Acerca De ===== -->
+<div id="modal-acerca-de" class="modal-center" style="display:none;">
+  <div class="modal-box" style="width:480px; max-width:95%;">
+    <div class="modal-header">
+      <h2>ℹ️ Acerca de</h2>
+      <button class="modal-close" id="btnCerrarAcercaDe">×</button>
+    </div>
+    <div style="padding:20px; display:flex; flex-direction:column; gap:14px;">
+      <div style="text-align:center; padding:10px 0;">
+        <div style="font-size:3rem; margin-bottom:6px;">📊</div>
+        <div style="font-size:1.3rem; font-weight:800; color:var(--text-bright); font-family:var(--font-heading);">DATTASOFT CRM</div>
+        <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Sistema de Gestión de Clientes y Soporte Técnico</div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.82rem;">
+        <div style="background:var(--bg-input); border-radius:var(--radius-md); padding:12px;">
+          <div style="font-size:0.7rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Versión</div>
+          <div style="color:var(--text-bright); font-weight:600;">v2.0.0</div>
+        </div>
+        <div style="background:var(--bg-input); border-radius:var(--radius-md); padding:12px;">
+          <div style="font-size:0.7rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Fecha de creación</div>
+          <div style="color:var(--text-bright); font-weight:600;">Junio 2025</div>
+        </div>
+        <div style="background:var(--bg-input); border-radius:var(--radius-md); padding:12px;">
+          <div style="font-size:0.7rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Desarrollado por</div>
+          <div style="color:var(--text-bright); font-weight:600;">Erick Casas</div>
+        </div>
+        <div style="background:var(--bg-input); border-radius:var(--radius-md); padding:12px;">
+          <div style="font-size:0.7rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Empresa</div>
+          <div style="color:var(--text-bright); font-weight:600;">DATTASOFT BY INFOXPERT</div>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:8px; font-size:0.82rem;">
+        <div style="font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">🔗 Enlaces</div>
+        <a href="https://github.com/ErickDattasoft/CRM_DATTASOFT" target="_blank" style="display:flex; align-items:center; gap:8px; color:var(--brand-primary-hover); text-decoration:none; background:var(--bg-input); padding:10px 12px; border-radius:var(--radius-md); transition:var(--transition-base);">
+          <span style="font-size:1.1rem;">🐙</span> GitHub — ErickDattasoft/CRM_DATTASOFT
+        </a>
+        <a href="https://crmdattasoft.netlify.app" target="_blank" style="display:flex; align-items:center; gap:8px; color:var(--brand-success); text-decoration:none; background:var(--bg-input); padding:10px 12px; border-radius:var(--radius-md); transition:var(--transition-base);">
+          <span style="font-size:1.1rem;">🚀</span> Netlify — crmdattasoft.netlify.app
+        </a>
+        <a href="https://console.firebase.google.com/project/agenda-crm-netlify" target="_blank" style="display:flex; align-items:center; gap:8px; color:var(--brand-warning); text-decoration:none; background:var(--bg-input); padding:10px 12px; border-radius:var(--radius-md); transition:var(--transition-base);">
+          <span style="font-size:1.1rem;">🔥</span> Firebase — agenda-crm-netlify
+        </a>
+      </div>
+      <div style="text-align:center; font-size:0.72rem; color:var(--text-light); padding-top:6px; border-top:1px solid var(--border-subtle);">
+        Stack: Astro · Firebase Firestore · Netlify · SheetJS · PWA
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: Papelera de Reciclaje ===== -->
+<div id="modal-papelera" class="modal-center" style="display:none;">
+  <div class="modal-box" style="width:720px; max-width:96%;">
+    <div class="modal-header">
+      <h2>🗑️ Papelera de Reciclaje</h2>
+      <button class="modal-close" id="btnCerrarPapelera">×</button>
+    </div>
+    <div style="padding:14px 18px;">
+      <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:12px;">Los tickets en papelera se eliminan permanentemente después de 30 días.</p>
+      <div class="table-wrap" style="max-height:350px;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:70px;">Folio</th>
+              <th>Asunto</th>
+              <th>Empresa</th>
+              <th style="text-align:center;">Estado</th>
+              <th>Eliminado</th>
+              <th style="text-align:center;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-papelera-body"></tbody>
+        </table>
+      </div>
+      <div class="form-actions" style="margin-top:12px; justify-content:flex-end;">
+        <button class="btn btn-danger btn-sm" id="btnVaciarPapelera">🔥 Vaciar Papelera</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: Exportar Excel ===== -->
+<div id="modal-exportar-excel" class="modal-center" style="display:none;">
+  <div class="modal-box" style="width:420px; max-width:95%;">
+    <div class="modal-header">
+      <h2>📊 Exportar a Excel</h2>
+      <button class="modal-close" id="btnCerrarExportExcel">×</button>
+    </div>
+    <div style="padding:16px 18px; display:flex; flex-direction:column; gap:12px;">
+      <p style="font-size:0.82rem; color:var(--text-muted);">Selecciona qué datos exportar:</p>
+      <button class="btn btn-success" id="btnExcelEmpresas" style="text-align:left; padding:14px 18px; font-size:0.88rem;">
+        🏢 Solo Empresas y Versiones
+      </button>
+      <button class="btn btn-success" id="btnExcelContactos" style="text-align:left; padding:14px 18px; font-size:0.88rem;">
+        👥 Solo Contactos
+      </button>
+      <button class="btn btn-success" id="btnExcelTickets" style="text-align:left; padding:14px 18px; font-size:0.88rem;">
+        🎫 Solo Tickets
+      </button>
+      <button class="btn btn-primary" id="btnExcelTodo" style="text-align:left; padding:14px 18px; font-size:0.88rem; margin-top:4px;">
+        📦 Todo (Empresas + Contactos + Tickets)
+      </button>
+    </div>
+  </div>
+</div>
+
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets } from "../data/firebase.js";
+import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico } from "../data/firebase.js";
 
 (() => {
   // ============================================================
@@ -2119,6 +2391,9 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
   let versionesMercado = {};
   let cartasTecnicas = {};
   let tickets = [];
+  let papelera = [];
+  let bitacoraLog = [];
+  let adjuntosTicketActual = []; // archivos adjuntos en formulario activo
   let plantillaMensaje = "Hola [contacto] de [empresa].\n\nTe saludamos de parte del equipo de DATTASOFT By INFOXPERT. Te escribimos para comentarte que ya se encuentran disponibles las últimas versiones oficiales y estables para tus sistemas CONTPAQi.\n\nRevisando tu perfil, notamos que tienes la oportunidad de actualizar los siguientes módulos:\n\n[sistemas_pendientes]\n\nMantenerlos al día te garantiza la mayor estabilidad, seguridad y el cumplimiento de los cambios fiscales más recientes. Estamos para atenderles con gusto.\n\nSaludos cordiales,\nEquipo DATTASOFT BY INFOXPERT";
 
   let crmLocalOnly = localStorage.getItem("crm_local_only") === "true";
@@ -2224,6 +2499,8 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
         }));
       }
     }
+    papelera = safeParseLocal("crm_papelera", []);
+    bitacoraLog = safeParseLocal("crm_bitacora", []);
     const cfgLocal = safeParseLocal("crm_config_tickets", null);
     if (cfgLocal) configTickets = { ...configTickets, ...cfgLocal };
 
@@ -2323,10 +2600,11 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     empresas: { title: "Empresas y Versiones", sub: "Gestión de empresas y versiones de sistemas CONTPAQi" },
     contactos: { title: "Contactos", sub: "Directorio de contactos asociados a empresas" },
     tickets: { title: "Soporte — Tickets", sub: "Sistema de tickets de soporte técnico" },
-    configuracion: { title: "Configuración", sub: "Ajustes del sistema de tickets y campos" }
+    configuracion: { title: "Configuración", sub: "Ajustes del sistema de tickets y campos" },
+    bitacora: { title: "Bitácora de Acciones", sub: "Registro de actividades del CRM" }
   };
 
-  function navegarA(sectionId) {
+  function navegarA(sectionId, filtroEstado = "") {
     navItems.forEach(n => n.classList.toggle("active", n.dataset.section === sectionId));
     sections.forEach(s => s.classList.toggle("active", s.id === `section-${sectionId}`));
     const meta = sectionMeta[sectionId] || {};
@@ -2336,9 +2614,25 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     if (sectionId === "dashboard") renderDashboard();
     if (sectionId === "empresas") renderEmpresas();
     if (sectionId === "contactos") renderContactos();
-    if (sectionId === "tickets") renderTickets();
+    if (sectionId === "tickets") {
+      if (filtroEstado) {
+        const sel = document.getElementById("selectFiltroEstado");
+        if (sel) sel.value = filtroEstado;
+      }
+      renderTickets();
+    }
     if (sectionId === "configuracion") renderConfig();
+    if (sectionId === "bitacora") renderBitacora();
   }
+
+  // Click en stat-cards del dashboard
+  document.querySelectorAll(".stat-card[data-nav]").forEach(card => {
+    card.addEventListener("click", () => {
+      const nav = card.dataset.nav;
+      const filtroEstado = card.dataset.filterEstado || "";
+      navegarA(nav, filtroEstado);
+    });
+  });
 
   navItems.forEach(n => n.addEventListener("click", () => navegarA(n.dataset.section)));
 
@@ -2588,6 +2882,281 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
   }
 
   // ============================================================
+  // BITÁCORA
+  // ============================================================
+  function logBitacora(msg, icon = "📌") {
+    const entry = { fecha: new Date().toISOString(), msg, icon };
+    bitacoraLog.unshift(entry);
+    if (bitacoraLog.length > 200) bitacoraLog.length = 200;
+    guardarLocal("crm_bitacora", bitacoraLog);
+  }
+
+  function renderBitacora() {
+    const cont = document.getElementById("bitacora-list");
+    if (!cont) return;
+    if (!bitacoraLog.length) {
+      cont.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:24px; font-size:0.85rem;">Sin actividad registrada.</div>';
+      return;
+    }
+    cont.innerHTML = bitacoraLog.slice(0, 100).map(e => `
+      <div class="bitacora-entry">
+        <span class="bitacora-time">${new Date(e.fecha).toLocaleString('es-MX', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</span>
+        <span class="bitacora-msg">${e.icon} ${e.msg}</span>
+      </div>`).join("");
+  }
+
+  document.getElementById("btnLimpiarBitacora")?.addEventListener("click", () => {
+    if (!confirm("¿Limpiar toda la bitácora?")) return;
+    bitacoraLog = [];
+    guardarLocal("crm_bitacora", bitacoraLog);
+    renderBitacora();
+  });
+
+  // ============================================================
+  // MODO OSCURO / CLARO
+  // ============================================================
+  function aplicarTema() {
+    const isLight = localStorage.getItem("crm_tema") === "light";
+    document.body.classList.toggle("light-mode", isLight);
+    const btnToggle = document.getElementById("btnToggleDarkMode");
+    const btnTema = document.getElementById("btnToggleTema");
+    if (btnToggle) btnToggle.textContent = isLight ? "☀️" : "🌙";
+    if (btnTema) btnTema.textContent = isLight ? "☀️ Modo Claro (activo)" : "🌙 Modo Oscuro (activo)";
+  }
+
+  function toggleTema() {
+    const isLight = localStorage.getItem("crm_tema") === "light";
+    localStorage.setItem("crm_tema", isLight ? "dark" : "light");
+    aplicarTema();
+    logBitacora(`Tema cambiado a ${isLight ? "oscuro" : "claro"}`, "🎨");
+  }
+
+  document.getElementById("btnToggleDarkMode")?.addEventListener("click", toggleTema);
+  document.getElementById("btnToggleTema")?.addEventListener("click", toggleTema);
+  aplicarTema();
+
+  // ============================================================
+  // MODAL ACERCA DE
+  // ============================================================
+  document.getElementById("btnAcercaDe")?.addEventListener("click", () => {
+    const m = document.getElementById("modal-acerca-de");
+    if (m) m.style.display = "flex";
+  });
+  document.getElementById("btnCerrarAcercaDe")?.addEventListener("click", () => {
+    const m = document.getElementById("modal-acerca-de");
+    if (m) m.style.display = "none";
+  });
+
+  // ============================================================
+  // PAPELERA DE RECICLAJE
+  // ============================================================
+  function renderPapelera() {
+    const tbody = document.getElementById("tabla-papelera-body");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    if (!papelera.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:20px; font-style:italic;">Papelera vacía.</td></tr>';
+      return;
+    }
+    papelera.forEach((t, i) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td style="text-align:center; font-weight:700; color:var(--text-muted);">#${t.numero}</td>
+        <td><strong>${t.asunto || "—"}</strong></td>
+        <td>${t.empresa || "—"}</td>
+        <td style="text-align:center;"><span class="badge badge-${(t.estado||"abierto").toLowerCase()}">${t.estado||"—"}</span></td>
+        <td style="font-size:0.78rem; color:var(--text-light);">${t.fechaEliminado ? new Date(t.fechaEliminado).toLocaleDateString('es-MX') : "—"}</td>
+        <td style="text-align:center;">
+          <div style="display:inline-flex; gap:4px;">
+            <button class="btn btn-success btn-xs btn-restaurar-tk" data-idx="${i}" title="Restaurar">↩️</button>
+            <button class="btn btn-danger btn-xs btn-eliminar-def-tk" data-idx="${i}" title="Eliminar definitivamente">🔥</button>
+          </div>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+    tbody.querySelectorAll(".btn-restaurar-tk").forEach(b => b.addEventListener("click", async (e) => {
+      const i = parseInt(e.target.closest("button").dataset.idx);
+      const t = papelera.splice(i, 1)[0];
+      delete t.fechaEliminado;
+      tickets.push(t);
+      guardarLocal("crm_papelera", papelera);
+      guardarLocal("crm_tickets", tickets);
+      if (!crmLocalOnly) { await guardarTickets(tickets); }
+      logBitacora(`Ticket #${t.numero} restaurado de papelera`, "↩️");
+      toast(`↩️ Ticket #${t.numero} restaurado`);
+      actualizarBadgePapelera();
+      renderPapelera();
+      renderTickets();
+      renderDashboard();
+    }));
+    tbody.querySelectorAll(".btn-eliminar-def-tk").forEach(b => b.addEventListener("click", (e) => {
+      const i = parseInt(e.target.closest("button").dataset.idx);
+      if (!confirm("¿Eliminar definitivamente? Esta acción no se puede deshacer.")) return;
+      const t = papelera.splice(i, 1)[0];
+      guardarLocal("crm_papelera", papelera);
+      logBitacora(`Ticket #${t.numero} eliminado definitivamente`, "🔥");
+      toast(`🔥 Ticket eliminado definitivamente`);
+      actualizarBadgePapelera();
+      renderPapelera();
+    }));
+  }
+
+  function actualizarBadgePapelera() {
+    const badge = document.getElementById("badge-papelera");
+    if (!badge) return;
+    if (papelera.length > 0) { badge.style.display = "inline-flex"; badge.textContent = papelera.length; }
+    else { badge.style.display = "none"; }
+  }
+
+  document.getElementById("btnVerPapelera")?.addEventListener("click", () => {
+    renderPapelera();
+    const m = document.getElementById("modal-papelera");
+    if (m) m.style.display = "flex";
+  });
+  document.getElementById("btnCerrarPapelera")?.addEventListener("click", () => {
+    const m = document.getElementById("modal-papelera");
+    if (m) m.style.display = "none";
+  });
+  document.getElementById("btnVaciarPapelera")?.addEventListener("click", () => {
+    if (!papelera.length) return;
+    if (!confirm(`¿Vaciar papelera? Se eliminarán ${papelera.length} ticket(s) permanentemente.`)) return;
+    papelera = [];
+    guardarLocal("crm_papelera", papelera);
+    logBitacora("Papelera vaciada", "🔥");
+    toast("🔥 Papelera vaciada");
+    actualizarBadgePapelera();
+    renderPapelera();
+  });
+
+  // ============================================================
+  // ADJUNTOS EN TICKETS
+  // ============================================================
+  function renderAdjuntosForm() {
+    const list = document.getElementById("tk-attachment-list");
+    if (!list) return;
+    list.innerHTML = "";
+    adjuntosTicketActual.forEach((f, i) => {
+      const chip = document.createElement("span");
+      chip.className = "attachment-chip";
+      const ext = f.nombre.split(".").pop().toUpperCase();
+      chip.innerHTML = `<span>${ext === "PDF" ? "📄" : ext === "XML" ? "📋" : "🖼️"} <span title="${f.nombre}">${f.nombre}</span></span><button data-i="${i}" title="Quitar">×</button>`;
+      chip.querySelector("button").addEventListener("click", () => {
+        adjuntosTicketActual.splice(i, 1);
+        renderAdjuntosForm();
+      });
+      list.appendChild(chip);
+    });
+  }
+
+  function renderAdjuntosDetalle(t) {
+    const sec = document.getElementById("det-tk-adjuntos-section");
+    const cont = document.getElementById("det-tk-adjuntos");
+    if (!sec || !cont) return;
+    const adjuntos = t.adjuntos || [];
+    if (!adjuntos.length) { sec.style.display = "none"; return; }
+    sec.style.display = "block";
+    cont.innerHTML = "";
+    adjuntos.forEach(f => {
+      const chip = document.createElement("a");
+      chip.className = "attachment-chip";
+      chip.style.textDecoration = "none";
+      chip.style.cursor = "pointer";
+      const ext = (f.nombre || "").split(".").pop().toUpperCase();
+      chip.innerHTML = `<span>${ext === "PDF" ? "📄" : ext === "XML" ? "📋" : "🖼️"} <span title="${f.nombre}">${f.nombre}</span></span>`;
+      if (f.data) {
+        chip.href = f.data;
+        chip.download = f.nombre;
+      }
+      cont.appendChild(chip);
+    });
+  }
+
+  const tkAttachZone = document.getElementById("tk-attachment-zone");
+  const tkAttachInput = document.getElementById("tk-attachment-input");
+
+  tkAttachZone?.addEventListener("click", () => tkAttachInput?.click());
+  tkAttachZone?.addEventListener("dragover", e => { e.preventDefault(); tkAttachZone.classList.add("drag-over"); });
+  tkAttachZone?.addEventListener("dragleave", () => tkAttachZone.classList.remove("drag-over"));
+  tkAttachZone?.addEventListener("drop", e => {
+    e.preventDefault(); tkAttachZone.classList.remove("drag-over");
+    procesarAdjuntos(Array.from(e.dataTransfer.files));
+  });
+  tkAttachInput?.addEventListener("change", () => { if (tkAttachInput.files.length) procesarAdjuntos(Array.from(tkAttachInput.files)); });
+
+  function procesarAdjuntos(files) {
+    const allowed = ["image/png", "image/jpeg", "image/jpg", "application/pdf", "text/xml", "application/xml"];
+    files.forEach(f => {
+      if (!allowed.includes(f.type) && !f.name.endsWith(".xml")) { toast(`⚠️ Tipo no permitido: ${f.name}`, "error"); return; }
+      if (f.size > 5 * 1024 * 1024) { toast(`⚠️ ${f.name} supera 5MB`, "error"); return; }
+      const reader = new FileReader();
+      reader.onload = ev => {
+        adjuntosTicketActual.push({ nombre: f.name, tipo: f.type, data: ev.target.result });
+        renderAdjuntosForm();
+      };
+      reader.readAsDataURL(f);
+    });
+    if (tkAttachInput) tkAttachInput.value = "";
+  }
+
+  // ============================================================
+  // EXPORTAR EXCEL
+  // ============================================================
+  document.getElementById("btnExportarExcel")?.addEventListener("click", () => {
+    const m = document.getElementById("modal-exportar-excel");
+    if (m) m.style.display = "flex";
+  });
+  document.getElementById("btnCerrarExportExcel")?.addEventListener("click", () => {
+    const m = document.getElementById("modal-exportar-excel");
+    if (m) m.style.display = "none";
+  });
+
+  function exportarExcel(tipo) {
+    const wb = XLSX.utils.book_new();
+    const fnClose = () => { const m = document.getElementById("modal-exportar-excel"); if(m) m.style.display = "none"; };
+
+    if (tipo === "empresas" || tipo === "todo") {
+      const rows = clientes.map(c => {
+        const row = { Empresa: c.EMPRESA, Contacto: c.CONTACTO, Correo: c.CORREO, RFC: c.RFC || "", Teléfono1: c.TELEFONO_1, Teléfono2: c.TELEFONO_2 };
+        listaSistemas.forEach(s => { row[s] = c.SISTEMAS?.[s.toUpperCase().trim()] || ""; });
+        return row;
+      });
+      const ws = XLSX.utils.json_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb, ws, "Empresas");
+    }
+
+    if (tipo === "contactos" || tipo === "todo") {
+      const rows = contactos.map(c => ({ Nombre: c.nombre, Correo: c.correo, Teléfono1: c.telefono1, Teléfono2: c.telefono2, Empresa: c.empresa }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb, ws, "Contactos");
+    }
+
+    if (tipo === "tickets" || tipo === "todo") {
+      const rows = tickets.map(t => ({
+        Folio: t.numero, Asunto: t.asunto, Empresa: t.empresa, Contacto: t.contacto,
+        Tipo: t.tipo, Estado: t.estado, Prioridad: t.prioridad, Grupo: t.grupo,
+        Agente: t.agente, Referido: t.referido, Solicitado: t.solicitado,
+        Canalizado: t.canalizado, Realizado: t.realizado,
+        Descripción: (t.descripcion || "").replace(/<[^>]+>/g, ""),
+        Creado: t.fechaCreacion ? new Date(t.fechaCreacion).toLocaleString('es-MX') : "",
+        Actualizado: t.fechaActualizacion ? new Date(t.fechaActualizacion).toLocaleString('es-MX') : ""
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb, ws, "Tickets");
+    }
+
+    const nombre = tipo === "todo" ? "CRM_DATTASOFT_completo" : `CRM_DATTASOFT_${tipo}`;
+    XLSX.writeFile(wb, `${nombre}_${new Date().toISOString().slice(0,10)}.xlsx`);
+    logBitacora(`Exportación Excel: ${tipo}`, "📊");
+    toast(`📊 Excel exportado: ${nombre}`);
+    fnClose();
+  }
+
+  document.getElementById("btnExcelEmpresas")?.addEventListener("click", () => exportarExcel("empresas"));
+  document.getElementById("btnExcelContactos")?.addEventListener("click", () => exportarExcel("contactos"));
+  document.getElementById("btnExcelTickets")?.addEventListener("click", () => exportarExcel("tickets"));
+  document.getElementById("btnExcelTodo")?.addEventListener("click", () => exportarExcel("todo"));
+
+  // ============================================================
   // MARKET VERSIONS
   // ============================================================
   function initMarketForms() {
@@ -2816,8 +3385,9 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
         <td style="text-align:center; vertical-align:middle;">
           <div style="display:inline-flex; gap:4px;">
             <button class="btn btn-secondary btn-xs btn-edit-emp" data-idx="${idx}">✏️</button>
-            <button class="btn btn-whatsapp btn-xs btn-wsp-emp" data-idx="${idx}">💬</button>
-            <button class="btn btn-email btn-xs btn-mail-emp" data-idx="${idx}">✉️</button>
+            <button class="btn btn-whatsapp btn-xs btn-wsp-emp" data-idx="${idx}" title="WhatsApp">💬</button>
+            <button class="btn btn-email btn-xs btn-mail-emp" data-idx="${idx}" title="Email">✉️</button>
+            <button class="btn btn-ghost btn-xs btn-mail-emp-zoho" data-idx="${idx}" title="Zoho Mail" style="border:1px solid rgba(255,165,0,0.4); color:#f97316;">Z✉</button>
             <button class="btn btn-danger btn-xs btn-del-emp" data-idx="${idx}">🗑️</button>
           </div>
         </td>
@@ -3013,6 +3583,8 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     }
 
     guardarLocal("crm_clientes", clientes); // respaldo local siempre primero
+    const isEdit = document.getElementById("edit-emp-index")?.value !== "";
+    logBitacora(`Empresa "${nuevo.EMPRESA}" ${isEdit ? "actualizada" : "creada"}`, "🏢");
     if (crmLocalOnly) {
       toast("💾 Empresa guardada (Local)");
       cerrarFormEmpresa();
@@ -3523,22 +4095,44 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     if (!e.target.closest(".autocomplete-wrap")) tkAutoList?.classList.add("hidden");
   });
 
+  function populateTipoAgenteFilters() {
+    const tipos = [...new Set(tickets.map(t => t.tipo).filter(Boolean))].sort();
+    const agentes = [...new Set(tickets.map(t => t.agente).filter(Boolean))].sort();
+    const selTipo = document.getElementById("selectFiltroTipo");
+    const selAgente = document.getElementById("selectFiltroAgente");
+    if (selTipo) {
+      const cur = selTipo.value;
+      selTipo.innerHTML = '<option value="">📋 Tipo</option>' + tipos.map(t => `<option value="${t}"${t===cur?' selected':''}>${t}</option>`).join("");
+    }
+    if (selAgente) {
+      const cur = selAgente.value;
+      selAgente.innerHTML = '<option value="">🧑‍💼 Agente</option>' + agentes.map(a => `<option value="${a}"${a===cur?' selected':''}>${a}</option>`).join("");
+    }
+  }
+
   function renderTickets() {
     const tbody = document.getElementById("tabla-tickets-body");
     if (!tbody) return;
     tbody.innerHTML = "";
 
+    populateTipoAgenteFilters();
+
     const busq = document.getElementById("txtBuscarTicket")?.value.toLowerCase().trim() || "";
     const fEstado = document.getElementById("selectFiltroEstado")?.value || "";
     const fPrior = document.getElementById("selectFiltroPrioridad")?.value || "";
+    const fTipo = document.getElementById("selectFiltroTipo")?.value || "";
+    const fAgente = document.getElementById("selectFiltroAgente")?.value || "";
 
     const filtrados = tickets.map((t, i) => ({ ...t, _idx: i })).filter(t => {
       if (fEstado && t.estado !== fEstado) return false;
       if (fPrior && t.prioridad !== fPrior) return false;
+      if (fTipo && t.tipo !== fTipo) return false;
+      if (fAgente && t.agente !== fAgente) return false;
       if (busq) {
         return (t.asunto || "").toLowerCase().includes(busq) ||
                (t.empresa || "").toLowerCase().includes(busq) ||
                (t.contacto || "").toLowerCase().includes(busq) ||
+               (t.agente || "").toLowerCase().includes(busq) ||
                String(t.numero).includes(busq);
       }
       return true;
@@ -3598,6 +4192,8 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     });
     const rte = document.getElementById("form-tk-descripcion");
     if (rte) rte.innerHTML = "";
+    adjuntosTicketActual = [];
+    renderAdjuntosForm();
   }
 
   document.getElementById("btnNuevoTicket")?.addEventListener("click", () => {
@@ -3649,10 +4245,12 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
       tickets.push({
         numero: num, asunto, empresa, contacto, contactoCorreo, tipo, estado, prioridad, grupo, agente,
         descripcion, cc, cco, referido, solicitado, canalizado, realizado,
+        adjuntos: [...adjuntosTicketActual],
         fechaCreacion: new Date().toISOString(),
         fechaActualizacion: new Date().toISOString(),
         notas: []
       });
+      logBitacora(`Ticket #${num} creado: "${asunto}" — ${empresa || contacto}`, "🎫");
 
       const enviarCorreo = document.getElementById("chk-enviar-correo")?.checked;
       const mailTo = contactoCorreo || contactos.find(c => c.nombre === contacto)?.correo || "";
@@ -3681,9 +4279,12 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
       }
     } else {
       const t = tickets[parseInt(idx)];
+      const adjuntosExistentes = t.adjuntos || [];
       Object.assign(t, { asunto, empresa, contacto, contactoCorreo, tipo, estado, prioridad, grupo, agente,
         descripcion, cc, cco, referido, solicitado, canalizado, realizado,
+        adjuntos: [...adjuntosExistentes, ...adjuntosTicketActual],
         fechaActualizacion: new Date().toISOString() });
+      logBitacora(`Ticket #${t.numero} actualizado: ${estado}`, "✏️");
     }
 
     guardarLocal("crm_tickets", tickets);
@@ -3727,16 +4328,22 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
 
   async function eliminarTicket(e) {
     const idx = parseInt(e.target.closest("button").dataset.idx);
-    if (!confirm("¿Eliminar este ticket?")) return;
-    tickets.splice(idx, 1);
+    if (!confirm("¿Mover este ticket a la papelera?")) return;
+    const [t] = tickets.splice(idx, 1);
+    t.fechaEliminado = new Date().toISOString();
+    papelera.unshift(t);
     guardarLocal("crm_tickets", tickets);
+    guardarLocal("crm_papelera", papelera);
+    logBitacora(`Ticket #${t.numero} "${t.asunto}" movido a papelera`, "🗑️");
+    actualizarBadgePapelera();
     if (crmLocalOnly) {
-      toast("🗑️ Ticket eliminado (Local)");
+      toast("🗑️ Ticket en papelera (Local)");
       renderTickets();
       renderDashboard();
       return;
     }
     await guardarTickets(tickets);
+    toast("🗑️ Ticket movido a papelera");
     renderTickets();
     renderDashboard();
   }
@@ -3750,13 +4357,14 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     ticketDetalleIdx = idx;
     const t = tickets[idx];
 
-    document.getElementById("det-tk-num").textContent = `Ticket #${t.numero}`;
+    document.getElementById("det-tk-num").textContent = `Folio #${t.numero}`;
     document.getElementById("det-tk-asunto").textContent = t.asunto;
     document.getElementById("det-tk-empresa").textContent = t.empresa || "—";
     document.getElementById("det-tk-contacto").textContent = t.contacto || "—";
     document.getElementById("det-tk-grupo").textContent = t.grupo || "—";
     document.getElementById("det-tk-agente").textContent = t.agente || "—";
     document.getElementById("det-tk-descripcion").innerHTML = t.descripcion || "";
+    renderAdjuntosDetalle(t);
 
     const bPrior = document.getElementById("det-tk-prioridad-badge");
     bPrior.textContent = t.prioridad;
@@ -3852,6 +4460,33 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
   document.getElementById("txtBuscarTicket")?.addEventListener("input", renderTickets);
   document.getElementById("selectFiltroEstado")?.addEventListener("change", renderTickets);
   document.getElementById("selectFiltroPrioridad")?.addEventListener("change", renderTickets);
+  document.getElementById("selectFiltroTipo")?.addEventListener("change", renderTickets);
+  document.getElementById("selectFiltroAgente")?.addEventListener("change", renderTickets);
+
+  // ============================================================
+  // ZOHO MAILTO
+  // ============================================================
+  function abrirZohoMail({ to = "", subject = "", body = "" } = {}) {
+    const zohoBase = "https://mail.zoho.com/zm/#compose";
+    const params = new URLSearchParams();
+    if (to) params.set("to", to);
+    if (subject) params.set("subject", subject);
+    if (body) params.set("body", body);
+    window.open(`${zohoBase}?${params.toString()}`, "_blank");
+    logBitacora(`Correo Zoho abierto para: ${to || "(sin destino)"}`, "✉️");
+  }
+
+  // Hook en botón de email empresa → Zoho si está configurado
+  document.addEventListener("click", e => {
+    const btn = e.target.closest(".btn-mail-emp-zoho");
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.idx);
+    const c = clientes[idx];
+    if (!c) return;
+    const pendientes = getSistemasPendientes(c);
+    const bodyMsg = pendientes.length > 0 ? generarMensaje(c) || "" : "";
+    abrirZohoMail({ to: c.CORREO || "", subject: "Actualización de Sistemas CONTPAQi", body: bodyMsg });
+  });
 
   // ============================================================
   // CONFIGURACIÓN
@@ -4753,6 +5388,131 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   }
+
+  // ============================================================
+  // TICKETS PÚBLICOS (Portal de Clientes)
+  // ============================================================
+  let ticketsPublicos = [];
+
+  async function cargarYMostrarTicketsPub() {
+    if (!firebaseEnabled) return;
+    try {
+      ticketsPublicos = await cargarTicketsPublicos();
+    } catch(e) { ticketsPublicos = []; }
+    const card = document.getElementById("card-tickets-publicos");
+    const countEl = document.getElementById("count-tickets-pub");
+    if (card) card.style.display = ticketsPublicos.length > 0 ? "block" : "none";
+    if (countEl) countEl.textContent = ticketsPublicos.length;
+  }
+
+  function renderTicketsPub() {
+    const cont = document.getElementById("lista-tickets-pub");
+    if (!cont) return;
+    if (!ticketsPublicos.length) {
+      cont.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:24px;">No hay tickets públicos pendientes.</div>';
+      return;
+    }
+    cont.innerHTML = "";
+    ticketsPublicos.forEach((t, i) => {
+      const div = document.createElement("div");
+      div.style.cssText = "background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:14px 16px;";
+      div.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+          <div style="flex:1; min-width:200px;">
+            <div style="font-weight:700; color:var(--text-bright); margin-bottom:4px;">${t.asunto || "Sin asunto"}</div>
+            <div style="font-size:0.78rem; color:var(--text-muted);">
+              👤 ${t.contacto || "—"} · 🏢 ${t.empresa || "—"} · ✉️ ${t.contactoCorreo || "—"}
+              ${t.telefono ? ` · 📞 ${t.telefono}` : ""}
+              ${t.sistema ? ` · 💻 ${t.sistema}` : ""}
+            </div>
+            <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">⚡ Prioridad: <strong>${t.prioridad || "Media"}</strong> · 📅 ${t.fechaCreacion ? new Date(t.fechaCreacion).toLocaleString('es-MX') : "—"}</div>
+            <div style="margin-top:8px; font-size:0.82rem; background:var(--bg-card); padding:10px 12px; border-radius:var(--radius-sm); border-left:3px solid var(--brand-warning); color:var(--text-main);">${(t.descripcion || "").replace(/\n/g,"<br>")}</div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px; flex-shrink:0;">
+            <button class="btn btn-success btn-xs btn-aceptar-pub" data-i="${i}" style="white-space:nowrap;">✅ Aceptar ticket</button>
+            <button class="btn btn-danger btn-xs btn-rechazar-pub" data-i="${i}" style="white-space:nowrap;">🗑️ Rechazar</button>
+          </div>
+        </div>`;
+      div.querySelector(".btn-aceptar-pub").addEventListener("click", async (e) => {
+        const idx = parseInt(e.target.dataset.i);
+        const tp = ticketsPublicos[idx];
+        const num = tickets.length > 0 ? Math.max(...tickets.map(x => x.numero)) + 1 : 1001;
+        tickets.push({
+          numero: num,
+          asunto: tp.asunto || "Sin asunto",
+          empresa: tp.empresa || "",
+          contacto: tp.contacto || "",
+          contactoCorreo: tp.contactoCorreo || "",
+          tipo: tp.sistema ? `Sistema: ${tp.sistema}` : "General",
+          estado: "Abierto",
+          prioridad: tp.prioridad || "Media",
+          grupo: "", agente: "",
+          descripcion: (tp.descripcion || "").replace(/\n/g, "<br>"),
+          referido: "Portal Público", solicitado: "", canalizado: "", realizado: "",
+          adjuntos: [],
+          notas: [{ autor: "Sistema", fecha: new Date().toISOString(), texto: `Ticket importado del portal público. Folio original: ${tp.folioPub || "—"}` }],
+          fechaCreacion: tp.fechaCreacion || new Date().toISOString(),
+          fechaActualizacion: new Date().toISOString()
+        });
+        guardarLocal("crm_tickets", tickets);
+        if (!crmLocalOnly) await guardarTickets(tickets);
+        if (tp._fbId) await eliminarTicketPublico(tp._fbId).catch(() => {});
+        ticketsPublicos.splice(idx, 1);
+        logBitacora(`Ticket público aceptado como #${num}: "${tp.asunto}"`, "🌐");
+        toast(`✅ Ticket #${num} creado desde portal público`);
+        await cargarYMostrarTicketsPub();
+        renderTicketsPub();
+        renderTickets();
+        renderDashboard();
+      });
+      div.querySelector(".btn-rechazar-pub").addEventListener("click", async (e) => {
+        const idx = parseInt(e.target.dataset.i);
+        const tp = ticketsPublicos[idx];
+        if (!confirm(`¿Rechazar el ticket "${tp.asunto}"? Se eliminará del portal.`)) return;
+        if (tp._fbId) await eliminarTicketPublico(tp._fbId).catch(() => {});
+        ticketsPublicos.splice(idx, 1);
+        logBitacora(`Ticket público rechazado: "${tp.asunto}"`, "🗑️");
+        toast("🗑️ Ticket rechazado");
+        await cargarYMostrarTicketsPub();
+        renderTicketsPub();
+      });
+      cont.appendChild(div);
+    });
+  }
+
+  document.getElementById("btnRevisarTicketsPub")?.addEventListener("click", () => {
+    renderTicketsPub();
+    const m = document.getElementById("modal-tickets-pub");
+    if (m) m.style.display = "flex";
+  });
+  document.getElementById("btnCerrarTicketsPub")?.addEventListener("click", () => {
+    const m = document.getElementById("modal-tickets-pub");
+    if (m) m.style.display = "none";
+  });
+  document.getElementById("modal-tickets-pub")?.addEventListener("click", e => {
+    if (e.target === document.getElementById("modal-tickets-pub")) document.getElementById("modal-tickets-pub").style.display = "none";
+  });
+
+  // Cargar tickets públicos al iniciar
+  cargarYMostrarTicketsPub();
+
+  // Inicializar badge papelera
+  actualizarBadgePapelera();
+
+  // Cerrar modales con Escape
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Escape") return;
+    ["modal-acerca-de", "modal-papelera", "modal-exportar-excel"].forEach(id => {
+      const m = document.getElementById(id);
+      if (m && m.style.display !== "none") m.style.display = "none";
+    });
+  });
+
+  // Cerrar modales al click fuera
+  ["modal-acerca-de", "modal-papelera", "modal-exportar-excel"].forEach(id => {
+    const m = document.getElementById(id);
+    m?.addEventListener("click", e => { if (e.target === m) m.style.display = "none"; });
+  });
 })();
 </script>
 </body>

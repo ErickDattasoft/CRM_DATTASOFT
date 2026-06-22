@@ -1,0 +1,345 @@
+---
+// Página pública para que clientes levanten tickets
+// NO tiene acceso a datos internos del CRM
+---
+
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Soporte Técnico — DATTASOFT</title>
+  <meta name="description" content="Levanta un ticket de soporte técnico con DATTASOFT BY INFOXPERT.">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 14px;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 48px;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+      margin-top: 16px;
+    }
+    .header-logo { font-size: 2.8rem; margin-bottom: 8px; }
+    .header h1 { font-size: 1.5rem; font-weight: 800; color: #fff; margin-bottom: 4px; }
+    .header p { font-size: 0.85rem; color: #8b95a8; }
+
+    .form-card {
+      background: rgba(26,30,41,0.95);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 32px;
+      width: 100%;
+      max-width: 580px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    }
+    .form-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #8b95a8;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .required { color: #ef4444; }
+    input, select, textarea {
+      background: #1e2231;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #e2e8f0;
+      font-family: inherit;
+      font-size: 0.9rem;
+      transition: border-color 0.2s;
+      outline: none;
+      width: 100%;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: #6366f1;
+      background: #252a3a;
+    }
+    select option { background: #1e2231; }
+    textarea { resize: vertical; min-height: 100px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: #6366f1; color: #fff; width: 100%; margin-top: 8px; }
+    .btn-primary:hover { background: #4f46e5; transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .alert {
+      padding: 14px 16px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .alert-success { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.25); color: #34d399; }
+    .alert-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); color: #f87171; }
+
+    .footer-note {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 0.75rem;
+      color: #4a5568;
+    }
+
+    .spinner { display: none; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #success-view {
+      display: none;
+      text-align: center;
+      padding: 40px 20px;
+    }
+    #success-view .big-icon { font-size: 4rem; margin-bottom: 16px; }
+    #success-view h2 { font-size: 1.3rem; color: #fff; margin-bottom: 8px; }
+    #success-view p { font-size: 0.88rem; color: #8b95a8; line-height: 1.6; }
+    #success-view .folio-display {
+      display: inline-block;
+      background: rgba(99,102,241,0.15);
+      border: 1px solid rgba(99,102,241,0.3);
+      border-radius: 8px;
+      padding: 8px 20px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #818cf8;
+      margin: 12px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-logo">📊</div>
+    <h1>DATTASOFT BY INFOXPERT</h1>
+    <p>Soporte Técnico — Levanta tu ticket de asistencia</p>
+  </div>
+
+  <div class="form-card">
+    <!-- Alert messages -->
+    <div class="alert alert-error" id="alert-error"></div>
+
+    <!-- Success view -->
+    <div id="success-view">
+      <div class="big-icon">✅</div>
+      <h2>¡Ticket enviado!</h2>
+      <div class="folio-display" id="folio-generado">Folio #—</div>
+      <p>Tu solicitud fue recibida correctamente. Nuestro equipo se pondrá en contacto contigo a la brevedad.<br><br>Guarda tu número de folio para dar seguimiento.</p>
+    </div>
+
+    <!-- Form -->
+    <div id="form-view">
+      <div class="form-title">📋 Nueva Solicitud de Soporte</div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tu Nombre <span class="required">*</span></label>
+          <input type="text" id="pub-nombre" placeholder="Ej: Juan Pérez" required>
+        </div>
+        <div class="form-group">
+          <label>Empresa / Organización <span class="required">*</span></label>
+          <input type="text" id="pub-empresa" placeholder="Nombre de tu empresa" required>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Correo electrónico <span class="required">*</span></label>
+          <input type="email" id="pub-correo" placeholder="correo@empresa.com" required>
+        </div>
+        <div class="form-group">
+          <label>Teléfono / WhatsApp</label>
+          <input type="tel" id="pub-telefono" placeholder="Ej: 55 1234 5678">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Asunto / Título del problema <span class="required">*</span></label>
+        <input type="text" id="pub-asunto" placeholder="Ej: Error al timbrar facturas" required>
+      </div>
+
+      <div class="form-group">
+        <label>Sistema CONTPAQi afectado</label>
+        <select id="pub-sistema">
+          <option value="">— Seleccionar sistema (opcional) —</option>
+          <option>CONTABILIDAD</option>
+          <option>BANCOS</option>
+          <option>NÓMINAS</option>
+          <option>COMERCIAL PRO</option>
+          <option>COMERCIAL PREMIUM</option>
+          <option>FACTURA ELECTRÓNICA</option>
+          <option>XML EN LÍNEA</option>
+          <option>COMPONENTES</option>
+          <option>RESPALDOS</option>
+          <option>SERVIDOR DE LICENCIAS</option>
+          <option>Otro / No aplica</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Prioridad</label>
+        <select id="pub-prioridad">
+          <option value="Media">Media — Puedo trabajar con inconvenientes</option>
+          <option value="Alta">Alta — El sistema falla pero puedo hacer algo</option>
+          <option value="Urgente">Urgente — Sistema completamente detenido</option>
+          <option value="Baja">Baja — Duda o consulta general</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Descripción del problema <span class="required">*</span></label>
+        <textarea id="pub-descripcion" placeholder="Describe con el mayor detalle posible: ¿qué estabas haciendo cuando ocurrió el error?, ¿qué mensaje de error apareció?, ¿cuándo inició el problema?" required></textarea>
+      </div>
+
+      <button class="btn btn-primary" id="btnEnviarTicket">
+        <div class="spinner" id="spinner"></div>
+        <span id="btn-text">Enviar solicitud de soporte</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    DATTASOFT BY INFOXPERT — Soporte Técnico CONTPAQi
+  </div>
+
+  <script>
+  (() => {
+    const FIREBASE_PROJECT = "agenda-crm-netlify";
+    const FIREBASE_API_KEY = ""; // No necesita API key para writes anónimos con las reglas correctas
+
+    const btn = document.getElementById("btnEnviarTicket");
+    const spinner = document.getElementById("spinner");
+    const btnText = document.getElementById("btn-text");
+    const alertError = document.getElementById("alert-error");
+
+    function showError(msg) {
+      alertError.textContent = msg;
+      alertError.style.display = "block";
+      setTimeout(() => { alertError.style.display = "none"; }, 5000);
+    }
+
+    function setLoading(v) {
+      spinner.style.display = v ? "block" : "none";
+      btnText.textContent = v ? "Enviando..." : "Enviar solicitud de soporte";
+      btn.disabled = v;
+    }
+
+    btn?.addEventListener("click", async () => {
+      const nombre = document.getElementById("pub-nombre")?.value.trim();
+      const empresa = document.getElementById("pub-empresa")?.value.trim();
+      const correo = document.getElementById("pub-correo")?.value.trim();
+      const telefono = document.getElementById("pub-telefono")?.value.trim();
+      const asunto = document.getElementById("pub-asunto")?.value.trim();
+      const sistema = document.getElementById("pub-sistema")?.value;
+      const prioridad = document.getElementById("pub-prioridad")?.value || "Media";
+      const descripcion = document.getElementById("pub-descripcion")?.value.trim();
+
+      if (!nombre || !empresa || !correo || !asunto || !descripcion) {
+        showError("Por favor completa todos los campos obligatorios (marcados con *).");
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+        showError("Por favor ingresa un correo electrónico válido.");
+        return;
+      }
+
+      setLoading(true);
+
+      const folio = `PUB-${Date.now()}`;
+      const ticket = {
+        folioPub: folio,
+        fuente: "publico",
+        estado: "Pendiente",
+        prioridad,
+        asunto,
+        contacto: nombre,
+        contactoCorreo: correo,
+        empresa,
+        telefono,
+        sistema,
+        descripcion,
+        notas: [],
+        fechaCreacion: new Date().toISOString(),
+        fechaActualizacion: new Date().toISOString()
+      };
+
+      try {
+        // Guardar en Firestore colección tickets_publicos (sin autenticación)
+        const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/tickets_publicos`;
+        const resp = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fields: {
+              folioPub: { stringValue: folio },
+              fuente: { stringValue: "publico" },
+              estado: { stringValue: ticket.estado },
+              prioridad: { stringValue: prioridad },
+              asunto: { stringValue: asunto },
+              contacto: { stringValue: nombre },
+              contactoCorreo: { stringValue: correo },
+              empresa: { stringValue: empresa },
+              telefono: { stringValue: telefono || "" },
+              sistema: { stringValue: sistema || "" },
+              descripcion: { stringValue: descripcion },
+              fechaCreacion: { stringValue: ticket.fechaCreacion },
+              revisado: { booleanValue: false }
+            }
+          })
+        });
+
+        if (!resp.ok) throw new Error(`Error ${resp.status}`);
+
+        document.getElementById("form-view").style.display = "none";
+        document.getElementById("folio-generado").textContent = `Folio ${folio}`;
+        document.getElementById("success-view").style.display = "block";
+      } catch (err) {
+        console.error(err);
+        showError("Ocurrió un error al enviar tu solicitud. Por favor intenta de nuevo o contáctanos directamente.");
+      } finally {
+        setLoading(false);
+      }
+    });
+  })();
+  </script>
+</body>
+</html>

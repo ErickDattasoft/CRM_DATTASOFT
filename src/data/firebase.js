@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
 
 // Configuración de Firebase usando las variables de entorno de Astro
 const firebaseConfig = {
@@ -113,6 +113,33 @@ export async function guardarConfigTickets(configTickets) {
     return true;
   } catch (error) {
     console.error("Error al guardar configuración de tickets en Firestore:", error);
+    return false;
+  }
+}
+
+/**
+ * Lee todos los tickets enviados desde el portal público (colección tickets_publicos).
+ */
+export async function cargarTicketsPublicos() {
+  try {
+    const colRef = collection(db, "tickets_publicos");
+    const snap = await getDocs(colRef);
+    return snap.docs.map(d => ({ _fbId: d.id, ...d.data() }));
+  } catch (error) {
+    console.error("Error al cargar tickets públicos:", error);
+    return [];
+  }
+}
+
+/**
+ * Elimina un ticket del área pública (tras ser importado al CRM o rechazado).
+ */
+export async function eliminarTicketPublico(fbId) {
+  try {
+    await deleteDoc(doc(db, "tickets_publicos", fbId));
+    return true;
+  } catch (error) {
+    console.error("Error al eliminar ticket público:", error);
     return false;
   }
 }
