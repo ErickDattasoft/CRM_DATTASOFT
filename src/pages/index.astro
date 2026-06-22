@@ -1136,6 +1136,7 @@ try {
     }
     .toast-success { background: linear-gradient(135deg, #10b981, #059669); }
     .toast-error { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    .toast-warning { background: linear-gradient(135deg, #f59e0b, #d97706); }
     .toast-info { background: linear-gradient(135deg, #6366f1, #4f46e5); }
     @keyframes toastIn {
       from { transform: translateY(80px) scale(0.9); opacity: 0; }
@@ -1183,6 +1184,27 @@ try {
       font-size: 0.78rem;
     }
 
+    /* ===== VERSIONES CARD ===== */
+    #formulario-empresa-versiones {
+      border-color: rgba(99,102,241,0.2) !important;
+      margin-top: 6px !important;
+    }
+    #formulario-empresa-versiones .card-title {
+      font-size: 0.82rem !important;
+      padding-bottom: 10px !important;
+      margin-bottom: 10px !important;
+    }
+    /* ===== LICENCIA EXPIRACION ===== */
+    .tr-licencia-vence { background: rgba(245,158,11,0.08) !important; }
+    .tr-licencia-vencida { background: rgba(239,68,68,0.08) !important; }
+    .badge-licencia {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 0.65rem; font-weight: 700; padding: 2px 6px;
+      border-radius: 4px; white-space: nowrap;
+    }
+    .badge-licencia-ok { background: rgba(16,185,129,0.15); color: #34d399; }
+    .badge-licencia-vence { background: rgba(245,158,11,0.2); color: #fbbf24; }
+    .badge-licencia-vencida { background: rgba(239,68,68,0.2); color: #f87171; }
     /* ===== CSV IMPORT ===== */
     .import-zone {
       border: 2px dashed var(--border-color);
@@ -1690,6 +1712,10 @@ try {
                 <div class="form-group"><label>RFC</label><input id="form-empresa-rfc" placeholder="Ej: XAXX010101000"></div>
                 <div class="form-group form-emp-extras"><label>Teléfono 1</label><input id="form-telefono1"></div>
                 <div class="form-group form-emp-extras"><label>Teléfono 2</label><input id="form-telefono2"></div>
+                <div class="form-group form-emp-extras" style="min-width:0;">
+                  <label style="color:#fbbf24;">📅 Vencimiento licencia</label>
+                  <input id="form-emp-fecha-venc" type="date" style="font-size:0.78rem; padding:6px 8px; color:#fbbf24;">
+                </div>
               </div>
               <div id="form-emp-campos-extra-section" style="border-top:1px dashed rgba(255,255,255,0.06); margin-top:10px; padding-top:12px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -1698,20 +1724,24 @@ try {
                 </div>
                 <div id="contenedorCamposExtras" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px;"></div>
               </div>
-              <div id="form-emp-sistemas-section" style="border-top:1px dashed rgba(255,255,255,0.06); margin-top:14px; padding-top:14px;">
-                <h4 style="font-size:0.85rem; color:var(--brand-secondary); font-family:var(--font-heading); margin-bottom:10px;">💻 Sistemas Instalados</h4>
-                <div class="sys-grid">
-                  {listaSistemasOpciones.map(sistema => (
-                    <div class="form-group">
-                      <label>{sistema}</label>
-                      <input id={`sys-${sistema.replace(/\s+/g, '_')}`} class="sistema-version-input" data-sistema={sistema} placeholder="No aplica">
-                    </div>
-                  ))}
-                </div>
-              </div>
               <div class="form-actions">
-                <button class="btn btn-primary" id="btnGuardarEmpresa">💾 Guardar</button>
+                <button class="btn btn-primary" id="btnGuardarEmpresa">💾 Guardar Empresa</button>
                 <button class="btn btn-secondary" id="btnCancelarEmpresa">Cancelar</button>
+              </div>
+            </div>
+
+            <!-- Tarjeta separada: Versiones de Sistemas Instalados -->
+            <div class="card hidden" id="formulario-empresa-versiones">
+              <div class="card-title">💻 Versiones de Sistemas Instalados
+                <span style="font-size:0.68rem; font-weight:400; color:var(--text-muted); margin-left:8px;">(se guardan junto con los datos de empresa)</span>
+              </div>
+              <div class="sys-grid">
+                {listaSistemasOpciones.map(sistema => (
+                  <div class="form-group">
+                    <label>{sistema}</label>
+                    <input id={`sys-${sistema.replace(/\s+/g, '_')}`} class="sistema-version-input" data-sistema={sistema} placeholder="No aplica">
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -2870,6 +2900,7 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
       renderConfig();
       ocultarEstado();
       initStickyHeaders();
+      checkLicenciasPorVencer();
     } catch (err) {
       console.error("Error Firebase, fallback local:", err);
       mostrarEstado("⚠️ Error de conexión a Firebase. Reintentando en la próxima carga.", 4000);
@@ -3320,6 +3351,14 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
       const idx = c._idx;
       const tr = document.createElement("tr");
       tr.className = "empresa-row";
+      // Colorear fila según vencimiento de licencia
+      if (c.FECHA_VENCIMIENTO) {
+        const hoy = new Date(); hoy.setHours(0,0,0,0);
+        const venc = new Date(c.FECHA_VENCIMIENTO + "T00:00:00");
+        const diasRestantes = Math.ceil((venc - hoy) / 86400000);
+        if (diasRestantes < 0) tr.classList.add("tr-licencia-vencida");
+        else if (diasRestantes <= 30) tr.classList.add("tr-licencia-vence");
+      }
       const checked = seleccionadosIdx.includes(idx) ? "checked" : "";
 
       let extras = "";
@@ -3327,6 +3366,17 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
         Object.entries(c.CAMPOS_EXTRAS).forEach(([k, v]) => {
           if (v) extras += `<span class="extra-badge">💻 ${k}: ${v}</span>`;
         });
+      }
+
+      // Badge licencia vencimiento
+      let badgeLicencia = "";
+      if (c.FECHA_VENCIMIENTO) {
+        const hoy2 = new Date(); hoy2.setHours(0,0,0,0);
+        const venc2 = new Date(c.FECHA_VENCIMIENTO + "T00:00:00");
+        const dias2 = Math.ceil((venc2 - hoy2) / 86400000);
+        if (dias2 < 0) badgeLicencia = `<span class="badge-licencia badge-licencia-vencida" title="Licencia vencida">🔴 Vencida</span>`;
+        else if (dias2 <= 30) badgeLicencia = `<span class="badge-licencia badge-licencia-vence" title="Vence en ${dias2} días">⚠️ ${dias2}d</span>`;
+        else badgeLicencia = `<span class="badge-licencia badge-licencia-ok" title="Vence en ${dias2} días">✅ ${dias2}d</span>`;
       }
 
       const tdBase = "vertical-align:top; padding:12px 14px;";
@@ -3337,6 +3387,7 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
           <div style="display:flex; align-items:center; gap:6px; overflow:hidden;">
             <span class="btn-fav" data-idx="${idx}" style="flex-shrink:0; font-size:1rem; cursor:pointer; color:${c.FAVORITO ? '#fbbf24' : '#64748b'};">${c.FAVORITO ? '⭐' : '☆'}</span>
             <strong title="${c.EMPRESA}" style="color:#f1f5f9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; font-size:0.88rem;">${c.EMPRESA}</strong>
+            ${badgeLicencia}
           </div>
         </td>
         <td style="${tdBase} overflow:hidden;">
@@ -3384,11 +3435,10 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
       html += `
         <td style="text-align:center; vertical-align:middle;">
           <div style="display:inline-flex; gap:4px;">
-            <button class="btn btn-secondary btn-xs btn-edit-emp" data-idx="${idx}">✏️</button>
+            <button class="btn btn-secondary btn-xs btn-edit-emp" data-idx="${idx}" title="Editar">✏️</button>
             <button class="btn btn-whatsapp btn-xs btn-wsp-emp" data-idx="${idx}" title="WhatsApp">💬</button>
-            <button class="btn btn-email btn-xs btn-mail-emp" data-idx="${idx}" title="Email">✉️</button>
-            <button class="btn btn-ghost btn-xs btn-mail-emp-zoho" data-idx="${idx}" title="Zoho Mail" style="border:1px solid rgba(255,165,0,0.4); color:#f97316;">Z✉</button>
-            <button class="btn btn-danger btn-xs btn-del-emp" data-idx="${idx}">🗑️</button>
+            <button class="btn btn-ghost btn-xs btn-mail-emp-zoho" data-idx="${idx}" title="Enviar email por Zoho Mail" style="background:rgba(249,115,22,0.15); border:1px solid rgba(249,115,22,0.4); color:#f97316; font-weight:700;">✉️ Zoho</button>
+            <button class="btn btn-danger btn-xs btn-del-emp" data-idx="${idx}" title="Eliminar">🗑️</button>
           </div>
         </td>
       `;
@@ -3400,7 +3450,6 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     tbody.querySelectorAll(".btn-edit-emp").forEach(b => b.addEventListener("click", prepararEdicionEmpresa));
     tbody.querySelectorAll(".btn-del-emp").forEach(b => b.addEventListener("click", eliminarEmpresa));
     tbody.querySelectorAll(".btn-wsp-emp").forEach(b => b.addEventListener("click", enviarWhatsApp));
-    tbody.querySelectorAll(".btn-mail-emp").forEach(b => b.addEventListener("click", enviarEmailEmpresa));
     tbody.querySelectorAll(".btn-fav").forEach(b => b.addEventListener("click", toggleFavorito));
     tbody.querySelectorAll(".chk-emp").forEach(b => {
       b.addEventListener("change", function() {
@@ -3423,6 +3472,7 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
 
   function cerrarFormEmpresa() {
     formEmp?.classList.add("hidden");
+    document.getElementById("formulario-empresa-versiones")?.classList.add("hidden");
     editEmpIdx.value = "";
     document.getElementById("form-empresa").value = "";
     document.getElementById("form-contacto").value = "";
@@ -3430,13 +3480,13 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     document.getElementById("form-empresa-rfc").value = "";
     document.getElementById("form-telefono1").value = "";
     document.getElementById("form-telefono2").value = "";
+    document.getElementById("form-emp-fecha-venc").value = "";
     document.getElementById("contenedorCamposExtras").innerHTML = "";
     const sel = document.getElementById("form-emp-contacto-select");
     if (sel) { sel.innerHTML = ""; sel.classList.add("hidden"); }
     document.getElementById("form-contacto")?.classList.remove("hidden");
     document.querySelectorAll(".form-emp-extras").forEach(el => el.classList.remove("hidden"));
     document.getElementById("form-emp-campos-extra-section")?.classList.remove("hidden");
-    document.getElementById("form-emp-sistemas-section")?.classList.remove("hidden");
     listaSistemas.forEach(s => {
       const inp = document.getElementById(`sys-${s.replace(/\s+/g, '_')}`);
       if (inp) inp.value = "";
@@ -3450,7 +3500,7 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     // Modo simplificado: ocultar campos no esenciales
     document.querySelectorAll(".form-emp-extras").forEach(el => el.classList.add("hidden"));
     document.getElementById("form-emp-campos-extra-section")?.classList.add("hidden");
-    document.getElementById("form-emp-sistemas-section")?.classList.add("hidden");
+    document.getElementById("formulario-empresa-versiones")?.classList.remove("hidden");
 
     // Usar select de contactos en lugar de input de texto
     const sel = document.getElementById("form-emp-contacto-select");
@@ -3514,10 +3564,11 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     document.getElementById("form-empresa-rfc").value = c.RFC || "";
     document.getElementById("form-telefono1").value = c.TELEFONO_1 || "";
     document.getElementById("form-telefono2").value = c.TELEFONO_2 || "";
+    document.getElementById("form-emp-fecha-venc").value = c.FECHA_VENCIMIENTO || "";
     // En modo edición mostrar todos los campos
     document.querySelectorAll(".form-emp-extras").forEach(el => el.classList.remove("hidden"));
     document.getElementById("form-emp-campos-extra-section")?.classList.remove("hidden");
-    document.getElementById("form-emp-sistemas-section")?.classList.remove("hidden");
+    document.getElementById("formulario-empresa-versiones")?.classList.remove("hidden");
     document.getElementById("form-emp-contacto-select")?.classList.add("hidden");
     document.getElementById("form-contacto")?.classList.remove("hidden");
     if (c.CAMPOS_EXTRAS) {
@@ -3556,6 +3607,7 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
       RFC: document.getElementById("form-empresa-rfc").value.trim(),
       TELEFONO_1: document.getElementById("form-telefono1").value.trim(),
       TELEFONO_2: document.getElementById("form-telefono2").value.trim(),
+      FECHA_VENCIMIENTO: document.getElementById("form-emp-fecha-venc").value || "",
       FAVORITO: idx !== "" ? clientes[parseInt(idx)]?.FAVORITO || false : false,
       CAMPOS_EXTRAS: extras,
       SISTEMAS: {}
@@ -3590,6 +3642,7 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
       cerrarFormEmpresa();
       renderEmpresas();
       renderDashboard();
+      checkLicenciasPorVencer();
       return;
     }
     mostrarEstado("💾 Guardando...");
@@ -3599,6 +3652,7 @@ import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion,
     cerrarFormEmpresa();
     renderEmpresas();
     renderDashboard();
+    checkLicenciasPorVencer();
   });
 
   async function eliminarEmpresa(e) {
@@ -5492,6 +5546,26 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   document.getElementById("modal-tickets-pub")?.addEventListener("click", e => {
     if (e.target === document.getElementById("modal-tickets-pub")) document.getElementById("modal-tickets-pub").style.display = "none";
   });
+
+  // Verificar licencias por vencer al iniciar
+  function checkLicenciasPorVencer() {
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    const vencidas = [];
+    const proximas = [];
+    clientes.forEach(c => {
+      if (!c.FECHA_VENCIMIENTO) return;
+      const venc = new Date(c.FECHA_VENCIMIENTO + "T00:00:00");
+      const dias = Math.ceil((venc - hoy) / 86400000);
+      if (dias < 0) vencidas.push({ nombre: c.EMPRESA, dias: Math.abs(dias) });
+      else if (dias <= 30) proximas.push({ nombre: c.EMPRESA, dias });
+    });
+    if (vencidas.length > 0) {
+      setTimeout(() => toast(`🔴 ${vencidas.length} licencia(s) VENCIDA(S): ${vencidas.map(e => e.nombre).join(", ")}`, "error"), 1500);
+    }
+    if (proximas.length > 0) {
+      setTimeout(() => toast(`⚠️ ${proximas.length} licencia(s) por vencer: ${proximas.map(e => `${e.nombre} (${e.dias}d)`).join(", ")}`, "warning"), 2500);
+    }
+  }
 
   // Cargar tickets públicos al iniciar
   cargarYMostrarTicketsPub();
