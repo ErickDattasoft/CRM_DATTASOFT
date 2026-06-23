@@ -2743,7 +2743,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios } from "../data/firebase.js";
+import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB } from "../data/firebase.js";
 
 // ── Multi-user Auth ───────────────────────────────────────────
 async function sha256(str: string): Promise<string> {
@@ -3297,6 +3297,10 @@ verificarSesion();
         }
         if (datos.usuarios && datos.usuarios.length > 0) {
           saveUsuariosLocal(datos.usuarios);
+        }
+        if (datos.eventos && datos.eventos.length > 0) {
+          eventos = datos.eventos;
+          guardarLocal("crm_eventos", eventos);
         }
         // Siempre respaldar en localStorage después de cargar de Firebase
         guardarLocal("crm_clientes", clientes);
@@ -6196,7 +6200,10 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   let eventos = JSON.parse(localStorage.getItem("crm_eventos") || "[]");
   let eventoActivoId = null;
 
-  function guardarEventos() { localStorage.setItem("crm_eventos", JSON.stringify(eventos)); }
+  function guardarEventos() {
+    localStorage.setItem("crm_eventos", JSON.stringify(eventos));
+    if (!crmLocalOnly && firebaseEnabled) guardarEventosFB(eventos);
+  }
 
   function getEventoActivo() { return eventos.find(e => e.id === eventoActivoId) || null; }
 

@@ -146,6 +146,20 @@ export async function guardarUsuarios(usuarios) {
 }
 
 /**
+ * Guarda los eventos del CRM en Firestore.
+ */
+export async function guardarEventosFB(eventos) {
+  try {
+    const docRef = doc(db, "agenda", "datos");
+    await setDoc(docRef, { eventos }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error al guardar eventos en Firestore:", error);
+    return false;
+  }
+}
+
+/**
  * Elimina un ticket del área pública (tras ser importado al CRM o rechazado).
  */
 export async function eliminarTicketPublico(fbId) {
