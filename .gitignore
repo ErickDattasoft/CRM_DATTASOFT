@@ -25,3 +25,14 @@ pnpm-debug.log*
 
 # Local Netlify folder
 .netlify
+
+# WSL metadata
+*:Zone.Identifier
+
+# Archivos de datos sensibles (clientes reales)
+src/data/clientes.json
+src/data/contactos.json
+src/data/importar_todo.json
+*.xlsx
+debug_patch.txt
+convertirXlsxACsv.js

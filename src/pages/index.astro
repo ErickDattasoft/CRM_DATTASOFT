@@ -355,6 +355,7 @@ try {
     .stat-card.stat-open::before { background: linear-gradient(90deg, #0ea5e9, #38bdf8); }
     .stat-card.stat-pending::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
     .stat-card.stat-resolved::before { background: linear-gradient(90deg, #10b981, #34d399); }
+    .stat-card.stat-closed::before { background: linear-gradient(90deg, #64748b, #94a3b8); }
     .stat-card.stat-companies::before { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
     .stat-card.stat-contacts::before { background: linear-gradient(90deg, #ec4899, #f472b6); }
 
@@ -780,11 +781,13 @@ try {
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
-    .market-row-inputs { display: flex; align-items: center; gap: 6px; }
+    .market-row-inputs { display: flex; flex-direction: column; gap: 6px; }
     .market-row input {
-      padding: 5px 8px;
-      font-size: 0.78rem;
-      flex: 1;
+      padding: 8px 10px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      width: 100%;
+      box-sizing: border-box;
     }
     .version-status { font-size: 0.65rem; white-space: nowrap; }
 
@@ -1171,7 +1174,7 @@ try {
     /* ===== SISTEMAS CLIENT GRID ===== */
     .sys-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
       gap: 8px;
     }
     .sys-grid .form-group { margin-bottom: 0; }
@@ -1180,8 +1183,9 @@ try {
       font-size: 0.68rem;
     }
     .sys-grid input {
-      padding: 6px 8px;
-      font-size: 0.78rem;
+      padding: 8px 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
     }
 
     /* ===== VERSIONES CARD ===== */
@@ -1631,6 +1635,11 @@ try {
         <span class="nav-label">Tickets</span>
         <span class="nav-badge" id="badge-tickets-abiertos">0</span>
       </div>
+      <div class="sidebar-section-label">Gestión</div>
+      <div class="nav-item" data-section="eventos" data-tooltip="Eventos">
+        <span class="nav-icon">📅</span>
+        <span class="nav-label">Eventos</span>
+      </div>
       <div class="sidebar-section-label">Sistema</div>
       <div class="nav-item" data-section="versiones" data-tooltip="Versiones CONTPAQi">
         <span class="nav-icon">🚀</span>
@@ -1717,7 +1726,12 @@ try {
           <div class="stat-card stat-resolved" data-nav="tickets" data-filter-estado="Resuelto" title="Ver tickets Resueltos">
             <div class="stat-icon">✅</div>
             <span class="stat-value" id="dash-tickets-resueltos">0</span>
-            <span class="stat-label">Resueltos / Cerrados</span>
+            <span class="stat-label">Resueltos</span>
+          </div>
+          <div class="stat-card stat-closed" data-nav="tickets" data-filter-estado="Cerrado" title="Ver tickets Cerrados">
+            <div class="stat-icon">🔒</div>
+            <span class="stat-value" id="dash-tickets-cerrados">0</span>
+            <span class="stat-label">Cerrados</span>
           </div>
         </div>
 
@@ -1824,7 +1838,7 @@ try {
               <div class="card-title" id="form-emp-titulo">➕ Registrar Empresa</div>
               <input type="hidden" id="edit-emp-index">
               <div class="form-grid">
-                <div class="form-group"><label>Empresa <span class="required">*</span></label><input id="form-empresa" required></div>
+                <div class="form-group"><label>Empresa <span class="required">*</span></label><input id="form-empresa" required style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
                 <div class="form-group" id="form-emp-contacto-group">
                   <label>Contacto Principal</label>
                   <select id="form-emp-contacto-select" class="hidden"></select>
@@ -1857,7 +1871,7 @@ try {
                 {listaSistemasOpciones.map(sistema => (
                   <div style="background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px 10px 8px; display:flex; flex-direction:column; gap:5px;">
                     <div style="font-size:0.72rem; font-weight:700; color:var(--brand-secondary); text-transform:uppercase; letter-spacing:0.03em;">{sistema}</div>
-                    <input id={`sys-${sistema.replace(/\s+/g, '_')}`} class="sistema-version-input" data-sistema={sistema} placeholder="Versión (ej: 18.1.0)" style="padding:5px 8px; font-size:0.78rem;">
+                    <input id={`sys-${sistema.replace(/\s+/g, '_')}`} class="sistema-version-input" data-sistema={sistema} placeholder="Versión (ej: 18.1.0)" style="padding:8px 10px; font-size:0.88rem; font-weight:600; letter-spacing:0.02em;">
                     <div style="display:flex; align-items:center; gap:5px; margin-top:1px;">
                       <span style="font-size:0.6rem; color:#fbbf24; white-space:nowrap; flex-shrink:0;">📅 Vence:</span>
                       <input id={`venc-${sistema.replace(/\s+/g, '_')}`} class="sistema-vencimiento-input" data-sistema={sistema} type="date" style="padding:3px 6px; font-size:0.72rem; color:#fbbf24; border-color:rgba(245,158,11,0.3); flex:1;">
@@ -1938,7 +1952,7 @@ try {
         <div id="modal-empresa-rapida" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center;">
           <div style="background:#1a1e2e; border:1px solid rgba(99,102,241,0.4); border-radius:12px; padding:24px; width:420px; max-width:90vw; box-shadow:0 20px 60px rgba(0,0,0,0.6);">
             <div style="font-size:1rem; font-weight:700; color:#f1f5f9; margin-bottom:16px;">🏢 Registrar Empresa Rápida</div>
-            <div class="form-group" style="margin-bottom:12px;"><label>Nombre de la Empresa <span class="required">*</span></label><input id="quick-emp-nombre" placeholder="Nombre de la empresa"></div>
+            <div class="form-group" style="margin-bottom:12px;"><label>Nombre de la Empresa <span class="required">*</span></label><input id="quick-emp-nombre" placeholder="Nombre de la empresa" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
             <div class="form-group" style="margin-bottom:12px;"><label>Correo</label><input id="quick-emp-correo" type="email" placeholder="correo@empresa.com"></div>
             <div class="form-group" style="margin-bottom:16px;"><label>Teléfono</label><input id="quick-emp-tel" placeholder="55 1234 5678"></div>
             <div style="display:flex; gap:8px; justify-content:flex-end;">
@@ -1970,7 +1984,7 @@ try {
       <!-- ============================== -->
       <div class="section" id="section-tickets">
         <!-- Dashboard cards -->
-        <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="stats-grid" style="grid-template-columns: repeat(5, 1fr);">
           <div class="stat-card stat-total">
             <span class="stat-value" id="tk-count-total">0</span>
             <span class="stat-label">Total Tickets</span>
@@ -1985,7 +1999,11 @@ try {
           </div>
           <div class="stat-card stat-resolved">
             <span class="stat-value" id="tk-count-resueltos">0</span>
-            <span class="stat-label">Resueltos / Cerrados</span>
+            <span class="stat-label">Resueltos</span>
+          </div>
+          <div class="stat-card stat-closed">
+            <span class="stat-value" id="tk-count-cerrados">0</span>
+            <span class="stat-label">Cerrados</span>
           </div>
         </div>
 
@@ -2082,6 +2100,11 @@ try {
               <button type="button" data-cmd="fontSize" data-val="2" title="Texto pequeño">A-</button>
             </div>
             <div class="rte-editor" contenteditable="true" id="form-tk-descripcion" data-placeholder="Describe el problema en detalle..."></div>
+          </div>
+          <!-- Notas Internas -->
+          <div class="form-group" style="margin-top:10px;">
+            <label style="color:#f59e0b;">🔒 Notas Internas <span style="font-size:0.72rem; font-weight:400; color:var(--text-muted); text-transform:none;">(uso interno: factura, pendientes, detalles — NO se envía al cliente)</span></label>
+            <textarea id="form-tk-notas-internas" rows="3" placeholder="Ej: Factura A-001, pendiente autorización, contactar el lunes..." style="font-size:0.83rem; border-color:rgba(245,158,11,0.3); background:rgba(245,158,11,0.04); resize:vertical;"></textarea>
           </div>
           <!-- Adjuntos -->
           <div class="form-group" style="margin-top:10px;">
@@ -2260,6 +2283,159 @@ try {
         </div>
       </div>
 
+      <!-- ============================== -->
+      <!-- SECTION: EVENTOS               -->
+      <!-- ============================== -->
+      <div class="section" id="section-eventos">
+        <!-- Selector de evento activo -->
+        <div class="controls-bar" style="flex-wrap:wrap; gap:10px;">
+          <div class="controls-left" style="flex-wrap:wrap; gap:8px;">
+            <select id="selectEventoActivo" style="min-width:200px; font-size:0.85rem; font-weight:600;">
+              <option value="">— Selecciona un evento —</option>
+            </select>
+            <button class="btn btn-primary btn-sm" id="btnNuevoEvento">➕ Nuevo Evento</button>
+            <button class="btn btn-danger btn-sm" id="btnEliminarEvento" style="display:none;">🗑️ Eliminar Evento</button>
+          </div>
+        </div>
+
+        <!-- Formulario de nuevo/editar evento (oculto) -->
+        <div class="card hidden" id="formulario-evento" style="border-color:rgba(99,102,241,0.3);">
+          <div class="card-title" id="form-evento-titulo">➕ Nuevo Evento</div>
+          <input type="hidden" id="edit-evento-id">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Nombre del Evento <span class="required">*</span></label>
+              <input id="form-ev-nombre" placeholder="Ej: Webinar CONTPAQi Julio 2026" required>
+            </div>
+            <div class="form-group">
+              <label>Sistema / Tema del evento</label>
+              <input id="form-ev-sistema" placeholder="Ej: Comercial Premium, Nóminas...">
+            </div>
+            <div class="form-group">
+              <label>Fecha del evento</label>
+              <input id="form-ev-fecha" type="date">
+            </div>
+            <div class="form-group">
+              <label>Hora</label>
+              <input id="form-ev-hora" type="time">
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:8px;">
+            <label>🔗 Link del evento (Zoom, Teams, Meet, etc.)</label>
+            <input id="form-ev-link" placeholder="https://zoom.us/j/..." type="url">
+          </div>
+          <div class="form-group" style="margin-top:8px;">
+            <label>Notas del evento</label>
+            <textarea id="form-ev-notas" rows="2" placeholder="Descripción, agenda, información adicional..."></textarea>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary" id="btnGuardarEvento">💾 Guardar Evento</button>
+            <button class="btn btn-secondary" id="btnCancelarEvento">Cancelar</button>
+          </div>
+        </div>
+
+        <!-- Panel del evento seleccionado -->
+        <div id="panel-evento" style="display:none;">
+          <!-- Info del evento -->
+          <div class="card" id="card-info-evento">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+              <div style="flex:1;">
+                <div class="card-title" id="ev-nombre-display" style="margin-bottom:6px;">—</div>
+                <div style="display:flex; gap:12px; flex-wrap:wrap; font-size:0.82rem; color:var(--text-muted);">
+                  <span id="ev-sistema-display"></span>
+                  <span id="ev-fecha-display"></span>
+                  <a id="ev-link-display" href="#" target="_blank" style="color:#7dd3fc; display:none;">🔗 Ver enlace</a>
+                </div>
+                <div id="ev-notas-display" style="margin-top:8px; font-size:0.82rem; color:var(--text-light); white-space:pre-wrap; display:none;"></div>
+              </div>
+              <div style="display:flex; gap:6px; flex-shrink:0;">
+                <button class="btn btn-sm btn-ghost" id="btnEditarEvento">✏️ Editar</button>
+              </div>
+            </div>
+            <!-- Resumen de asistencia -->
+            <div style="display:flex; gap:16px; margin-top:14px; padding-top:12px; border-top:1px solid var(--border-subtle); flex-wrap:wrap;">
+              <div style="text-align:center;">
+                <div id="ev-stat-invitados" style="font-size:1.5rem; font-weight:800; color:#818cf8; font-family:var(--font-heading);">0</div>
+                <div style="font-size:0.7rem; color:var(--text-muted);">Invitados</div>
+              </div>
+              <div style="text-align:center;">
+                <div id="ev-stat-asistira" style="font-size:1.5rem; font-weight:800; color:#34d399; font-family:var(--font-heading);">0</div>
+                <div style="font-size:0.7rem; color:var(--text-muted);">Asistirá</div>
+              </div>
+              <div style="text-align:center;">
+                <div id="ev-stat-no" style="font-size:1.5rem; font-weight:800; color:#f87171; font-family:var(--font-heading);">0</div>
+                <div style="font-size:0.7rem; color:var(--text-muted);">No Asistirá</div>
+              </div>
+              <div style="text-align:center;">
+                <div id="ev-stat-noloc" style="font-size:1.5rem; font-weight:800; color:#fbbf24; font-family:var(--font-heading);">0</div>
+                <div style="font-size:0.7rem; color:var(--text-muted);">No Localizado</div>
+              </div>
+              <div style="text-align:center;">
+                <div id="ev-stat-pendiente" style="font-size:1.5rem; font-weight:800; color:#94a3b8; font-family:var(--font-heading);">0</div>
+                <div style="font-size:0.7rem; color:var(--text-muted);">Pendiente</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabla de empresas participantes -->
+          <div class="card" style="margin-top:0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+              <div class="card-title" style="margin-bottom:0;">🏢 Empresas Invitadas</div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <input id="ev-buscar-empresa" placeholder="Buscar empresa..." style="font-size:0.8rem; padding:6px 10px; width:200px;" autocomplete="off">
+                <button class="btn btn-sm btn-primary" id="btnAgregarEmpresaEvento">➕ Agregar empresa</button>
+              </div>
+            </div>
+            <div id="ev-empresas-autocomplete" class="autocomplete-list hidden" style="max-height:160px;"></div>
+            <div class="table-wrap" style="max-height:340px;">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="min-width:160px;">Empresa</th>
+                    <th style="min-width:120px; font-size:0.72rem;">Sistema / Área</th>
+                    <th style="text-align:center; width:80px; font-size:0.72rem;">Invitado<br><span style="font-weight:400;">(contactado)</span></th>
+                    <th style="text-align:center; width:120px; font-size:0.72rem;">Respuesta</th>
+                    <th style="min-width:120px; font-size:0.72rem;">Notas</th>
+                    <th style="text-align:center; width:60px;">Quitar</th>
+                  </tr>
+                </thead>
+                <tbody id="ev-tabla-empresas"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Invitados Extras (redes sociales / externos) -->
+          <div class="card" style="margin-top:0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+              <div class="card-title" style="margin-bottom:0;">🌐 Invitados Extras <span style="font-size:0.72rem; font-weight:400; color:var(--text-muted);">(redes sociales, externos)</span></div>
+              <button class="btn btn-sm btn-ghost" id="btnAgregarInvitadoExtra">➕ Agregar invitado externo</button>
+            </div>
+            <div class="table-wrap" style="max-height:240px;">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="min-width:140px;">Nombre</th>
+                    <th style="min-width:120px;">Fuente</th>
+                    <th style="text-align:center; width:80px; font-size:0.72rem;">Invitado</th>
+                    <th style="text-align:center; width:120px; font-size:0.72rem;">Respuesta</th>
+                    <th style="min-width:120px; font-size:0.72rem;">Notas</th>
+                    <th style="text-align:center; width:60px;">Quitar</th>
+                  </tr>
+                </thead>
+                <tbody id="ev-tabla-extras"></tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /panel-evento -->
+
+        <!-- Estado vacío cuando no hay eventos -->
+        <div id="ev-empty" style="text-align:center; padding:60px 20px; color:var(--text-muted);">
+          <div style="font-size:3rem; margin-bottom:12px;">📅</div>
+          <div style="font-size:1rem; font-weight:600; color:var(--text-light); margin-bottom:6px;">Sin eventos creados</div>
+          <div style="font-size:0.82rem;">Crea un evento para gestionar invitados y asistencia.</div>
+        </div>
+      </div><!-- /section-eventos -->
+
     </div><!-- /content-scroll -->
   </div><!-- /main-content -->
 </div><!-- /app-layout -->
@@ -2302,6 +2478,10 @@ try {
     <div style="border-top:1px solid var(--border-color); padding-top:14px; flex:1; min-height:80px;">
       <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:6px;">📝 Descripción</div>
       <div id="det-tk-descripcion" style="font-size:0.88rem; line-height:1.6; background:var(--bg-input); padding:14px; border-radius:var(--radius-md); border:1px solid var(--border-color); overflow-y:auto; max-height:180px;"></div>
+    </div>
+    <div id="det-tk-notas-internas-section" style="border-top:1px solid rgba(245,158,11,0.3); padding-top:12px; display:none; background:rgba(245,158,11,0.04); border-radius:6px; padding:12px 14px; margin-top:2px;">
+      <div style="font-size:0.72rem; color:#f59e0b; text-transform:uppercase; font-weight:700; margin-bottom:6px;">🔒 Notas Internas</div>
+      <div id="det-tk-notas-internas" style="font-size:0.85rem; line-height:1.6; white-space:pre-wrap; color:var(--text-main);"></div>
     </div>
     <div id="det-tk-adjuntos-section" style="border-top:1px solid var(--border-color); padding-top:12px; display:none;">
       <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:8px;">📎 Adjuntos</div>
@@ -2435,9 +2615,13 @@ try {
   <div class="modal-box" style="width:480px; max-width:95%;">
     <div class="modal-header">
       <h2>ℹ️ Acerca de</h2>
-      <button class="modal-close" id="btnCerrarAcercaDe">×</button>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button id="btnEditarAcercaDe" class="btn btn-sm" style="display:none; font-size:0.75rem; padding:4px 10px; background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.3); color:#818cf8;">✏️ Editar</button>
+        <button class="modal-close" id="btnCerrarAcercaDe">×</button>
+      </div>
     </div>
-    <div style="padding:20px; display:flex; flex-direction:column; gap:14px;">
+    <!-- Vista normal -->
+    <div id="acerca-de-vista" style="padding:20px; display:flex; flex-direction:column; gap:14px;">
       <div style="text-align:center; padding:10px 0;">
         <div style="font-size:3rem; margin-bottom:6px;">📊</div>
         <div style="font-size:1.3rem; font-weight:800; color:var(--text-bright); font-family:var(--font-heading);">DATTASOFT CRM</div>
@@ -2446,11 +2630,11 @@ try {
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.82rem;">
         <div style="background:var(--bg-input); border-radius:var(--radius-md); padding:12px;">
           <div style="font-size:0.7rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Versión</div>
-          <div style="color:var(--text-bright); font-weight:600;">v2.0.0</div>
+          <div id="acerca-version-txt" style="color:var(--text-bright); font-weight:600;">v2.0.0</div>
         </div>
         <div style="background:var(--bg-input); border-radius:var(--radius-md); padding:12px;">
-          <div style="font-size:0.7rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Fecha de creación</div>
-          <div style="color:var(--text-bright); font-weight:600;">Junio 2025</div>
+          <div style="font-size:0.7rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Última actualización</div>
+          <div id="acerca-fecha-txt" style="color:var(--text-bright); font-weight:600;">Junio 2025</div>
         </div>
         <div style="background:var(--bg-input); border-radius:var(--radius-md); padding:12px;">
           <div style="font-size:0.7rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Desarrollado por</div>
@@ -2461,20 +2645,40 @@ try {
           <div style="color:var(--text-bright); font-weight:600;">DATTASOFT BY INFOXPERT</div>
         </div>
       </div>
+      <div id="acerca-notas-display" style="display:none; background:rgba(99,102,241,0.07); border:1px solid rgba(99,102,241,0.2); border-radius:var(--radius-md); padding:12px; font-size:0.83rem; color:var(--text-main); white-space:pre-wrap; line-height:1.6;"></div>
       <div style="display:flex; flex-direction:column; gap:8px; font-size:0.82rem;">
         <div style="font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">🔗 Enlaces</div>
         <a href="https://github.com/ErickDattasoft/CRM_DATTASOFT" target="_blank" style="display:flex; align-items:center; gap:8px; color:var(--brand-primary-hover); text-decoration:none; background:var(--bg-input); padding:10px 12px; border-radius:var(--radius-md); transition:var(--transition-base);">
           <span style="font-size:1.1rem;">🐙</span> GitHub — ErickDattasoft/CRM_DATTASOFT
         </a>
-        <a href="https://crmdattasoft.netlify.app" target="_blank" style="display:flex; align-items:center; gap:8px; color:var(--brand-success); text-decoration:none; background:var(--bg-input); padding:10px 12px; border-radius:var(--radius-md); transition:var(--transition-base);">
-          <span style="font-size:1.1rem;">🚀</span> Netlify — crmdattasoft.netlify.app
+        <a href="https://crm-dattasoft.pages.dev" target="_blank" style="display:flex; align-items:center; gap:8px; color:var(--brand-success); text-decoration:none; background:var(--bg-input); padding:10px 12px; border-radius:var(--radius-md); transition:var(--transition-base);">
+          <span style="font-size:1.1rem;">☁️</span> Cloudflare Pages — crm-dattasoft.pages.dev
         </a>
         <a href="https://console.firebase.google.com/project/agenda-crm-netlify" target="_blank" style="display:flex; align-items:center; gap:8px; color:var(--brand-warning); text-decoration:none; background:var(--bg-input); padding:10px 12px; border-radius:var(--radius-md); transition:var(--transition-base);">
           <span style="font-size:1.1rem;">🔥</span> Firebase — agenda-crm-netlify
         </a>
       </div>
       <div style="text-align:center; font-size:0.72rem; color:var(--text-light); padding-top:6px; border-top:1px solid var(--border-subtle);">
-        Stack: Astro · Firebase Firestore · Netlify · SheetJS · PWA
+        Stack: Astro · Firebase Firestore · Cloudflare Pages · SheetJS · PWA
+      </div>
+    </div>
+    <!-- Formulario de edición (solo ERICK) -->
+    <div id="acerca-de-form" style="display:none; padding:20px; display:none; flex-direction:column; gap:14px;">
+      <div class="form-group">
+        <label style="font-size:0.75rem;">Versión del CRM</label>
+        <input id="acerca-edit-version" placeholder="ej: v2.1.0" style="font-size:0.9rem; font-weight:700;">
+      </div>
+      <div class="form-group">
+        <label style="font-size:0.75rem;">Última actualización</label>
+        <input id="acerca-edit-fecha" placeholder="ej: Junio 2026" style="font-size:0.9rem;">
+      </div>
+      <div class="form-group">
+        <label style="font-size:0.75rem;">Notas / Descripción personalizada</label>
+        <textarea id="acerca-edit-notas" rows="4" placeholder="Cambios, notas internas, información adicional..." style="font-size:0.83rem; resize:vertical;"></textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary btn-sm" id="btnGuardarAcercaDe">💾 Guardar</button>
+        <button class="btn btn-secondary btn-sm" id="btnCancelarEditAcercaDe">Cancelar</button>
       </div>
     </div>
   </div>
@@ -2872,7 +3076,8 @@ verificarSesion();
     contactos: { title: "Contactos", sub: "Directorio de contactos asociados a empresas" },
     tickets: { title: "Soporte — Tickets", sub: "Sistema de tickets de soporte técnico" },
     configuracion: { title: "Configuración", sub: "Ajustes del sistema de tickets y campos" },
-    bitacora: { title: "Bitácora de Acciones", sub: "Registro de actividades del CRM" }
+    bitacora: { title: "Bitácora de Acciones", sub: "Registro de actividades del CRM" },
+    eventos: { title: "Eventos", sub: "Gestión de eventos, invitados y asistencia" }
   };
 
   function navegarA(sectionId, filtroEstado = "") {
@@ -2896,6 +3101,7 @@ verificarSesion();
     if (sectionId === "configuracion") renderConfig();
     if (sectionId === "bitacora") renderBitacora();
     if (sectionId === "configuracion") renderUsuariosPanel();
+    if (sectionId === "eventos") renderSeccionEventos();
   }
 
   // Click en stat-cards del dashboard
@@ -3222,13 +3428,57 @@ verificarSesion();
   // ============================================================
   // MODAL ACERCA DE
   // ============================================================
+  function cargarDatosAcercaDe() {
+    const datos = JSON.parse(localStorage.getItem("crm_acerca_de") || "{}");
+    const version = datos.version || "v2.0.0";
+    const fecha = datos.fecha || "Junio 2025";
+    const notas = datos.notas || "";
+    const vTxt = document.getElementById("acerca-version-txt");
+    const fTxt = document.getElementById("acerca-fecha-txt");
+    const nDisp = document.getElementById("acerca-notas-display");
+    if (vTxt) vTxt.textContent = version;
+    if (fTxt) fTxt.textContent = fecha;
+    if (nDisp) { nDisp.textContent = notas; nDisp.style.display = notas ? "block" : "none"; }
+  }
+
   document.getElementById("btnAcercaDe")?.addEventListener("click", () => {
+    cargarDatosAcercaDe();
+    const u = getUsuarioActual();
+    const btnEdit = document.getElementById("btnEditarAcercaDe");
+    if (btnEdit) btnEdit.style.display = (u?.nombre === "ERICK") ? "inline-flex" : "none";
+    document.getElementById("acerca-de-vista").style.display = "flex";
+    document.getElementById("acerca-de-form").style.display = "none";
     const m = document.getElementById("modal-acerca-de");
     if (m) m.style.display = "flex";
   });
   document.getElementById("btnCerrarAcercaDe")?.addEventListener("click", () => {
     const m = document.getElementById("modal-acerca-de");
     if (m) m.style.display = "none";
+  });
+  document.getElementById("btnEditarAcercaDe")?.addEventListener("click", () => {
+    const datos = JSON.parse(localStorage.getItem("crm_acerca_de") || "{}");
+    document.getElementById("acerca-edit-version").value = datos.version || "v2.0.0";
+    document.getElementById("acerca-edit-fecha").value = datos.fecha || "Junio 2025";
+    document.getElementById("acerca-edit-notas").value = datos.notas || "";
+    document.getElementById("acerca-de-vista").style.display = "none";
+    document.getElementById("acerca-de-form").style.display = "flex";
+  });
+  document.getElementById("btnCancelarEditAcercaDe")?.addEventListener("click", () => {
+    document.getElementById("acerca-de-vista").style.display = "flex";
+    document.getElementById("acerca-de-form").style.display = "none";
+  });
+  document.getElementById("btnGuardarAcercaDe")?.addEventListener("click", () => {
+    const datos = {
+      version: document.getElementById("acerca-edit-version").value.trim() || "v2.0.0",
+      fecha: document.getElementById("acerca-edit-fecha").value.trim() || "Junio 2025",
+      notas: document.getElementById("acerca-edit-notas").value.trim()
+    };
+    localStorage.setItem("crm_acerca_de", JSON.stringify(datos));
+    cargarDatosAcercaDe();
+    document.getElementById("acerca-de-vista").style.display = "flex";
+    document.getElementById("acerca-de-form").style.display = "none";
+    toast("💾 Acerca de actualizado");
+    logBitacora("Acerca De actualizado", "ℹ️");
   });
 
   // ============================================================
@@ -3531,7 +3781,8 @@ verificarSesion();
     el("dash-total-tickets").textContent = tickets.length;
     el("dash-tickets-abiertos").textContent = tickets.filter(t => t.estado === "Abierto").length;
     el("dash-tickets-pendientes").textContent = tickets.filter(t => t.estado === "Pendiente").length;
-    el("dash-tickets-resueltos").textContent = tickets.filter(t => t.estado === "Resuelto" || t.estado === "Cerrado").length;
+    el("dash-tickets-resueltos").textContent = tickets.filter(t => t.estado === "Resuelto").length;
+    el("dash-tickets-cerrados").textContent = tickets.filter(t => t.estado === "Cerrado").length;
 
     // Sidebar badges
     el("badge-empresas").textContent = clientes.length;
@@ -3627,19 +3878,23 @@ verificarSesion();
         });
       }
 
-      // Badge licencia vencimiento (sistema más próximo a vencer)
+      // Badge licencia vencimiento (todos los sistemas vencidos o por vencer ≤30 días)
       let badgeLicencia = "";
       if (c.VENCIMIENTOS && Object.keys(c.VENCIMIENTOS).length > 0) {
         const hoy2 = new Date(); hoy2.setHours(0,0,0,0);
-        let minDias2 = Infinity; let sistemaVence2 = "";
+        const vencidos = []; const proximos = [];
         Object.entries(c.VENCIMIENTOS).forEach(([sis, fecha]) => {
           if (!fecha) return;
           const d = Math.ceil((new Date(fecha + "T00:00:00") - hoy2) / 86400000);
-          if (d < minDias2) { minDias2 = d; sistemaVence2 = sis; }
+          if (d < 0) vencidos.push({ sis, d });
+          else if (d <= 30) proximos.push({ sis, d });
         });
-        if (minDias2 < Infinity) {
-          if (minDias2 < 0) badgeLicencia = `<span class="badge-licencia badge-licencia-vencida" title="${sistemaVence2} vencida hace ${Math.abs(minDias2)}d">🔴</span>`;
-          else if (minDias2 <= 30) badgeLicencia = `<span class="badge-licencia badge-licencia-vence" title="${sistemaVence2} vence en ${minDias2}d">⚠️ ${minDias2}d</span>`;
+        const tooltipVenc = vencidos.map(x => `🔴 ${x.sis}: vencida hace ${Math.abs(x.d)} días`).join("\n");
+        const tooltipProx = proximos.sort((a,b) => a.d - b.d).map(x => `⚠️ ${x.sis}: vence en ${x.d} días`).join("\n");
+        if (vencidos.length > 0) badgeLicencia += `<span class="badge-licencia badge-licencia-vencida" title="${tooltipVenc}">🔴 ${vencidos.length > 1 ? vencidos.length + " licencias vencidas" : vencidos[0].sis + " vencida"}</span>`;
+        if (proximos.length > 0) {
+          const primero = proximos.sort((a,b) => a.d - b.d)[0];
+          badgeLicencia += `<span class="badge-licencia badge-licencia-vence" title="${tooltipProx}">⚠️ ${proximos.length > 1 ? primero.d + "d · " + proximos.length + " sistemas" : primero.sis + " · " + primero.d + "d"}</span>`;
         }
       }
 
@@ -3988,7 +4243,7 @@ verificarSesion();
   async function enviarEmailConProveedor({ to, subject, html, text, replyTo = "" }) {
     const cuerpo = html || `<pre style="font-family:sans-serif; white-space:pre-wrap;">${text || ""}</pre>`;
     try {
-      const response = await fetch("/.netlify/functions/send-email", {
+      const response = await fetch("/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ to, subject, html: cuerpo, replyTo }),
@@ -4515,7 +4770,8 @@ verificarSesion();
     el("tk-count-total").textContent = tickets.length;
     el("tk-count-abiertos").textContent = tickets.filter(t => t.estado === "Abierto").length;
     el("tk-count-pendientes").textContent = tickets.filter(t => t.estado === "Pendiente").length;
-    el("tk-count-resueltos").textContent = tickets.filter(t => t.estado === "Resuelto" || t.estado === "Cerrado").length;
+    el("tk-count-resueltos").textContent = tickets.filter(t => t.estado === "Resuelto").length;
+    el("tk-count-cerrados").textContent = tickets.filter(t => t.estado === "Cerrado").length;
   }
 
   // Ticket Form
@@ -4527,7 +4783,8 @@ verificarSesion();
     editTkIdx.value = "";
     ["form-tk-contacto-buscar", "form-tk-contacto", "form-tk-correo-contacto", "form-tk-empresa",
      "form-tk-asunto", "form-tk-cc", "form-tk-cco",
-     "form-tk-referido", "form-tk-solicitado", "form-tk-canalizado", "form-tk-realizado"].forEach(id => {
+     "form-tk-referido", "form-tk-solicitado", "form-tk-canalizado", "form-tk-realizado",
+     "form-tk-notas-internas"].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = "";
     });
@@ -4575,6 +4832,7 @@ verificarSesion();
     const solicitado = document.getElementById("form-tk-solicitado")?.value.trim() || "";
     const canalizado = document.getElementById("form-tk-canalizado")?.value.trim() || "";
     const realizado = document.getElementById("form-tk-realizado")?.value.trim() || "";
+    const notasInternas = document.getElementById("form-tk-notas-internas")?.value.trim() || "";
 
     if (!contacto || !asunto || !descripcion) {
       alert("Por favor rellena los campos obligatorios: Contacto, Asunto, Descripción.");
@@ -4585,7 +4843,7 @@ verificarSesion();
       const num = tickets.length > 0 ? Math.max(...tickets.map(t => t.numero)) + 1 : 1001;
       tickets.push({
         numero: num, asunto, empresa, contacto, contactoCorreo, tipo, estado, prioridad, grupo, agente,
-        descripcion, cc, cco, referido, solicitado, canalizado, realizado,
+        descripcion, notasInternas, cc, cco, referido, solicitado, canalizado, realizado,
         adjuntos: [...adjuntosTicketActual],
         fechaCreacion: new Date().toISOString(),
         fechaActualizacion: new Date().toISOString(),
@@ -4622,7 +4880,7 @@ verificarSesion();
       const t = tickets[parseInt(idx)];
       const adjuntosExistentes = t.adjuntos || [];
       Object.assign(t, { asunto, empresa, contacto, contactoCorreo, tipo, estado, prioridad, grupo, agente,
-        descripcion, cc, cco, referido, solicitado, canalizado, realizado,
+        descripcion, notasInternas, cc, cco, referido, solicitado, canalizado, realizado,
         adjuntos: [...adjuntosExistentes, ...adjuntosTicketActual],
         fechaActualizacion: new Date().toISOString() });
       logBitacora(`Ticket #${t.numero} actualizado: ${estado}`, "✏️");
@@ -4662,6 +4920,7 @@ verificarSesion();
     const fSol = document.getElementById("form-tk-solicitado"); if (fSol) fSol.value = t.solicitado || "";
     const fCan = document.getElementById("form-tk-canalizado"); if (fCan) fCan.value = t.canalizado || "";
     const fRea = document.getElementById("form-tk-realizado"); if (fRea) fRea.value = t.realizado || "";
+    const fNI = document.getElementById("form-tk-notas-internas"); if (fNI) fNI.value = t.notasInternas || "";
     initTicketFormDropdowns(t);
     formTk?.classList.remove("hidden");
     formTk?.scrollIntoView({ behavior: "smooth" });
@@ -4705,6 +4964,12 @@ verificarSesion();
     document.getElementById("det-tk-grupo").textContent = t.grupo || "—";
     document.getElementById("det-tk-agente").textContent = t.agente || "—";
     document.getElementById("det-tk-descripcion").innerHTML = t.descripcion || "";
+    const detNI = document.getElementById("det-tk-notas-internas");
+    const detNISec = document.getElementById("det-tk-notas-internas-section");
+    if (detNI && detNISec) {
+      if (t.notasInternas) { detNI.textContent = t.notasInternas; detNISec.style.display = "block"; }
+      else { detNI.textContent = ""; detNISec.style.display = "none"; }
+    }
     renderAdjuntosDetalle(t);
 
     const bPrior = document.getElementById("det-tk-prioridad-badge");
@@ -4808,11 +5073,14 @@ verificarSesion();
   // ZOHO MAILTO
   // ============================================================
   function abrirZohoMail({ to = "", subject = "", body = "" } = {}) {
-    const params = new URLSearchParams();
-    if (to) params.set("to", to);
-    if (subject) params.set("subject", subject);
-    if (body) params.set("body", body);
-    window.open(`https://mail.zoho.com/zm/compose?${params.toString()}`, "_blank");
+    window.open("https://mail.zoho.com/zm/#compose", "_blank");
+    if (to) {
+      navigator.clipboard.writeText(to).then(() => {
+        toast(`✉️ Zoho abierto · Correo copiado: ${to} — pégalo en el campo "Para:"`, "info");
+      }).catch(() => {
+        toast(`✉️ Zoho abierto · Destinatario: ${to}`, "info");
+      });
+    }
     logBitacora(`Correo Zoho abierto para: ${to || "(sin destino)"}`, "✉️");
   }
 
@@ -5921,6 +6189,326 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   document.getElementById("modal-tickets-pub")?.addEventListener("click", e => {
     if (e.target === document.getElementById("modal-tickets-pub")) document.getElementById("modal-tickets-pub").style.display = "none";
   });
+
+  // ============================================================
+  // EVENTOS
+  // ============================================================
+  let eventos = JSON.parse(localStorage.getItem("crm_eventos") || "[]");
+  let eventoActivoId = null;
+
+  function guardarEventos() { localStorage.setItem("crm_eventos", JSON.stringify(eventos)); }
+
+  function getEventoActivo() { return eventos.find(e => e.id === eventoActivoId) || null; }
+
+  function calcularStatsEvento(ev) {
+    const todos = [...(ev.empresas || []), ...(ev.extras || [])];
+    return {
+      invitados: todos.filter(x => x.invitado).length,
+      asistira: todos.filter(x => x.respuesta === "ASISTIRA").length,
+      no: todos.filter(x => x.respuesta === "NO_ASISTIRA").length,
+      noloc: todos.filter(x => x.respuesta === "NO_LOCALIZADO").length,
+      pendiente: todos.filter(x => !x.respuesta || x.respuesta === "PENDIENTE").length,
+    };
+  }
+
+  function renderSelectEventos() {
+    const sel = document.getElementById("selectEventoActivo");
+    if (!sel) return;
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">— Selecciona un evento —</option>';
+    eventos.forEach(ev => {
+      const opt = document.createElement("option");
+      opt.value = ev.id;
+      opt.textContent = `${ev.nombre}${ev.fecha ? " · " + new Date(ev.fecha + "T00:00:00").toLocaleDateString("es-MX", { day:"2-digit", month:"short", year:"numeric" }) : ""}`;
+      sel.appendChild(opt);
+    });
+    if (prev && eventos.find(e => e.id === prev)) sel.value = prev;
+    else sel.value = "";
+  }
+
+  function mostrarPanelEvento(ev) {
+    document.getElementById("ev-empty").style.display = "none";
+    document.getElementById("panel-evento").style.display = "block";
+    document.getElementById("btnEliminarEvento").style.display = "inline-flex";
+
+    document.getElementById("ev-nombre-display").textContent = ev.nombre || "—";
+    const sistEl = document.getElementById("ev-sistema-display");
+    sistEl.textContent = ev.sistema ? `📦 ${ev.sistema}` : "";
+    const fechaEl = document.getElementById("ev-fecha-display");
+    fechaEl.textContent = ev.fecha ? `📅 ${new Date(ev.fecha + "T00:00:00").toLocaleDateString("es-MX", { weekday:"long", day:"2-digit", month:"long", year:"numeric" })}${ev.hora ? " · " + ev.hora : ""}` : "";
+    const linkEl = document.getElementById("ev-link-display");
+    if (ev.link) { linkEl.href = ev.link; linkEl.style.display = "inline"; }
+    else linkEl.style.display = "none";
+    const notasEl = document.getElementById("ev-notas-display");
+    if (ev.notas) { notasEl.textContent = ev.notas; notasEl.style.display = "block"; }
+    else notasEl.style.display = "none";
+
+    const s = calcularStatsEvento(ev);
+    document.getElementById("ev-stat-invitados").textContent = s.invitados;
+    document.getElementById("ev-stat-asistira").textContent = s.asistira;
+    document.getElementById("ev-stat-no").textContent = s.no;
+    document.getElementById("ev-stat-noloc").textContent = s.noloc;
+    document.getElementById("ev-stat-pendiente").textContent = s.pendiente;
+
+    renderTablaEmpresasEvento(ev);
+    renderTablaExtrasEvento(ev);
+  }
+
+  function ocultarPanelEvento() {
+    document.getElementById("panel-evento").style.display = "none";
+    document.getElementById("btnEliminarEvento").style.display = "none";
+    const hayEventos = eventos.length > 0;
+    document.getElementById("ev-empty").style.display = hayEventos ? "none" : "block";
+  }
+
+  function renderTablaEmpresasEvento(ev) {
+    const tbody = document.getElementById("ev-tabla-empresas");
+    if (!tbody) return;
+    const empresas = ev.empresas || [];
+    if (!empresas.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:20px; font-style:italic;">Sin empresas. Usa el buscador para agregar.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = "";
+    empresas.forEach((emp, i) => {
+      const tr = document.createElement("tr");
+      const respOpts = ["PENDIENTE", "ASISTIRA", "NO_ASISTIRA", "NO_LOCALIZADO"];
+      const respLabels = { PENDIENTE: "Pendiente", ASISTIRA: "✅ Asistirá", NO_ASISTIRA: "❌ No Asistirá", NO_LOCALIZADO: "📵 No Localizado" };
+      const selOpts = respOpts.map(r => `<option value="${r}" ${emp.respuesta === r ? "selected" : ""}>${respLabels[r]}</option>`).join("");
+      tr.innerHTML = `
+        <td style="font-weight:600; font-size:0.85rem;">${emp.nombre}</td>
+        <td><input class="ev-emp-sistema" data-idx="${i}" value="${emp.sistema || ""}" placeholder="Sistema/área" style="font-size:0.78rem; padding:4px 8px; width:100%;"></td>
+        <td style="text-align:center;"><input type="checkbox" class="ev-emp-invitado" data-idx="${i}" ${emp.invitado ? "checked" : ""} style="width:16px;height:16px;accent-color:#6366f1;cursor:pointer;" title="Marcar si se le contactó"></td>
+        <td><select class="ev-emp-respuesta" data-idx="${i}" style="font-size:0.75rem; padding:4px 6px; width:100%;">${selOpts}</select></td>
+        <td><input class="ev-emp-notas" data-idx="${i}" value="${(emp.notas || "").replace(/"/g, "&quot;")}" placeholder="Notas..." style="font-size:0.75rem; padding:4px 8px; width:100%;"></td>
+        <td style="text-align:center;"><button class="btn btn-ghost btn-xs ev-btn-quitar-emp" data-idx="${i}" style="color:#f87171;">✕</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll(".ev-emp-invitado").forEach(chk => chk.addEventListener("change", e => {
+      const ev2 = getEventoActivo(); if (!ev2) return;
+      ev2.empresas[+e.target.dataset.idx].invitado = e.target.checked;
+      guardarEventos(); actualizarStatsEvento(ev2);
+    }));
+    tbody.querySelectorAll(".ev-emp-respuesta").forEach(sel => sel.addEventListener("change", e => {
+      const ev2 = getEventoActivo(); if (!ev2) return;
+      ev2.empresas[+e.target.dataset.idx].respuesta = e.target.value;
+      guardarEventos(); actualizarStatsEvento(ev2);
+    }));
+    tbody.querySelectorAll(".ev-emp-sistema").forEach(inp => inp.addEventListener("change", e => {
+      const ev2 = getEventoActivo(); if (!ev2) return;
+      ev2.empresas[+e.target.dataset.idx].sistema = e.target.value.trim();
+      guardarEventos();
+    }));
+    tbody.querySelectorAll(".ev-emp-notas").forEach(inp => inp.addEventListener("change", e => {
+      const ev2 = getEventoActivo(); if (!ev2) return;
+      ev2.empresas[+e.target.dataset.idx].notas = e.target.value.trim();
+      guardarEventos();
+    }));
+    tbody.querySelectorAll(".ev-btn-quitar-emp").forEach(btn => btn.addEventListener("click", e => {
+      const ev2 = getEventoActivo(); if (!ev2) return;
+      ev2.empresas.splice(+e.target.closest("button").dataset.idx, 1);
+      guardarEventos(); mostrarPanelEvento(ev2);
+    }));
+  }
+
+  function renderTablaExtrasEvento(ev) {
+    const tbody = document.getElementById("ev-tabla-extras");
+    if (!tbody) return;
+    const extras = ev.extras || [];
+    if (!extras.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:16px; font-style:italic;">Sin invitados externos. Agrega con el botón ➕.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = "";
+    extras.forEach((ext, i) => {
+      const tr = document.createElement("tr");
+      const respOpts = ["PENDIENTE", "ASISTIRA", "NO_ASISTIRA", "NO_LOCALIZADO"];
+      const respLabels = { PENDIENTE: "Pendiente", ASISTIRA: "✅ Asistirá", NO_ASISTIRA: "❌ No Asistirá", NO_LOCALIZADO: "📵 No Localizado" };
+      const selOpts = respOpts.map(r => `<option value="${r}" ${ext.respuesta === r ? "selected" : ""}>${respLabels[r]}</option>`).join("");
+      tr.innerHTML = `
+        <td><input class="ev-ext-nombre" data-idx="${i}" value="${(ext.nombre || "").replace(/"/g, "&quot;")}" placeholder="Nombre completo" style="font-size:0.82rem; padding:4px 8px; width:100%;"></td>
+        <td><input class="ev-ext-fuente" data-idx="${i}" value="${(ext.fuente || "").replace(/"/g, "&quot;")}" placeholder="Facebook, Instagram, Web..." style="font-size:0.78rem; padding:4px 8px; width:100%;"></td>
+        <td style="text-align:center;"><input type="checkbox" class="ev-ext-invitado" data-idx="${i}" ${ext.invitado ? "checked" : ""} style="width:16px;height:16px;accent-color:#6366f1;cursor:pointer;" title="Marcar si se le contactó"></td>
+        <td><select class="ev-ext-respuesta" data-idx="${i}" style="font-size:0.75rem; padding:4px 6px; width:100%;">${selOpts}</select></td>
+        <td><input class="ev-ext-notas" data-idx="${i}" value="${(ext.notas || "").replace(/"/g, "&quot;")}" placeholder="Notas..." style="font-size:0.75rem; padding:4px 8px; width:100%;"></td>
+        <td style="text-align:center;"><button class="btn btn-ghost btn-xs ev-btn-quitar-ext" data-idx="${i}" style="color:#f87171;">✕</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll(".ev-ext-invitado").forEach(chk => chk.addEventListener("change", e => {
+      const ev2 = getEventoActivo(); if (!ev2) return;
+      ev2.extras[+e.target.dataset.idx].invitado = e.target.checked;
+      guardarEventos(); actualizarStatsEvento(ev2);
+    }));
+    tbody.querySelectorAll(".ev-ext-respuesta").forEach(sel => sel.addEventListener("change", e => {
+      const ev2 = getEventoActivo(); if (!ev2) return;
+      ev2.extras[+e.target.dataset.idx].respuesta = e.target.value;
+      guardarEventos(); actualizarStatsEvento(ev2);
+    }));
+    ["nombre","fuente","notas"].forEach(campo => {
+      tbody.querySelectorAll(`.ev-ext-${campo}`).forEach(inp => inp.addEventListener("change", e => {
+        const ev2 = getEventoActivo(); if (!ev2) return;
+        ev2.extras[+e.target.dataset.idx][campo] = e.target.value.trim();
+        guardarEventos();
+      }));
+    });
+    tbody.querySelectorAll(".ev-btn-quitar-ext").forEach(btn => btn.addEventListener("click", e => {
+      const ev2 = getEventoActivo(); if (!ev2) return;
+      ev2.extras.splice(+e.target.closest("button").dataset.idx, 1);
+      guardarEventos(); mostrarPanelEvento(ev2);
+    }));
+  }
+
+  function actualizarStatsEvento(ev) {
+    const s = calcularStatsEvento(ev);
+    document.getElementById("ev-stat-invitados").textContent = s.invitados;
+    document.getElementById("ev-stat-asistira").textContent = s.asistira;
+    document.getElementById("ev-stat-no").textContent = s.no;
+    document.getElementById("ev-stat-noloc").textContent = s.noloc;
+    document.getElementById("ev-stat-pendiente").textContent = s.pendiente;
+  }
+
+  function renderSeccionEventos() {
+    renderSelectEventos();
+    if (eventoActivoId && eventos.find(e => e.id === eventoActivoId)) {
+      mostrarPanelEvento(eventos.find(e => e.id === eventoActivoId));
+    } else {
+      ocultarPanelEvento();
+    }
+    document.getElementById("formulario-evento")?.classList.add("hidden");
+  }
+
+  // Cambio de evento activo
+  document.getElementById("selectEventoActivo")?.addEventListener("change", e => {
+    eventoActivoId = e.target.value || null;
+    document.getElementById("formulario-evento")?.classList.add("hidden");
+    if (eventoActivoId) mostrarPanelEvento(getEventoActivo());
+    else ocultarPanelEvento();
+  });
+
+  // Nuevo evento
+  document.getElementById("btnNuevoEvento")?.addEventListener("click", () => {
+    document.getElementById("edit-evento-id").value = "";
+    document.getElementById("form-evento-titulo").textContent = "➕ Nuevo Evento";
+    ["form-ev-nombre","form-ev-sistema","form-ev-link","form-ev-notas"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
+    document.getElementById("form-ev-fecha").value = "";
+    document.getElementById("form-ev-hora").value = "";
+    document.getElementById("formulario-evento").classList.remove("hidden");
+    document.getElementById("formulario-evento").scrollIntoView({ behavior:"smooth" });
+  });
+
+  document.getElementById("btnCancelarEvento")?.addEventListener("click", () => {
+    document.getElementById("formulario-evento").classList.add("hidden");
+  });
+
+  document.getElementById("btnGuardarEvento")?.addEventListener("click", () => {
+    const nombre = document.getElementById("form-ev-nombre").value.trim();
+    if (!nombre) { alert("El nombre del evento es obligatorio."); return; }
+    const id = document.getElementById("edit-evento-id").value || `ev_${Date.now()}`;
+    const existente = eventos.find(e => e.id === id);
+    const datos = {
+      id, nombre,
+      sistema: document.getElementById("form-ev-sistema").value.trim(),
+      fecha: document.getElementById("form-ev-fecha").value,
+      hora: document.getElementById("form-ev-hora").value,
+      link: document.getElementById("form-ev-link").value.trim(),
+      notas: document.getElementById("form-ev-notas").value.trim(),
+      empresas: existente?.empresas || [],
+      extras: existente?.extras || [],
+    };
+    if (existente) Object.assign(existente, datos);
+    else eventos.unshift(datos);
+    guardarEventos();
+    eventoActivoId = id;
+    renderSelectEventos();
+    document.getElementById("selectEventoActivo").value = id;
+    mostrarPanelEvento(datos.id === id ? (existente || datos) : datos);
+    document.getElementById("formulario-evento").classList.add("hidden");
+    toast("💾 Evento guardado");
+  });
+
+  // Editar evento
+  document.getElementById("btnEditarEvento")?.addEventListener("click", () => {
+    const ev = getEventoActivo(); if (!ev) return;
+    document.getElementById("edit-evento-id").value = ev.id;
+    document.getElementById("form-evento-titulo").textContent = "✏️ Editar Evento";
+    document.getElementById("form-ev-nombre").value = ev.nombre || "";
+    document.getElementById("form-ev-sistema").value = ev.sistema || "";
+    document.getElementById("form-ev-fecha").value = ev.fecha || "";
+    document.getElementById("form-ev-hora").value = ev.hora || "";
+    document.getElementById("form-ev-link").value = ev.link || "";
+    document.getElementById("form-ev-notas").value = ev.notas || "";
+    document.getElementById("formulario-evento").classList.remove("hidden");
+    document.getElementById("formulario-evento").scrollIntoView({ behavior:"smooth" });
+  });
+
+  // Eliminar evento
+  document.getElementById("btnEliminarEvento")?.addEventListener("click", () => {
+    const ev = getEventoActivo(); if (!ev) return;
+    if (!confirm(`¿Eliminar el evento "${ev.nombre}"? Esta acción no se puede deshacer.`)) return;
+    eventos = eventos.filter(e => e.id !== ev.id);
+    guardarEventos();
+    eventoActivoId = null;
+    renderSeccionEventos();
+    toast("🗑️ Evento eliminado");
+  });
+
+  // Buscar empresa para agregar al evento
+  const evBuscarInput = document.getElementById("ev-buscar-empresa");
+  const evAutoList = document.getElementById("ev-empresas-autocomplete");
+  evBuscarInput?.addEventListener("input", () => {
+    const val = evBuscarInput.value.toLowerCase().trim();
+    if (!val || val.length < 2) { evAutoList.classList.add("hidden"); return; }
+    const ev = getEventoActivo(); if (!ev) return;
+    const yaAgregadas = new Set((ev.empresas || []).map(e => e.nombre));
+    const matches = clientes.filter(c => (c.EMPRESA || "").toLowerCase().includes(val) && !yaAgregadas.has(c.EMPRESA)).slice(0, 10);
+    if (!matches.length) { evAutoList.classList.add("hidden"); return; }
+    evAutoList.innerHTML = matches.map(c => `<div class="autocomplete-item" data-nombre="${c.EMPRESA}">${c.EMPRESA}</div>`).join("");
+    evAutoList.classList.remove("hidden");
+    evAutoList.querySelectorAll(".autocomplete-item").forEach(item => {
+      item.addEventListener("click", () => {
+        const ev2 = getEventoActivo(); if (!ev2) return;
+        if (!ev2.empresas) ev2.empresas = [];
+        ev2.empresas.push({ nombre: item.dataset.nombre, sistema: "", invitado: false, respuesta: "PENDIENTE", notas: "" });
+        guardarEventos();
+        mostrarPanelEvento(ev2);
+        evBuscarInput.value = "";
+        evAutoList.classList.add("hidden");
+      });
+    });
+  });
+  document.getElementById("btnAgregarEmpresaEvento")?.addEventListener("click", () => {
+    const val = evBuscarInput.value.trim();
+    if (!val) { evBuscarInput.focus(); return; }
+    const ev2 = getEventoActivo(); if (!ev2) return;
+    if (!ev2.empresas) ev2.empresas = [];
+    const yaExiste = ev2.empresas.some(e => e.nombre.toLowerCase() === val.toLowerCase());
+    if (yaExiste) { toast("⚠️ La empresa ya está en el evento"); return; }
+    ev2.empresas.push({ nombre: val.toUpperCase(), sistema: "", invitado: false, respuesta: "PENDIENTE", notas: "" });
+    guardarEventos();
+    mostrarPanelEvento(ev2);
+    evBuscarInput.value = "";
+    evAutoList.classList.add("hidden");
+  });
+  document.addEventListener("click", e => {
+    if (!evAutoList?.contains(e.target) && e.target !== evBuscarInput) evAutoList?.classList.add("hidden");
+  });
+
+  // Agregar invitado externo
+  document.getElementById("btnAgregarInvitadoExtra")?.addEventListener("click", () => {
+    const ev = getEventoActivo(); if (!ev) return;
+    if (!ev.extras) ev.extras = [];
+    ev.extras.push({ nombre: "", fuente: "Redes Sociales", invitado: false, respuesta: "PENDIENTE", notas: "" });
+    guardarEventos();
+    renderTablaExtrasEvento(ev);
+    actualizarStatsEvento(ev);
+  });
+
+  // Inicializar sección eventos cuando se navega a ella
+  // (ya manejado por el switch en navegarA, se llama renderSeccionEventos)
 
   // Verificar licencias por vencer al iniciar (por sistema por empresa)
   function checkLicenciasPorVencer() {
