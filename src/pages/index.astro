@@ -4808,12 +4808,11 @@ verificarSesion();
   // ZOHO MAILTO
   // ============================================================
   function abrirZohoMail({ to = "", subject = "", body = "" } = {}) {
-    const zohoBase = "https://mail.zoho.com/zm/#compose";
     const params = new URLSearchParams();
     if (to) params.set("to", to);
     if (subject) params.set("subject", subject);
     if (body) params.set("body", body);
-    window.open(`${zohoBase}?${params.toString()}`, "_blank");
+    window.open(`https://mail.zoho.com/zm/compose?${params.toString()}`, "_blank");
     logBitacora(`Correo Zoho abierto para: ${to || "(sin destino)"}`, "✉️");
   }
 
