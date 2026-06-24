@@ -2173,6 +2173,12 @@ try {
             <input id="cfg-correo-soporte" type="email" value="erick.casas@dattasoft.mx">
             <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">Este correo se usará para enviar confirmaciones y seguimiento de tickets. Puede cambiarse en cualquier momento.</span>
           </div>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; padding:12px 14px; background:rgba(99,102,241,0.06); border-radius:8px; border:1px solid rgba(99,102,241,0.15);">
+            <span style="font-size:0.8rem; font-weight:600; color:var(--brand-primary-hover); white-space:nowrap;">🧪 Prueba de correo</span>
+            <input id="cfg-test-email" type="email" placeholder="destinatario@correo.com" style="flex:1; min-width:200px; font-size:0.82rem; padding:6px 10px;">
+            <button id="btn-test-email" class="btn btn-secondary btn-sm" style="white-space:nowrap;">Enviar prueba</button>
+            <span id="cfg-test-email-result" style="font-size:0.78rem; display:none;"></span>
+          </div>
           <div style="border-top:1px dashed rgba(255,255,255,0.06); padding-top:14px;">
             <div style="font-size:0.82rem; font-weight:700; color:var(--brand-primary-hover); margin-bottom:12px;">🚀 Servicio de envío de correo</div>
             <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:12px; margin-bottom:12px;">
@@ -3859,6 +3865,7 @@ verificarSesion();
       const idx = c._idx;
       const tr = document.createElement("tr");
       tr.className = "empresa-row";
+      tr.dataset.idx = idx;
       // Colorear fila según vencimiento de licencia (el más próximo de cualquier sistema)
       if (c.VENCIMIENTOS && Object.keys(c.VENCIMIENTOS).length > 0) {
         const hoy = new Date(); hoy.setHours(0,0,0,0);
@@ -3998,6 +4005,25 @@ verificarSesion();
       });
     });
     actualizarContSel();
+
+    // Click selecciona fila (morado), doble click abre edición
+    tbody.addEventListener("click", (e) => {
+      if (e.target.closest("button, input, select")) return;
+      const row = e.target.closest(".empresa-row");
+      if (!row) return;
+      tbody.querySelectorAll(".empresa-row td").forEach(td => { td.style.background = ""; td.style.borderLeft = ""; td.style.paddingLeft = ""; });
+      row.querySelectorAll("td").forEach((td, i) => {
+        td.style.background = "rgba(99,102,241,0.18)";
+        if (i === 0) { td.style.borderLeft = "4px solid #6366f1"; td.style.paddingLeft = "14px"; }
+      });
+    });
+    tbody.addEventListener("dblclick", (e) => {
+      e.preventDefault();
+      if (e.target.closest("button, input, select")) return;
+      const row = e.target.closest(".empresa-row");
+      if (!row) return;
+      row.querySelector(".btn-edit-emp")?.click();
+    });
   }
 
   function actualizarContSel() {
@@ -4741,6 +4767,7 @@ verificarSesion();
 
     filtrados.forEach(t => {
       const tr = document.createElement("tr");
+      tr.dataset.idx = t._idx;
       tr.innerHTML = `
         <td style="text-align:center; font-weight:700; color:var(--text-muted);">#${t.numero}</td>
         <td><strong style="color:var(--text-bright);">${t.asunto}</strong></td>
@@ -4767,6 +4794,25 @@ verificarSesion();
     tbody.querySelectorAll(".btn-ver-tk").forEach(b => b.addEventListener("click", abrirDetalleTicket));
     tbody.querySelectorAll(".btn-edit-tk").forEach(b => b.addEventListener("click", prepararEdicionTicket));
     tbody.querySelectorAll(".btn-del-tk").forEach(b => b.addEventListener("click", eliminarTicket));
+
+    // Click selecciona fila (morado), doble click abre edición
+    tbody.addEventListener("click", (e) => {
+      if (e.target.closest("button")) return;
+      const row = e.target.closest("tr");
+      if (!row) return;
+      tbody.querySelectorAll("tr td").forEach(td => { td.style.background = ""; td.style.borderLeft = ""; td.style.paddingLeft = ""; });
+      row.querySelectorAll("td").forEach((td, i) => {
+        td.style.background = "rgba(99,102,241,0.18)";
+        if (i === 0) { td.style.borderLeft = "4px solid #6366f1"; td.style.paddingLeft = "14px"; }
+      });
+    });
+    tbody.addEventListener("dblclick", (e) => {
+      e.preventDefault();
+      if (e.target.closest("button")) return;
+      const row = e.target.closest("tr");
+      if (!row) return;
+      row.querySelector(".btn-edit-tk")?.click();
+    });
 
     updateBrowserTabTitle();
 
@@ -5192,6 +5238,33 @@ verificarSesion();
       apiKeyInput.addEventListener('input', updateMailProviderHelp);
     }
     document.getElementById("cfg-correo-soporte")?.addEventListener('input', updateMailProviderHelp);
+
+    // Botón de prueba de correo
+    document.getElementById("btn-test-email")?.addEventListener("click", async () => {
+      const dest = document.getElementById("cfg-test-email")?.value.trim();
+      const resultEl = document.getElementById("cfg-test-email-result");
+      if (!dest || !dest.includes("@")) {
+        resultEl.textContent = "⚠️ Ingresa un correo válido";
+        resultEl.style.color = "#f59e0b";
+        resultEl.style.display = "inline";
+        return;
+      }
+      resultEl.textContent = "Enviando...";
+      resultEl.style.color = "var(--text-muted)";
+      resultEl.style.display = "inline";
+      const ok = await enviarEmailConProveedor({
+        to: dest,
+        subject: "✅ Prueba de correo — DATTASOFT CRM",
+        html: `<div style="font-family:sans-serif;padding:20px;"><h2 style="color:#6366f1;">DATTASOFT CRM</h2><p>Este es un correo de prueba enviado desde el CRM.</p><p style="color:#64748b;font-size:0.85em;">Si recibes este mensaje, el envío de correos está funcionando correctamente.</p></div>`
+      });
+      if (ok) {
+        resultEl.textContent = `✅ Enviado correctamente a ${dest}`;
+        resultEl.style.color = "#34d399";
+      } else {
+        resultEl.textContent = "❌ Falló el envío — revisa la configuración";
+        resultEl.style.color = "#f87171";
+      }
+    });
 
     updateMailProviderSelectionState();
     updateMailProviderHelp();
