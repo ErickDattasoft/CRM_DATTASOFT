@@ -1,9 +1,9 @@
 export const onRequestPost = async (context) => {
   const { request, env } = context;
 
-  const apiKey = env.RESEND_API_KEY;
+  const apiKey = env.BREVO_API_KEY;
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: "RESEND_API_KEY no configurada en Cloudflare" }), {
+    return new Response(JSON.stringify({ error: "BREVO_API_KEY no configurada en Cloudflare" }), {
       status: 500, headers: { "Content-Type": "application/json" },
     });
   }
@@ -24,20 +24,23 @@ export const onRequestPost = async (context) => {
     });
   }
 
-  const fromAddress = from || env.RESEND_FROM || "soporte@dattasoft.mx";
+  const fromEmail = from || env.BREVO_FROM || "erick.casas@dattasoft.mx";
+  const fromName = env.BREVO_FROM_NAME || "DATTASOFT Soporte";
+
+  const toList = (Array.isArray(to) ? to : [to]).map(email => ({ email }));
 
   const body = {
-    from: fromAddress,
-    to: Array.isArray(to) ? to : [to],
+    sender: { name: fromName, email: fromEmail },
+    to: toList,
     subject,
-    html,
+    htmlContent: html,
   };
-  if (replyTo) body.reply_to = replyTo;
+  if (replyTo) body.replyTo = { email: replyTo };
 
-  const resp = await fetch("https://api.resend.com/emails", {
+  const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      "api-key": apiKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
