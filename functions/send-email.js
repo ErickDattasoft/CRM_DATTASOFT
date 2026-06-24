@@ -17,14 +17,14 @@ export const onRequestPost = async (context) => {
     });
   }
 
-  const { to, subject, html, replyTo } = payload;
+  const { to, subject, html, replyTo, from } = payload;
   if (!to || !subject || !html) {
     return new Response(JSON.stringify({ error: "Faltan campos: to, subject, html" }), {
       status: 400, headers: { "Content-Type": "application/json" },
     });
   }
 
-  const fromAddress = env.RESEND_FROM || "soporte@dattasoft.mx";
+  const fromAddress = from || env.RESEND_FROM || "soporte@dattasoft.mx";
 
   const body = {
     from: fromAddress,

@@ -4246,11 +4246,12 @@ verificarSesion();
 
   async function enviarEmailConProveedor({ to, subject, html, text, replyTo = "" }) {
     const cuerpo = html || `<pre style="font-family:sans-serif; white-space:pre-wrap;">${text || ""}</pre>`;
+    const fromEmail = document.getElementById("cfg-correo-soporte")?.value.trim() || configTickets.correoSoporte || "";
     try {
       const response = await fetch("/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to, subject, html: cuerpo, replyTo }),
+        body: JSON.stringify({ to, subject, html: cuerpo, replyTo, from: fromEmail }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || response.statusText);
@@ -6268,6 +6269,18 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     document.getElementById("ev-empty").style.display = hayEventos ? "none" : "block";
   }
 
+  function getHistorialEmpresaEventos(nombreEmpresa, excludeId) {
+    const historial = [];
+    eventos.forEach(ev => {
+      if (ev.id === excludeId) return;
+      const found = (ev.empresas || []).find(e => e.nombre === nombreEmpresa);
+      if (found && found.invitado) {
+        historial.push({ nombre: ev.nombre, fecha: ev.fecha, tema: ev.tema || ev.sistema || "", respuesta: found.respuesta });
+      }
+    });
+    return historial;
+  }
+
   function renderTablaEmpresasEvento(ev) {
     const tbody = document.getElementById("ev-tabla-empresas");
     if (!tbody) return;
@@ -6282,8 +6295,16 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       const respOpts = ["PENDIENTE", "ASISTIRA", "NO_ASISTIRA", "NO_LOCALIZADO"];
       const respLabels = { PENDIENTE: "Pendiente", ASISTIRA: "✅ Asistirá", NO_ASISTIRA: "❌ No Asistirá", NO_LOCALIZADO: "📵 No Localizado" };
       const selOpts = respOpts.map(r => `<option value="${r}" ${emp.respuesta === r ? "selected" : ""}>${respLabels[r]}</option>`).join("");
+      const historial = getHistorialEmpresaEventos(emp.nombre, ev.id);
+      const asistidos = historial.filter(h => h.respuesta === "ASISTIRA");
+      const historialTip = historial.length
+        ? historial.map(h => `${h.respuesta === "ASISTIRA" ? "✅" : h.respuesta === "NO_ASISTIRA" ? "❌" : "📵"} ${h.nombre}${h.fecha ? " ("+h.fecha+")" : ""}${h.tema ? " — "+h.tema : ""}`).join("\n")
+        : "";
+      const historialBadge = historial.length
+        ? `<span title="${historialTip}" style="cursor:help; font-size:0.68rem; padding:2px 6px; border-radius:999px; background:${asistidos.length ? "rgba(16,185,129,0.15)" : "rgba(100,116,139,0.15)"}; color:${asistidos.length ? "#34d399" : "#94a3b8"}; white-space:nowrap;">📋 ${historial.length} evento${historial.length>1?"s":""}${asistidos.length ? " · ✅"+asistidos.length : ""}</span>`
+        : `<span style="font-size:0.65rem; color:var(--text-muted);">—</span>`;
       tr.innerHTML = `
-        <td style="font-weight:600; font-size:0.85rem;">${emp.nombre}</td>
+        <td style="font-weight:600; font-size:0.85rem;">${emp.nombre}<br><span style="font-size:0.68rem; font-weight:400;">${historialBadge}</span></td>
         <td><input class="ev-emp-sistema" data-idx="${i}" value="${emp.sistema || ""}" placeholder="Sistema/área" style="font-size:0.78rem; padding:4px 8px; width:100%;"></td>
         <td style="text-align:center;"><input type="checkbox" class="ev-emp-invitado" data-idx="${i}" ${emp.invitado ? "checked" : ""} style="width:16px;height:16px;accent-color:#6366f1;cursor:pointer;" title="Marcar si se le contactó"></td>
         <td><select class="ev-emp-respuesta" data-idx="${i}" style="font-size:0.75rem; padding:4px 6px; width:100%;">${selOpts}</select></td>
