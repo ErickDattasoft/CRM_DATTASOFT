@@ -1610,7 +1610,9 @@ try {
     background: rgba(99,102,241,0.15); color: var(--brand-primary-hover); border-radius: var(--radius-full);
     padding: 1px 7px; font-size: 0.66rem; font-weight: 700; min-width: 18px; text-align: center;
   }
-  .kb-split { display: grid; grid-template-columns: 290px 1fr; gap: 12px; flex: 1; min-height: 0; overflow: hidden; }
+  .kb-split { display: grid; grid-template-columns: var(--kb-list-w, 290px) 5px 1fr; gap: 0; flex: 1; min-height: 0; overflow: hidden; }
+  #kb-resizer { cursor: col-resize; background: transparent; border-radius: 3px; margin: 0 4px; transition: background 0.15s; }
+  #kb-resizer:hover, #kb-resizer.kb-resizing { background: var(--brand-primary); }
   .kb-list {
     background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg);
     overflow-y: auto; display: flex; flex-direction: column; padding: 6px; gap: 2px;
@@ -2640,6 +2642,11 @@ try {
                 📂 Carpeta completa
                 <input id="kb-upload-folder" type="file" accept=".md,.ps1,.bat,.sql,.txt" multiple style="display:none;" webkitdirectory>
               </label>
+              <div style="height:1px; background:var(--border-color);"></div>
+              <label style="display:flex; align-items:center; gap:10px; padding:10px 14px; cursor:pointer; font-size:0.82rem; color:var(--text-main); transition:background 0.15s;" onmouseover="this.style.background='rgba(20,184,166,0.08)'" onmouseout="this.style.background=''" title="Sube archivos actualizados — si el nombre ya existe lo actualiza, no duplica">
+                🔄 Indexar / Actualizar
+                <input id="kb-index-input" type="file" accept=".md,.ps1,.bat,.sql,.txt" multiple style="display:none;">
+              </label>
             </div>
           </div>
           <div class="kb-acceso-wrap" id="kb-acceso-wrap" style="display:none;">
@@ -2697,6 +2704,9 @@ try {
           <div class="kb-list" id="kb-doc-list">
             <div class="kb-list-empty">📭 Sin documentos.<br>Sube archivos o crea uno nuevo.</div>
           </div>
+
+          <!-- Divisor redimensionable -->
+          <div id="kb-resizer" title="Arrastra para ajustar el ancho"></div>
 
           <!-- Visor de documentos -->
           <div class="kb-viewer">
@@ -7198,6 +7208,11 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         }
         kbAbrirDoc(el.dataset.kid!);
       });
+      el.addEventListener("dblclick", (e) => {
+        const tagChip = (e.target as HTMLElement).closest(".kb-tag-chip");
+        if (tagChip) return;
+        kbAbrirModal(el.dataset.kid!);
+      });
     });
   }
 
@@ -7419,6 +7434,61 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     toast(`✅ ${done - errors} subidos${errors ? ` · ${errors} errores` : ""}`);
   }
 
+  async function kbIndexar(files: FileList | File[]) {
+    const lista = Array.from(files).filter(f => /\.(md|ps1|bat|sql|txt)$/i.test(f.name));
+    if (!lista.length) { toast("⚠️ No se encontraron archivos válidos", "warning"); return; }
+
+    const progressEl = document.getElementById("kb-upload-progress");
+    const statusEl   = document.getElementById("kb-upload-status");
+    const counterEl  = document.getElementById("kb-upload-counter");
+    const barEl      = document.getElementById("kb-upload-bar");
+    const errorsEl   = document.getElementById("kb-upload-errors");
+    if (progressEl) progressEl.style.display = "block";
+    if (errorsEl)   errorsEl.textContent = "";
+    if (barEl)      barEl.style.width = "0%";
+
+    const total = lista.length;
+    let done = 0, actualizados = 0, nuevos = 0, errores = 0;
+
+    const updateProgress = () => {
+      const pct = Math.round((done / total) * 100);
+      if (barEl)    barEl.style.width = pct + "%";
+      if (counterEl) counterEl.textContent = `${done} / ${total}`;
+      if (statusEl)  statusEl.textContent = done < total
+        ? `Indexando... (${pct}%)`
+        : `✅ ${actualizados} actualizados · ${nuevos} nuevos${errores ? ` · ${errores} errores` : ""}`;
+    };
+
+    const BATCH = 8;
+    for (let i = 0; i < lista.length; i += BATCH) {
+      const lote = lista.slice(i, i + BATCH);
+      await Promise.allSettled(lote.map(async (f) => {
+        try {
+          const text    = await f.text();
+          const title   = f.name.replace(/\.(md|ps1|bat|sql|txt)$/i, "");
+          const existing = kbDocs.find(d => kbNorm(d.title) === kbNorm(title));
+          if (existing) {
+            await actualizarDocKB(existing._id, { content: text });
+            actualizados++;
+          } else {
+            await crearDocKB({
+              title,
+              category: kbGuessCat(f.name),
+              file_type: kbGuessType(f.name),
+              content: text,
+              tags: []
+            });
+            nuevos++;
+          }
+        } catch { errores++; }
+        done++;
+        updateProgress();
+      }));
+    }
+    setTimeout(() => { if (progressEl) progressEl.style.display = "none"; }, 4000);
+    toast(`🔄 Indexado: ${actualizados} actualizados · ${nuevos} nuevos`);
+  }
+
   function kbSetupEvents() {
     // Búsqueda
     document.getElementById("kb-search-input")?.addEventListener("input", kbRenderList);
@@ -7553,6 +7623,41 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       pendingFolderFiles = null;
       const folderInput = document.getElementById("kb-upload-folder") as HTMLInputElement;
       if (folderInput) folderInput.value = "";
+    });
+
+    // Indexar: actualizar existentes por nombre, crear nuevos
+    document.getElementById("kb-index-input")?.addEventListener("change", async (e) => {
+      const files = (e.target as HTMLInputElement).files;
+      if (uploadMenu) uploadMenu.style.display = "none";
+      if (!files?.length) return;
+      await kbIndexar(files);
+      (e.target as HTMLInputElement).value = "";
+    });
+
+    // Resizer del panel lista ↔ visor
+    const resizerEl = document.getElementById("kb-resizer");
+    let kbResizing = false, kbResizeStartX = 0, kbResizeStartW = 290;
+    resizerEl?.addEventListener("mousedown", (e) => {
+      kbResizing = true;
+      kbResizeStartX = e.clientX;
+      kbResizeStartW = parseInt(
+        getComputedStyle(document.documentElement).getPropertyValue("--kb-list-w") || "290"
+      ) || 290;
+      resizerEl.classList.add("kb-resizing");
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    });
+    document.addEventListener("mousemove", (e) => {
+      if (!kbResizing) return;
+      const w = Math.max(160, Math.min(520, kbResizeStartW + e.clientX - kbResizeStartX));
+      document.documentElement.style.setProperty("--kb-list-w", w + "px");
+    });
+    document.addEventListener("mouseup", () => {
+      if (!kbResizing) return;
+      kbResizing = false;
+      resizerEl?.classList.remove("kb-resizing");
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
     });
 
     // Drag & drop sobre el panel principal (kb-split)
