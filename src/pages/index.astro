@@ -1628,7 +1628,7 @@ try {
     transition: all 0.15s; border: 1px solid transparent; user-select: none;
   }
   .kb-doc-item:hover { background: var(--bg-card-hover); border-color: var(--border-color); }
-  .kb-doc-item.kb-sel { background: rgba(99,102,241,0.13); border-color: rgba(99,102,241,0.4); border-left: 3px solid var(--brand-primary); padding-left: 9px; }
+  .kb-doc-item.kb-sel, .kb-doc-item.kb-sel:hover { background: rgba(99,102,241,0.18) !important; border-color: rgba(99,102,241,0.5) !important; border-left: 3px solid #6366f1 !important; padding-left: 9px; }
   .kb-item-title { font-size: 0.82rem; font-weight: 600; color: var(--text-main); line-height: 1.35; margin-bottom: 5px; word-break: break-word; }
   .kb-item-foot { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
   .kb-badge { font-size: 0.6rem; font-weight: 700; padding: 2px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -7200,17 +7200,19 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     return kbEsc(text).replace(new RegExp(safe, "gi"), m => `<mark class="kb-hl">${m}</mark>`);
   }
 
-  function kbHighlightContent(html: string, q: string): string {
-    if (!q) return html;
-    const words = kbExact ? [q] : q.trim().split(/\s+/).filter(Boolean);
-    let result = html;
+  function kbHighlightContent(content: string, rawQ: string): string {
+    if (!rawQ) return content;
+    const words = kbExact ? [rawQ] : rawQ.trim().split(/\s+/).filter(Boolean);
+    let result = content;
     for (const w of words) {
+      if (!w) continue;
       const safe = w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const re = new RegExp(`(?<=>)([^<]*)`, "g");
-      result = result.replace(re, (_, textNode) => {
-        const normNode = kbNorm(textNode);
-        if (!normNode.includes(kbNorm(w))) return _;
-        return textNode.replace(new RegExp(safe, "gi"), m => `<mark class="kb-hl-content">${m}</mark>`);
+      // Alternation: match HTML tags (keep) OR text nodes (highlight)
+      result = result.replace(/(<[^>]+>)|([^<]+)/g, (_, tag, text) => {
+        if (tag) return tag;
+        if (!text) return "";
+        if (!kbNorm(text).includes(kbNorm(w))) return text;
+        return text.replace(new RegExp(safe, "gi"), m => `<mark class="kb-hl-content">${m}</mark>`);
       });
     }
     return result;
@@ -7309,7 +7311,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const wrap = document.getElementById("kb-content-wrap");
     if (wrap) {
       const isScript = doc.file_type === "ps1" || doc.file_type === "bat" || doc.file_type === "sql";
-      const qVisor = kbNorm((document.getElementById("kb-search-input") as HTMLInputElement)?.value || "");
+      const qVisor = ((document.getElementById("kb-search-input") as HTMLInputElement)?.value || "").trim();
       const ps1Note = doc.file_type === "ps1"
         ? `<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;margin-bottom:8px;background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.2);border-radius:var(--radius-sm);font-size:0.75rem;color:#fbbf24;">
             ⚠️ Si no corre con doble clic: clic derecho → <strong>Propiedades → Desbloquear</strong>, o pega el contenido directo en la terminal PowerShell.
@@ -7746,7 +7748,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     });
     document.addEventListener("mousemove", (e) => {
       if (!kbResizing) return;
-      const w = Math.max(160, Math.min(520, kbResizeStartW + e.clientX - kbResizeStartX));
+      const w = Math.max(160, Math.min(820, kbResizeStartW + e.clientX - kbResizeStartX));
       document.documentElement.style.setProperty("--kb-list-w", w + "px");
     });
     document.addEventListener("mouseup", () => {
