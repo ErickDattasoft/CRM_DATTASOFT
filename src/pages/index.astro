@@ -1832,7 +1832,7 @@ try {
         <span class="nav-icon">⚙️</span>
         <span class="nav-label">Configuración</span>
       </div>
-      <div class="nav-item" data-section="bitacora" data-tooltip="Bitácora">
+      <div class="nav-item" id="nav-item-bitacora" data-section="bitacora" data-tooltip="Bitácora">
         <span class="nav-icon">📋</span>
         <span class="nav-label">Bitácora</span>
       </div>
@@ -3239,9 +3239,10 @@ async function intentarLogin() {
     return;
   }
   sessionStorage.setItem(SESSION_KEY, JSON.stringify({ nombre: selectedUser.nombre, rol: selectedUser.rol }));
-  sessionStorage.setItem("crm_new_login", "1");
   document.getElementById("login-overlay")?.classList.add("hidden");
   if (errEl) errEl.textContent = "";
+  // Notificar al IIFE (scope distinto) para que aplique permisos y registre en bitácora
+  document.dispatchEvent(new CustomEvent("crm:login", { detail: { nombre: selectedUser.nombre, rol: selectedUser.rol } }));
 }
 
 async function verificarSesion() {
@@ -3287,7 +3288,7 @@ verificarSesion();
   let cartasTecnicas = {};
   let tickets = [];
   let papelera = [];
-  let bitacoraLog = [];
+  let bitacoraLog = (() => { try { return JSON.parse(localStorage.getItem("crm_bitacora") || "[]"); } catch { return []; } })();
   let acercaDe = { version: "v3.0.0", fecha: "Junio 2026", notas: "" };
   let configCorreo = { provider: "brevo", apiKey: "" };
   let unsubscribeCRM = null;
@@ -3422,6 +3423,7 @@ verificarSesion();
     renderEmpresas();
     renderContactos();
     renderConfig();
+    aplicarPermisosNavegacion();
     initStickyHeaders();
     console.log("[CRM DEBUG] cargarDesdeLocalStorage => clientes:", clientes.length, clientes.slice(0,2));
     console.log("[CRM DEBUG] cargarDesdeLocalStorage => contactos:", contactos.length, contactos.slice(0,2));
@@ -3521,7 +3523,11 @@ verificarSesion();
       renderTickets();
     }
     if (sectionId === "configuracion") renderConfig();
-    if (sectionId === "bitacora") renderBitacora();
+    if (sectionId === "bitacora") {
+      const uNav = getUsuarioActual();
+      if (!uNav || uNav.rol !== "admin") { navegarA("dashboard"); return; }
+      renderBitacora();
+    }
     if (sectionId === "configuracion") renderUsuariosPanel();
     if (sectionId === "eventos") renderSeccionEventos();
     if (sectionId === "knowledge") initKB();
@@ -3709,7 +3715,9 @@ verificarSesion();
     if (datos.configTickets) configTickets = { ...configTickets, ...datos.configTickets };
     if (datos.usuarios && datos.usuarios.length > 0) saveUsuariosLocal(datos.usuarios);
     if (datos.eventos && datos.eventos.length > 0) eventos = datos.eventos;
-    if (datos.bitacora && datos.bitacora.length > 0) bitacoraLog = datos.bitacora;
+    // Bitácora NO se toca aquí — se carga solo en primeraCargaFB y se actualiza
+    // únicamente desde logBitacora(), para evitar que writes ajenos sobreescriban
+    // entradas recientes aún no confirmadas por el servidor.
     if (datos.papelera) papelera = datos.papelera;
     if (datos.acercaDe) acercaDe = datos.acercaDe;
     if (datos.configCorreo) configCorreo = datos.configCorreo;
@@ -3767,6 +3775,15 @@ verificarSesion();
 
           if (datos) {
             aplicarDatosFirebase(datos);
+            // Carga inicial de bitácora: fusionar Firebase + entradas locales aún no confirmadas
+            if (datos.bitacora && datos.bitacora.length > 0) {
+              const fechasFB = new Set(datos.bitacora.map(e => e.fecha));
+              const localExtras = bitacoraLog.filter(e => !fechasFB.has(e.fecha));
+              bitacoraLog = [...localExtras, ...datos.bitacora].sort(
+                (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+              );
+              guardarLocal("crm_bitacora", bitacoraLog);
+            }
             // Respaldo en localStorage (caché para offline)
             guardarLocal("crm_clientes", clientes);
             guardarLocal("crm_contactos", contactos);
@@ -3815,10 +3832,7 @@ verificarSesion();
           ocultarEstado();
           initStickyHeaders();
           checkLicenciasPorVencer();
-          if (sessionStorage.getItem("crm_new_login") === "1") {
-            sessionStorage.removeItem("crm_new_login");
-            logBitacora("Sesión iniciada", "🔐");
-          }
+          aplicarPermisosNavegacion();
 
         } else {
           // ── ACTUALIZACIÓN REMOTA (otro dispositivo guardó algo) ───────
@@ -3846,22 +3860,43 @@ verificarSesion();
   }
 
   // ============================================================
+  // PERMISOS DE NAVEGACIÓN
+  // ============================================================
+  function aplicarPermisosNavegacion() {
+    const u = getUsuarioActual();
+    const esAdmin = u?.rol === "admin";
+    const navBitacora = document.getElementById("nav-item-bitacora");
+    if (navBitacora) navBitacora.style.display = esAdmin ? "" : "none";
+  }
+
+  // ============================================================
   // BITÁCORA
   // ============================================================
   function logBitacora(msg, icon = "📌") {
     const u = getUsuarioActual();
     const entry = { fecha: new Date().toISOString(), msg, icon, usuario: u?.nombre || "Sistema" };
     bitacoraLog.unshift(entry);
-    // Purgar entradas con más de 60 días
     const limite60 = new Date();
     limite60.setDate(limite60.getDate() - 60);
     bitacoraLog = bitacoraLog.filter(e => new Date(e.fecha) >= limite60);
+    guardarLocal("crm_bitacora", bitacoraLog);
     if (firebaseEnabled) guardarBitacora(bitacoraLog).catch(() => {});
   }
+
+  // Listener para el evento de login (cruzar scope IIFE ↔ auth)
+  document.addEventListener("crm:login", () => {
+    aplicarPermisosNavegacion();
+    logBitacora("Sesión iniciada", "🔐");
+  }, { once: false });
 
   function renderBitacora() {
     const cont = document.getElementById("bitacora-list");
     if (!cont) return;
+    const u = getUsuarioActual();
+    if (!u || u.rol !== "admin") {
+      cont.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:24px; font-size:0.85rem;">🔒 Acceso restringido a administradores.</div>';
+      return;
+    }
     if (!bitacoraLog.length) {
       cont.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:24px; font-size:0.85rem;">Sin actividad registrada.</div>';
       return;
@@ -3884,6 +3919,7 @@ verificarSesion();
   document.getElementById("btnLimpiarBitacora")?.addEventListener("click", () => {
     if (!confirm("¿Limpiar toda la bitácora?")) return;
     bitacoraLog = [];
+    guardarLocal("crm_bitacora", []);
     if (firebaseEnabled) guardarBitacora(bitacoraLog).catch(() => {});
     renderBitacora();
   });
@@ -4228,13 +4264,14 @@ verificarSesion();
       guardarLocal("crm_versiones", versionesMercado);
       guardarLocal("crm_cartas", cartasTecnicas);
       toast("💾 Versiones guardadas (Local)");
+      logBitacora("Versiones oficiales actualizadas", "🚀");
       updateMarketStatusIndicators();
       renderEmpresas();
       return;
     }
     mostrarEstado("💾 Guardando versiones...");
     const ok = await guardarConfiguracion(versionesMercado, cartasTecnicas);
-    if (ok) { toast("💾 Versiones guardadas"); ocultarEstado(); }
+    if (ok) { toast("💾 Versiones guardadas"); ocultarEstado(); logBitacora("Versiones oficiales actualizadas", "🚀"); }
     else { guardarLocal("crm_versiones", versionesMercado); guardarLocal("crm_cartas", cartasTecnicas); mostrarEstado("⚠️ Guardado localmente", 3000); }
     updateMarketStatusIndicators();
     renderEmpresas();
