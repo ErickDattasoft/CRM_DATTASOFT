@@ -1631,9 +1631,11 @@ try {
   .kb-b-md { background: rgba(16,185,129,0.12); color: #34d399; }
   .kb-b-ps1 { background: rgba(99,102,241,0.12); color: #818cf8; }
   .kb-b-bat { background: rgba(245,158,11,0.12); color: #fbbf24; }
+  .kb-b-sql { background: rgba(20,184,166,0.12); color: #2dd4bf; }
   .kb-b-cat-empresa { background: rgba(14,165,233,0.1); color: #38bdf8; }
   .kb-b-cat-solucion { background: rgba(16,185,129,0.1); color: #34d399; }
   .kb-b-cat-script { background: rgba(168,85,247,0.1); color: #c084fc; }
+  .kb-b-cat-sql { background: rgba(20,184,166,0.1); color: #2dd4bf; }
   .kb-item-date { font-size: 0.66rem; color: var(--text-light); margin-left: auto; }
   .kb-viewer {
     background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg);
@@ -2631,12 +2633,12 @@ try {
             <div id="kb-upload-menu" style="display:none; position:absolute; top:calc(100% + 4px); left:0; z-index:200; background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-md); box-shadow:var(--shadow-lg); min-width:180px; overflow:hidden;">
               <label style="display:flex; align-items:center; gap:10px; padding:10px 14px; cursor:pointer; font-size:0.82rem; color:var(--text-main); transition:background 0.15s;" onmouseover="this.style.background='rgba(99,102,241,0.08)'" onmouseout="this.style.background=''">
                 📄 Archivos sueltos
-                <input id="kb-upload-input" type="file" accept=".md,.ps1,.bat,.txt" multiple style="display:none;">
+                <input id="kb-upload-input" type="file" accept=".md,.ps1,.bat,.sql,.txt" multiple style="display:none;">
               </label>
               <div style="height:1px; background:var(--border-color);"></div>
               <label style="display:flex; align-items:center; gap:10px; padding:10px 14px; cursor:pointer; font-size:0.82rem; color:var(--text-main); transition:background 0.15s;" onmouseover="this.style.background='rgba(99,102,241,0.08)'" onmouseout="this.style.background=''">
                 📂 Carpeta completa
-                <input id="kb-upload-folder" type="file" accept=".md,.ps1,.bat,.txt" multiple style="display:none;" webkitdirectory>
+                <input id="kb-upload-folder" type="file" accept=".md,.ps1,.bat,.sql,.txt" multiple style="display:none;" webkitdirectory>
               </label>
             </div>
           </div>
@@ -2659,6 +2661,7 @@ try {
               <option value="solucion">🛠 Solución / Error</option>
               <option value="empresa">🏢 Empresa</option>
               <option value="script">⚡ Script</option>
+              <option value="sql">🗄️ SQL / Queries</option>
             </select>
             <button id="kb-folder-ok" class="btn btn-primary btn-sm">✓ Cargar</button>
             <button id="kb-folder-cancel" class="btn btn-ghost btn-sm">Cancelar</button>
@@ -2683,6 +2686,7 @@ try {
           <button class="kb-tab" data-kb-cat="empresa">🏢 Empresas <span class="kb-cnt" id="kb-cnt-empresa">0</span></button>
           <button class="kb-tab" data-kb-cat="solucion">🛠 Soluciones <span class="kb-cnt" id="kb-cnt-solucion">0</span></button>
           <button class="kb-tab" data-kb-cat="script">⚡ Scripts <span class="kb-cnt" id="kb-cnt-script">0</span></button>
+          <button class="kb-tab" data-kb-cat="sql">🗄️ SQL <span class="kb-cnt" id="kb-cnt-sql">0</span></button>
         </div>
 
         <!-- Vista dividida: lista + visor -->
@@ -2743,6 +2747,7 @@ try {
                     <option value="solucion">🛠 Solución / Error</option>
                     <option value="empresa">🏢 Empresa</option>
                     <option value="script">⚡ Script</option>
+                    <option value="sql">🗄️ SQL / Queries</option>
                   </select>
                 </div>
                 <div class="form-group" style="margin:0;">
@@ -2751,6 +2756,7 @@ try {
                     <option value="md">Markdown (.md)</option>
                     <option value="ps1">PowerShell (.ps1)</option>
                     <option value="bat">Batch (.bat)</option>
+                    <option value="sql">SQL (.sql)</option>
                   </select>
                 </div>
               </div>
@@ -7058,9 +7064,9 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   interface KBDoc {
     _id: string;
     title: string;
-    category: "empresa" | "solucion" | "script";
+    category: "empresa" | "solucion" | "script" | "sql";
     content: string;
-    file_type: "md" | "ps1" | "bat";
+    file_type: "md" | "ps1" | "bat" | "sql";
     tags: string[];
     created_at?: any;
     updated_at?: any;
@@ -7092,23 +7098,27 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   function kbFmtType(type: string): { ext: string; cls: string } {
     if (type === "ps1") return { ext: ".ps1", cls: "kb-b-ps1" };
     if (type === "bat") return { ext: ".bat", cls: "kb-b-bat" };
+    if (type === "sql") return { ext: ".sql", cls: "kb-b-sql" };
     return { ext: ".md", cls: "kb-b-md" };
   }
   function kbFmtCat(cat: string): { label: string; cls: string } {
     if (cat === "empresa")  return { label: "🏢 Empresa",  cls: "kb-b-cat-empresa" };
     if (cat === "script")   return { label: "⚡ Script",   cls: "kb-b-cat-script" };
+    if (cat === "sql")      return { label: "🗄️ SQL",      cls: "kb-b-cat-sql" };
     return { label: "🛠 Solución", cls: "kb-b-cat-solucion" };
   }
 
-  function kbGuessType(filename: string): "md" | "ps1" | "bat" {
+  function kbGuessType(filename: string): "md" | "ps1" | "bat" | "sql" {
     const ext = filename.split(".").pop()?.toLowerCase() || "";
     if (ext === "ps1") return "ps1";
     if (ext === "bat") return "bat";
+    if (ext === "sql") return "sql";
     return "md";
   }
-  function kbGuessCat(filename: string): "empresa" | "solucion" | "script" {
+  function kbGuessCat(filename: string): "empresa" | "solucion" | "script" | "sql" {
     const n = filename.toLowerCase();
     if (n.includes("empresa") || n.includes("client")) return "empresa";
+    if (n.includes("sql") || n.includes("quer") || n.includes("consulta")) return "sql";
     if (n.includes("script") || n.includes(".ps1") || n.includes(".bat")) return "script";
     return "solucion";
   }
@@ -7150,8 +7160,9 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const empresa = kbDocs.filter(d => d.category === "empresa").length;
     const solucion= kbDocs.filter(d => d.category === "solucion").length;
     const script  = kbDocs.filter(d => d.category === "script").length;
+    const sql     = kbDocs.filter(d => d.category === "sql").length;
     const setN = (id: string, n: number) => { const el = document.getElementById(id); if (el) el.textContent = String(n); };
-    setN("kb-cnt-all", total); setN("kb-cnt-empresa", empresa); setN("kb-cnt-solucion", solucion); setN("kb-cnt-script", script);
+    setN("kb-cnt-all", total); setN("kb-cnt-empresa", empresa); setN("kb-cnt-solucion", solucion); setN("kb-cnt-script", script); setN("kb-cnt-sql", sql);
 
     if (!docs.length) {
       list.innerHTML = `<div class="kb-list-empty">${kbDocs.length ? "🔍 Sin resultados." : "📭 Sin documentos.<br>Sube archivos o crea uno nuevo."}</div>`;
@@ -7231,6 +7242,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
     const wrap = document.getElementById("kb-content-wrap");
     if (wrap) {
+      const isScript = doc.file_type === "ps1" || doc.file_type === "bat" || doc.file_type === "sql";
       const ps1Note = doc.file_type === "ps1"
         ? `<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;margin-bottom:8px;background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.2);border-radius:var(--radius-sm);font-size:0.75rem;color:#fbbf24;">
             ⚠️ Si no corre con doble clic: clic derecho → <strong>Propiedades → Desbloquear</strong>, o pega el contenido directo en la terminal PowerShell.
@@ -7238,7 +7250,8 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         : "";
       const contentHtml = doc.file_type === "md"
         ? `<div class="kb-md">${kbRenderMarkdown(doc.content)}</div>`
-        : ps1Note + `<div class="kb-script">${kbEsc(doc.content)}</div>`;
+        : ps1Note + `<div class="kb-script">${kbEsc(doc.content)}</div>`
+      ;
 
       const rel = kbRelacionados(doc);
       const relHtml = rel.length ? `
@@ -7361,7 +7374,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   }
 
   async function kbSubidaMasiva(files: FileList | File[], forcedCategory?: KBDoc["category"]) {
-    const lista = Array.from(files).filter(f => /\.(md|ps1|bat|txt)$/i.test(f.name));
+    const lista = Array.from(files).filter(f => /\.(md|ps1|bat|sql|txt)$/i.test(f.name));
     if (!lista.length) { toast("⚠️ No se encontraron archivos .md .ps1 .bat", "warning"); return; }
 
     const progressEl  = document.getElementById("kb-upload-progress");
@@ -7455,7 +7468,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     document.getElementById("kb-btn-download")?.addEventListener("click", () => {
       const doc = kbDocs.find(d => d._id === kbSelId);
       if (!doc) return;
-      const ext = doc.file_type === "md" ? "md" : doc.file_type === "ps1" ? "ps1" : "bat";
+      const ext = doc.file_type === "md" ? "md" : doc.file_type === "ps1" ? "ps1" : doc.file_type === "sql" ? "sql" : "bat";
       const mime = ext === "md" ? "text/markdown" : "text/plain";
       const blob = new Blob([doc.content], { type: mime });
       const url  = URL.createObjectURL(blob);
@@ -7507,7 +7520,8 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       const fn = folderName.toLowerCase();
       const catGuess: KBDoc["category"] =
         /empresa|client|company/.test(fn) ? "empresa" :
-        /script|ps1|bat|cmd|auto/.test(fn) ? "script" : "solucion";
+        /sql|quer|consulta/.test(fn)       ? "sql"     :
+        /script|ps1|bat|cmd|auto/.test(fn) ? "script"  : "solucion";
 
       const validFiles = Array.from(files).filter(f => /\.(md|ps1|bat|txt)$/i.test(f.name));
       const confirmEl = document.getElementById("kb-folder-confirm");
