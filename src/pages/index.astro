@@ -2405,6 +2405,28 @@ try {
           </p>
         </div>
 
+        <div class="card">
+          <div class="card-title">🔖 Puntos de Restauración (GitHub)</div>
+          <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">
+            Crea etiquetas (tags) en GitHub para marcar versiones estables del CRM. Necesitas un Personal Access Token de GitHub con permiso <strong style="color:var(--text-main);">repo</strong>.
+          </p>
+          <div style="display:flex; flex-direction:column; gap:10px; max-width:520px; margin-bottom:16px;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label>GitHub Personal Access Token (PAT)</label>
+              <div style="display:flex; gap:8px;">
+                <input id="cfg-gh-pat" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="flex:1; font-size:0.82rem;">
+                <button id="btn-gh-pat-save" class="btn btn-secondary btn-sm">Guardar</button>
+              </div>
+              <span style="font-size:0.7rem; color:var(--text-muted); margin-top:4px; display:block;">Se guarda solo en este navegador (localStorage). Crea uno en GitHub → Settings → Developer settings → Personal access tokens.</span>
+            </div>
+          </div>
+          <div style="border-top:1px dashed rgba(255,255,255,0.06); padding-top:14px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <button id="btn-crear-punto" class="btn btn-primary btn-sm">🔖 Crear punto de restauración</button>
+            <button id="btn-ver-puntos" class="btn btn-ghost btn-sm">📋 Ver puntos en GitHub ↗</button>
+            <span id="gh-punto-status" style="font-size:0.78rem; display:none;"></span>
+          </div>
+        </div>
+
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:20px;">
           <div class="card">
             <div class="card-title">📋 Tipos de Ticket</div>
@@ -8054,7 +8076,141 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
   // Inicializar KB si ya hay sesión activa con acceso
   initKB();
+
+  // ── PUNTOS DE RESTAURACIÓN (GitHub API) ──────────────────────────────
+  const GH_OWNER = "ErickDattasoft";
+  const GH_REPO  = "CRM_DATTASOFT";
+  const GH_PAT_KEY = "crm_gh_pat";
+
+  // Cargar PAT guardado
+  const patInput = document.getElementById("cfg-gh-pat") as HTMLInputElement;
+  if (patInput) patInput.value = localStorage.getItem(GH_PAT_KEY) || "";
+
+  document.getElementById("btn-gh-pat-save")?.addEventListener("click", () => {
+    const v = patInput?.value.trim() || "";
+    if (!v) { toast("⚠️ Ingresa un token antes de guardar", "warning"); return; }
+    localStorage.setItem(GH_PAT_KEY, v);
+    toast("✓ Token guardado", "success");
+  });
+
+  document.getElementById("btn-ver-puntos")?.addEventListener("click", () => {
+    window.open(`https://github.com/${GH_OWNER}/${GH_REPO}/tags`, "_blank");
+  });
+
+  document.getElementById("btn-crear-punto")?.addEventListener("click", () => {
+    const pat = localStorage.getItem(GH_PAT_KEY) || "";
+    if (!pat) { toast("⚠️ Primero guarda tu GitHub Token en Configuración", "warning"); return; }
+    document.getElementById("modal-gh-punto")!.style.display = "flex";
+    const hoy = new Date();
+    const sugerido = `v${hoy.getFullYear()}.${String(hoy.getMonth()+1).padStart(2,"0")}.${String(hoy.getDate()).padStart(2,"0")}`;
+    (document.getElementById("gh-punto-nombre") as HTMLInputElement).value = sugerido;
+    (document.getElementById("gh-punto-desc") as HTMLInputElement).value = "";
+    document.getElementById("gh-punto-status")!.style.display = "none";
+    (document.getElementById("gh-punto-nombre") as HTMLInputElement).focus();
+  });
+
+  document.getElementById("btn-gh-punto-cancelar")?.addEventListener("click", () => {
+    document.getElementById("modal-gh-punto")!.style.display = "none";
+  });
+
+  document.getElementById("btn-gh-punto-crear")?.addEventListener("click", async () => {
+    const pat  = localStorage.getItem(GH_PAT_KEY) || "";
+    const name = (document.getElementById("gh-punto-nombre") as HTMLInputElement).value.trim().replace(/\s+/g, "-");
+    const desc = (document.getElementById("gh-punto-desc") as HTMLInputElement).value.trim() || `Punto de restauración ${name}`;
+    const status = document.getElementById("gh-punto-status2")!;
+    const btn = document.getElementById("btn-gh-punto-crear") as HTMLButtonElement;
+
+    if (!name) { toast("⚠️ El nombre no puede estar vacío", "warning"); return; }
+
+    btn.disabled = true;
+    btn.textContent = "Creando...";
+    status.style.display = "inline";
+    status.style.color = "var(--text-muted)";
+    status.textContent = "⏳ Obteniendo commit actual...";
+
+    try {
+      // 1. Obtener SHA del HEAD de main
+      const refRes = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/git/ref/heads/main`, {
+        headers: { Authorization: `Bearer ${pat}`, Accept: "application/vnd.github+json" }
+      });
+      if (!refRes.ok) throw new Error(refRes.status === 401 ? "Token inválido o sin permiso" : `Error ${refRes.status}`);
+      const refData = await refRes.json();
+      const sha = refData.object.sha;
+
+      status.textContent = "⏳ Creando tag anotado...";
+
+      // 2. Crear el objeto tag (anotado)
+      const tagRes = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/git/tags`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${pat}`, Accept: "application/vnd.github+json", "Content-Type": "application/json" },
+        body: JSON.stringify({ tag: name, message: desc, object: sha, type: "commit",
+          tagger: { name: "CRM DATTASOFT", email: "crm@dattasoft.mx", date: new Date().toISOString() }
+        })
+      });
+      if (!tagRes.ok) {
+        const err = await tagRes.json();
+        throw new Error(err.message || `Error ${tagRes.status}`);
+      }
+      const tagData = await tagRes.json();
+
+      // 3. Crear la referencia del tag
+      const refPostRes = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/git/refs`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${pat}`, Accept: "application/vnd.github+json", "Content-Type": "application/json" },
+        body: JSON.stringify({ ref: `refs/tags/${name}`, sha: tagData.sha })
+      });
+      if (!refPostRes.ok) {
+        const err = await refPostRes.json();
+        throw new Error(err.message || `Error ${refPostRes.status}`);
+      }
+
+      status.style.color = "#34d399";
+      status.textContent = `✓ Punto "${name}" creado en GitHub`;
+      btn.textContent = "✓ Creado";
+      setTimeout(() => {
+        document.getElementById("modal-gh-punto")!.style.display = "none";
+        toast(`🔖 Punto de restauración "${name}" guardado`, "success");
+        btn.disabled = false;
+        btn.textContent = "🔖 Crear";
+      }, 1500);
+    } catch (err: any) {
+      status.style.color = "#f87171";
+      status.textContent = `✗ ${err.message}`;
+      btn.disabled = false;
+      btn.textContent = "🔖 Crear";
+    }
+  });
+
+  // Cerrar modal con Escape
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      const m = document.getElementById("modal-gh-punto");
+      if (m && m.style.display !== "none") m.style.display = "none";
+    }
+  });
 })();
 </script>
+
+<!-- MODAL: Crear punto de restauración GitHub -->
+<div id="modal-gh-punto" style="display:none; position:fixed; inset:0; z-index:4000; background:rgba(0,0,0,0.75); align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px);">
+  <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-xl); padding:28px 30px; width:100%; max-width:440px; box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+    <div style="font-size:1rem; font-weight:800; color:var(--text-bright); font-family:var(--font-heading); margin-bottom:6px;">🔖 Crear punto de restauración</div>
+    <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:20px; line-height:1.5;">Se creará un tag anotado en GitHub apuntando al commit actual de <strong style="color:var(--text-main);">main</strong>.</p>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label>Nombre del punto</label>
+      <input id="gh-punto-nombre" type="text" placeholder="v2025.06.25-kb-completo" style="font-size:0.85rem;">
+      <span style="font-size:0.7rem; color:var(--text-muted); margin-top:3px; display:block;">Sin espacios. Ejemplo: v1.2-fix-login</span>
+    </div>
+    <div class="form-group" style="margin-bottom:20px;">
+      <label>Descripción (opcional)</label>
+      <input id="gh-punto-desc" type="text" placeholder="Base de Conocimiento completa + pizarra" style="font-size:0.85rem;">
+    </div>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <button id="btn-gh-punto-crear" class="btn btn-primary btn-sm">🔖 Crear</button>
+      <button id="btn-gh-punto-cancelar" class="btn btn-ghost btn-sm">Cancelar</button>
+      <span id="gh-punto-status2" style="font-size:0.78rem; display:none;"></span>
+    </div>
+  </div>
+</div>
 </body>
 </html>
