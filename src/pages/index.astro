@@ -1686,6 +1686,7 @@ try {
   .kb-script { background: #0a0c14; border: 1px solid rgba(255,255,255,0.07); border-radius: var(--radius-md); padding: 16px; font-family: 'Courier New', monospace; font-size: 0.82rem; color: #c9d1d9; white-space: pre-wrap; word-break: break-word; line-height: 1.6; }
   /* Highlight búsqueda */
   mark.kb-hl { background: rgba(251,191,36,0.28); color: var(--text-bright); border-radius: 2px; padding: 0 1px; font-style: normal; }
+  mark.kb-hl-content { background: rgba(16,185,129,0.25); color: #34d399; border-radius: 2px; padding: 0 1px; font-style: normal; }
   /* Modal KB */
   .kb-modal-overlay { position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,0.72); display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
   .kb-modal-box { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-xl); width: 100%; max-width: 800px; max-height: 92vh; display: flex; flex-direction: column; box-shadow: var(--shadow-xl); }
@@ -2630,6 +2631,8 @@ try {
             <input id="kb-search-input" type="text" placeholder="Buscar por título o contenido..." autocomplete="off" spellcheck="false">
             <button id="kb-exact-btn" class="kb-toggle-btn" title="Buscar frase exacta (sin separar palabras)">Frase exacta</button>
           </div>
+          <button id="kb-sort-az" class="btn btn-ghost btn-sm kb-toggle-btn active" title="Orden A → Z">A→Z</button>
+          <button id="kb-sort-za" class="btn btn-ghost btn-sm kb-toggle-btn" title="Orden Z → A">Z→A</button>
           <div style="position:relative;" id="kb-upload-wrap">
             <button id="kb-upload-btn" class="btn btn-ghost btn-sm" style="display:flex; align-items:center; gap:5px;">
               ⬆ Cargar <span style="font-size:0.65rem; opacity:0.6;">▼</span>
@@ -7088,6 +7091,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   let kbSelId: string | null = null;
   let kbCat = "all";
   let kbExact = false;
+  let kbSort: "asc" | "desc" = "asc";
   let kbTagFilter: string | null = null;
   let kbEditId: string | null = null;
   let kbUnsubscribe: (() => void) | null = null;
@@ -7137,20 +7141,40 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
   function kbFiltrar(): KBDoc[] {
     const q = kbNorm((document.getElementById("kb-search-input") as HTMLInputElement)?.value || "");
-    let docs = kbCat === "all" ? kbDocs : kbDocs.filter(d => d.category === kbCat);
+    let docs = kbCat === "all" ? [...kbDocs] : kbDocs.filter(d => d.category === kbCat);
     if (kbTagFilter) docs = docs.filter(d => (d.tags || []).map(t => kbNorm(t)).includes(kbNorm(kbTagFilter!)));
-    if (!q) return docs;
-    return docs.filter(d => {
+    if (q) docs = docs.filter(d => {
       const t = kbNorm(d.title), c = kbNorm(d.content), tg = kbNorm((d.tags || []).join(" "));
       if (kbExact) return t.includes(q) || c.includes(q) || tg.includes(q);
       return q.trim().split(/\s+/).every(w => t.includes(w) || c.includes(w) || tg.includes(w));
     });
+    docs.sort((a, b) => {
+      const cmp = kbNorm(a.title).localeCompare(kbNorm(b.title));
+      return kbSort === "asc" ? cmp : -cmp;
+    });
+    return docs;
   }
 
   function kbHighlight(text: string, q: string): string {
     if (!q) return kbEsc(text);
     const safe = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     return kbEsc(text).replace(new RegExp(safe, "gi"), m => `<mark class="kb-hl">${m}</mark>`);
+  }
+
+  function kbHighlightContent(html: string, q: string): string {
+    if (!q) return html;
+    const words = kbExact ? [q] : q.trim().split(/\s+/).filter(Boolean);
+    let result = html;
+    for (const w of words) {
+      const safe = w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const re = new RegExp(`(?<=>)([^<]*)`, "g");
+      result = result.replace(re, (_, textNode) => {
+        const normNode = kbNorm(textNode);
+        if (!normNode.includes(kbNorm(w))) return _;
+        return textNode.replace(new RegExp(safe, "gi"), m => `<mark class="kb-hl-content">${m}</mark>`);
+      });
+    }
+    return result;
   }
 
   function kbRenderMarkdown(md: string): string {
@@ -7255,15 +7279,17 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const wrap = document.getElementById("kb-content-wrap");
     if (wrap) {
       const isScript = doc.file_type === "ps1" || doc.file_type === "bat" || doc.file_type === "sql";
+      const qVisor = kbNorm((document.getElementById("kb-search-input") as HTMLInputElement)?.value || "");
       const ps1Note = doc.file_type === "ps1"
         ? `<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;margin-bottom:8px;background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.2);border-radius:var(--radius-sm);font-size:0.75rem;color:#fbbf24;">
             ⚠️ Si no corre con doble clic: clic derecho → <strong>Propiedades → Desbloquear</strong>, o pega el contenido directo en la terminal PowerShell.
            </div>`
         : "";
+      const rawMd  = kbRenderMarkdown(doc.content);
+      const rawScr = kbEsc(doc.content);
       const contentHtml = doc.file_type === "md"
-        ? `<div class="kb-md">${kbRenderMarkdown(doc.content)}</div>`
-        : ps1Note + `<div class="kb-script">${kbEsc(doc.content)}</div>`
-      ;
+        ? `<div class="kb-md">${qVisor ? kbHighlightContent(rawMd, qVisor) : rawMd}</div>`
+        : ps1Note + `<div class="kb-script">${qVisor ? kbHighlightContent(rawScr, qVisor) : rawScr}</div>`;
 
       const rel = kbRelacionados(doc);
       const relHtml = rel.length ? `
@@ -7518,6 +7544,20 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
         kbRenderList();
       });
+    });
+
+    // Orden alfabético
+    document.getElementById("kb-sort-az")?.addEventListener("click", () => {
+      kbSort = "asc";
+      document.getElementById("kb-sort-az")?.classList.add("active");
+      document.getElementById("kb-sort-za")?.classList.remove("active");
+      kbRenderList();
+    });
+    document.getElementById("kb-sort-za")?.addEventListener("click", () => {
+      kbSort = "desc";
+      document.getElementById("kb-sort-za")?.classList.add("active");
+      document.getElementById("kb-sort-az")?.classList.remove("active");
+      kbRenderList();
     });
 
     // Doble clic en lista → editar (delegado en contenedor para sobrevivir re-renders)
