@@ -50,7 +50,7 @@ try {
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <style>
+  <style is:global>
     /* ===== RESET & VARIABLES ===== */
     :root {
       --font-heading: 'Outfit', sans-serif;
@@ -7147,8 +7147,12 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   }
   function kbFmtDate(ts: any): string {
     if (!ts) return "";
-    const d: Date = ts.toDate ? ts.toDate() : new Date(ts);
-    return d.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
+    let d: Date;
+    if (ts.toDate) d = ts.toDate();
+    else if (ts.seconds) d = new Date(ts.seconds * 1000);
+    else d = new Date(ts);
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
   }
   function kbFmtType(type: string): { ext: string; cls: string } {
     if (type === "ps1") return { ext: ".ps1", cls: "kb-b-ps1" };
