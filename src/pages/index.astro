@@ -1611,9 +1611,10 @@ try {
     background: rgba(99,102,241,0.15); color: var(--brand-primary-hover); border-radius: var(--radius-full);
     padding: 1px 7px; font-size: 0.66rem; font-weight: 700; min-width: 18px; text-align: center;
   }
-  .kb-split { display: grid; grid-template-columns: var(--kb-list-w, 290px) 5px 1fr; gap: 0; flex: 1; min-height: 0; overflow: hidden; }
-  #kb-resizer { cursor: col-resize; background: transparent; border-radius: 3px; margin: 0 4px; transition: background 0.15s; }
-  #kb-resizer:hover, #kb-resizer.kb-resizing { background: var(--brand-primary); }
+  .kb-split { display: grid; grid-template-columns: var(--kb-list-w, 290px) 14px 1fr; gap: 0; flex: 1; min-height: 0; overflow: hidden; }
+  #kb-resizer { cursor: col-resize; background: transparent; transition: background 0.15s; position: relative; }
+  #kb-resizer::after { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; transform: translateX(-50%); width: 4px; border-radius: 2px; background: transparent; transition: background 0.15s; }
+  #kb-resizer:hover::after, #kb-resizer.kb-resizing::after { background: var(--brand-primary); }
   .kb-list {
     background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg);
     overflow-y: auto; display: flex; flex-direction: column; padding: 6px; gap: 2px;
@@ -7209,11 +7210,6 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         }
         kbAbrirDoc(el.dataset.kid!);
       });
-      el.addEventListener("dblclick", (e) => {
-        const tagChip = (e.target as HTMLElement).closest(".kb-tag-chip");
-        if (tagChip) return;
-        kbAbrirModal(el.dataset.kid!);
-      });
     });
   }
 
@@ -7522,6 +7518,14 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
         kbRenderList();
       });
+    });
+
+    // Doble clic en lista → editar (delegado en contenedor para sobrevivir re-renders)
+    document.getElementById("kb-doc-list")?.addEventListener("dblclick", (e) => {
+      const item = (e.target as HTMLElement).closest<HTMLElement>(".kb-doc-item");
+      if (!item) return;
+      if ((e.target as HTMLElement).closest(".kb-tag-chip")) return;
+      kbAbrirModal(item.dataset.kid!);
     });
 
     // Nuevo documento
