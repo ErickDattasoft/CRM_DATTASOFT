@@ -1628,7 +1628,7 @@ try {
     transition: all 0.15s; border: 1px solid transparent; user-select: none;
   }
   .kb-doc-item:hover { background: var(--bg-card-hover); border-color: var(--border-color); }
-  .kb-doc-item.kb-sel { background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.3); }
+  .kb-doc-item.kb-sel { background: rgba(99,102,241,0.13); border-color: rgba(99,102,241,0.4); border-left: 3px solid var(--brand-primary); padding-left: 9px; }
   .kb-item-title { font-size: 0.82rem; font-weight: 600; color: var(--text-main); line-height: 1.35; margin-bottom: 5px; word-break: break-word; }
   .kb-item-foot { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
   .kb-badge { font-size: 0.6rem; font-weight: 700; padding: 2px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -1687,6 +1687,12 @@ try {
   /* Highlight búsqueda */
   mark.kb-hl { background: rgba(251,191,36,0.28); color: var(--text-bright); border-radius: 2px; padding: 0 1px; font-style: normal; }
   mark.kb-hl-content { background: rgba(16,185,129,0.25); color: #34d399; border-radius: 2px; padding: 0 1px; font-style: normal; }
+  .kb-fmt-btn { background: transparent; border: 1px solid transparent; border-radius: 4px; color: var(--text-muted); cursor: pointer; font-size: 0.75rem; padding: 3px 7px; transition: all 0.12s; }
+  .kb-fmt-btn:hover { background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.2); color: var(--text-main); }
+  #kb-pizarra-texto:empty::before { content: attr(data-placeholder); color: var(--text-light); pointer-events: none; }
+  #kb-pizarra-texto h3 { font-size: 0.95rem; font-weight: 700; margin: 6px 0 2px; color: var(--text-bright); }
+  #kb-pizarra-texto ul, #kb-pizarra-texto ol { padding-left: 20px; margin: 4px 0; }
+  #kb-pizarra-texto li { margin: 2px 0; }
   /* Modal KB */
   .kb-modal-overlay { position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,0.72); display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
   .kb-modal-box { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-xl); width: 100%; max-width: 800px; max-height: 92vh; display: flex; flex-direction: column; box-shadow: var(--shadow-xl); }
@@ -2654,6 +2660,7 @@ try {
               </label>
             </div>
           </div>
+          <button id="kb-btn-transferir" class="btn btn-ghost btn-sm" title="Enviar archivos por enlace temporal">📤 Transferir</button>
           <div class="kb-acceso-wrap" id="kb-acceso-wrap" style="display:none;">
             <button id="kb-btn-acceso" class="btn btn-ghost btn-sm" title="Gestionar quién puede ver este panel">👥 Acceso</button>
             <div class="kb-acceso-panel" id="kb-acceso-panel">
@@ -2751,9 +2758,68 @@ try {
             </div>
           </div>
           <div id="kb-pizarra-body">
-            <textarea id="kb-pizarra-texto"
-              placeholder="Escribe aquí notas temporales, comandos, ideas... Se guarda automáticamente en tu navegador."
-              style="width:100%; height:130px; resize:vertical; background:transparent; border:none; outline:none; padding:12px 14px; font-size:0.82rem; font-family:var(--font-mono,monospace); color:var(--text-main); line-height:1.6; box-sizing:border-box;"></textarea>
+            <div id="kb-pizarra-fmt" style="display:flex; gap:2px; padding:5px 10px; border-bottom:1px solid var(--border-color); flex-wrap:wrap; background:rgba(255,255,255,0.01);">
+              <button class="kb-fmt-btn" data-cmd="bold" title="Negrita (Ctrl+B)" style="font-weight:700;">B</button>
+              <button class="kb-fmt-btn" data-cmd="italic" title="Cursiva (Ctrl+I)" style="font-style:italic;">I</button>
+              <button class="kb-fmt-btn" data-cmd="underline" title="Subrayado (Ctrl+U)" style="text-decoration:underline;">U</button>
+              <div style="width:1px; background:var(--border-color); margin:2px 4px;"></div>
+              <button class="kb-fmt-btn" data-cmd="formatBlock" data-val="h3" title="Título">T</button>
+              <button class="kb-fmt-btn" data-cmd="insertUnorderedList" title="Lista con viñetas">• Lista</button>
+              <button class="kb-fmt-btn" data-cmd="insertOrderedList" title="Lista numerada">1. Lista</button>
+              <div style="width:1px; background:var(--border-color); margin:2px 4px;"></div>
+              <button class="kb-fmt-btn" data-cmd="foreColor" data-val="#f87171" title="Texto rojo" style="color:#f87171;">A</button>
+              <button class="kb-fmt-btn" data-cmd="foreColor" data-val="#fbbf24" title="Texto amarillo" style="color:#fbbf24;">A</button>
+              <button class="kb-fmt-btn" data-cmd="foreColor" data-val="#34d399" title="Texto verde" style="color:#34d399;">A</button>
+              <div style="width:1px; background:var(--border-color); margin:2px 4px;"></div>
+              <button class="kb-fmt-btn" data-cmd="removeFormat" title="Quitar formato">✕ Formato</button>
+            </div>
+            <div id="kb-pizarra-texto" contenteditable="true"
+              style="min-height:110px; max-height:300px; overflow-y:auto; resize:vertical; outline:none; padding:12px 14px; font-size:0.83rem; font-family:var(--font-body); color:var(--text-main); line-height:1.7;"
+              data-placeholder="Escribe notas temporales, ideas... Se guarda automáticamente."></div>
+          </div>
+        </div>
+
+        <!-- Modal: transferencia de archivos -->
+        <div id="kb-transfer-modal" style="display:none; position:fixed; inset:0; z-index:500; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:none; align-items:center; justify-content:center;">
+          <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-xl); width:min(520px,94vw); max-height:80vh; overflow-y:auto; box-shadow:var(--shadow-xl);">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--border-color);">
+              <span style="font-weight:700; font-size:0.95rem;">📤 Enviar archivo</span>
+              <button id="kb-transfer-close" class="btn btn-ghost btn-sm">✕</button>
+            </div>
+            <div style="padding:20px; display:flex; flex-direction:column; gap:16px;">
+              <!-- Zona de subida -->
+              <label id="kb-transfer-drop" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; border:2px dashed var(--border-color); border-radius:var(--radius-lg); padding:28px 20px; cursor:pointer; transition:all 0.15s; text-align:center;">
+                <span style="font-size:2rem;">📁</span>
+                <span style="font-size:0.85rem; font-weight:600; color:var(--text-main);">Selecciona o arrastra un archivo</span>
+                <span style="font-size:0.72rem; color:var(--text-light);">Cualquier tipo · El enlace dura hasta que lo elimines</span>
+                <input id="kb-transfer-input" type="file" style="display:none;">
+              </label>
+              <!-- Barra de progreso -->
+              <div id="kb-transfer-progress" style="display:none;">
+                <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted); margin-bottom:5px;">
+                  <span id="kb-transfer-status">Subiendo...</span>
+                  <span id="kb-transfer-pct">0%</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.06); border-radius:var(--radius-full); height:6px;">
+                  <div id="kb-transfer-bar" style="height:100%; background:var(--brand-primary); border-radius:var(--radius-full); width:0%; transition:width 0.2s;"></div>
+                </div>
+              </div>
+              <!-- Resultado: enlace generado -->
+              <div id="kb-transfer-result" style="display:none; background:rgba(16,185,129,0.07); border:1px solid rgba(16,185,129,0.2); border-radius:var(--radius-md); padding:14px;">
+                <div style="font-size:0.75rem; font-weight:700; color:#34d399; margin-bottom:8px;">✅ Archivo listo para compartir</div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                  <input id="kb-transfer-url" type="text" readonly style="flex:1; font-size:0.75rem; padding:7px 10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-main);">
+                  <button id="kb-transfer-copy" class="btn btn-primary btn-sm">📋 Copiar</button>
+                </div>
+              </div>
+              <!-- Lista de archivos enviados -->
+              <div>
+                <div style="font-size:0.72rem; font-weight:700; color:var(--text-light); letter-spacing:0.05em; margin-bottom:8px;">ARCHIVOS ENVIADOS</div>
+                <div id="kb-transfer-list" style="display:flex; flex-direction:column; gap:6px; max-height:200px; overflow-y:auto;">
+                  <div style="font-size:0.78rem; color:var(--text-light); text-align:center; padding:12px;">Sin archivos enviados aún</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -3124,7 +3190,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, suscribirKB, crearDocKB, actualizarDocKB, eliminarDocKB, guardarKBAcceso } from "../data/firebase.js";
+import { firebaseEnabled, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, suscribirKB, crearDocKB, actualizarDocKB, eliminarDocKB, guardarKBAcceso, subirArchivo, eliminarArchivoTransferencia, guardarRegistroTransferencia, cargarTransferencias, eliminarRegistroTransferencia } from "../data/firebase.js";
 
 // ── Multi-user Auth ───────────────────────────────────────────
 async function sha256(str: string): Promise<string> {
@@ -7268,6 +7334,10 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
   function kbAbrirDoc(id: string) {
     kbSelId = id;
+    // Actualizar highlight sin re-renderizar toda la lista
+    document.querySelectorAll<HTMLElement>(".kb-doc-item").forEach(el => {
+      el.classList.toggle("kb-sel", el.dataset.kid === id);
+    });
     const doc = kbDocs.find(d => d._id === id);
     if (!doc) return;
     const emptyEl = document.getElementById("kb-viewer-empty");
@@ -7329,7 +7399,6 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         el.addEventListener("click", () => kbAbrirDoc(el.dataset.kid!));
       });
     }
-    kbRenderList();
   }
 
   function kbAbrirModal(editId?: string) {
@@ -7810,51 +7879,169 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     });
   }
 
+  function kbFmtSize(bytes: number): string {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  }
+
+  async function kbSetupTransferencia() {
+    let transferList: any[] = [];
+
+    const modal    = document.getElementById("kb-transfer-modal");
+    const btnAbrir = document.getElementById("kb-btn-transferir");
+    const btnCerr  = document.getElementById("kb-transfer-close");
+    const input    = document.getElementById("kb-transfer-input") as HTMLInputElement;
+    const drop     = document.getElementById("kb-transfer-drop");
+    const progWrap = document.getElementById("kb-transfer-progress");
+    const progBar  = document.getElementById("kb-transfer-bar");
+    const progPct  = document.getElementById("kb-transfer-pct");
+    const progSts  = document.getElementById("kb-transfer-status");
+    const result   = document.getElementById("kb-transfer-result");
+    const urlInput = document.getElementById("kb-transfer-url") as HTMLInputElement;
+    const listEl   = document.getElementById("kb-transfer-list");
+
+    const showModal  = () => { if (modal) modal.style.display = "flex"; };
+    const closeModal = () => { if (modal) modal.style.display = "none"; };
+
+    btnAbrir?.addEventListener("click", showModal);
+    btnCerr?.addEventListener("click",  closeModal);
+    modal?.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+
+    // Cargar lista existente
+    const renderList = () => {
+      if (!listEl) return;
+      if (!transferList.length) {
+        listEl.innerHTML = `<div style="font-size:0.78rem; color:var(--text-light); text-align:center; padding:12px;">Sin archivos enviados aún</div>`;
+        return;
+      }
+      listEl.innerHTML = transferList.map(t => `
+        <div style="display:flex; align-items:center; gap:10px; padding:8px 10px; background:var(--bg-section); border-radius:var(--radius-md); border:1px solid var(--border-color);">
+          <span style="font-size:0.8rem; flex:1; font-weight:600; color:var(--text-main); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${t.name}</span>
+          <span style="font-size:0.7rem; color:var(--text-light); white-space:nowrap;">${kbFmtSize(t.size || 0)}</span>
+          <button class="btn btn-ghost btn-sm tf-copy" data-url="${t.url}" style="font-size:0.7rem; padding:3px 7px;">📋</button>
+          <button class="btn btn-sm tf-del" data-id="${t._id}" data-path="${t.path}" style="font-size:0.7rem; padding:3px 7px; background:rgba(239,68,68,0.1); color:#f87171; border:1px solid rgba(239,68,68,0.2);">🗑️</button>
+        </div>`).join("");
+      listEl.querySelectorAll<HTMLElement>(".tf-copy").forEach(btn => {
+        btn.addEventListener("click", () => {
+          navigator.clipboard.writeText(btn.dataset.url!);
+          toast("📋 Enlace copiado");
+        });
+      });
+      listEl.querySelectorAll<HTMLElement>(".tf-del").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          if (!confirm("¿Eliminar este archivo? El enlace dejará de funcionar.")) return;
+          await eliminarArchivoTransferencia(btn.dataset.path!);
+          await eliminarRegistroTransferencia(btn.dataset.id!);
+          transferList = transferList.filter(t => t._id !== btn.dataset.id);
+          renderList();
+          toast("🗑️ Archivo eliminado");
+        });
+      });
+    };
+
+    transferList = await cargarTransferencias();
+    renderList();
+
+    // Subir archivo
+    const doUpload = async (file: File) => {
+      if (!file) return;
+      if (progWrap) progWrap.style.display = "block";
+      if (result)   result.style.display   = "none";
+      if (progSts)  progSts.textContent     = `Subiendo ${file.name}...`;
+
+      try {
+        const data = await subirArchivo(file, (pct: number) => {
+          if (progBar) progBar.style.width = pct + "%";
+          if (progPct) progPct.textContent = pct + "%";
+        });
+        const id = await guardarRegistroTransferencia({ name: data.name, url: data.url, path: data.path, size: data.size });
+        if (id) transferList.unshift({ _id: id, ...data });
+        renderList();
+        if (urlInput) urlInput.value = data.url;
+        if (result)   result.style.display = "block";
+        if (progSts)  progSts.textContent  = "✅ Subida completa";
+        navigator.clipboard.writeText(data.url).catch(() => {});
+        toast("✅ Enlace copiado al portapapeles");
+      } catch (err) {
+        if (progSts) progSts.textContent = "❌ Error al subir";
+        toast("❌ Error al subir el archivo", "error");
+      }
+    };
+
+    input?.addEventListener("change", () => { if (input.files?.[0]) doUpload(input.files[0]); input.value = ""; });
+
+    document.getElementById("kb-transfer-copy")?.addEventListener("click", () => {
+      navigator.clipboard.writeText(urlInput?.value || "");
+      toast("📋 Enlace copiado");
+    });
+
+    // Drag & drop en la zona de subida
+    drop?.addEventListener("dragover", (e) => { e.preventDefault(); (drop as HTMLElement).style.borderColor = "var(--brand-primary)"; });
+    drop?.addEventListener("dragleave", () => { (drop as HTMLElement).style.borderColor = ""; });
+    drop?.addEventListener("drop", (e) => {
+      e.preventDefault();
+      (drop as HTMLElement).style.borderColor = "";
+      const file = e.dataTransfer?.files[0];
+      if (file) doUpload(file);
+    });
+  }
+
   function kbSetupPizarra() {
-    const LS_KEY = "crm_kb_pizarra";
-    const texto   = document.getElementById("kb-pizarra-texto")  as HTMLTextAreaElement;
+    const LS_KEY  = "crm_kb_pizarra";
+    const texto   = document.getElementById("kb-pizarra-texto") as HTMLElement;
     const savedEl = document.getElementById("kb-pizarra-saved");
     const body    = document.getElementById("kb-pizarra-body");
     const toggle  = document.getElementById("kb-pizarra-toggle");
     if (!texto) return;
 
     // Restaurar contenido guardado
-    texto.value = localStorage.getItem(LS_KEY) || "";
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved) texto.innerHTML = saved;
 
-    // Auto-guardar en localStorage con debounce
+    // Auto-guardar con debounce
     let saveTimer: ReturnType<typeof setTimeout>;
-    texto.addEventListener("input", () => {
-      clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => {
-        localStorage.setItem(LS_KEY, texto.value);
-        if (savedEl) { savedEl.style.opacity = "1"; setTimeout(() => { savedEl.style.opacity = "0"; }, 1500); }
-      }, 600);
+    const doSave = () => {
+      localStorage.setItem(LS_KEY, texto.innerHTML);
+      if (savedEl) { savedEl.style.opacity = "1"; setTimeout(() => { savedEl.style.opacity = "0"; }, 1500); }
+    };
+    texto.addEventListener("input", () => { clearTimeout(saveTimer); saveTimer = setTimeout(doSave, 600); });
+
+    // Botones de formato
+    document.querySelectorAll<HTMLButtonElement>(".kb-fmt-btn").forEach(btn => {
+      btn.addEventListener("mousedown", (e) => {
+        e.preventDefault(); // Evita perder el foco del editor
+        const cmd = btn.dataset.cmd!;
+        const val = btn.dataset.val || undefined;
+        document.execCommand(cmd, false, val);
+        texto.focus();
+        doSave();
+      });
     });
 
     // Colapsar / expandir
     let collapsed = false;
     toggle?.addEventListener("click", () => {
       collapsed = !collapsed;
-      if (body)   body.style.display  = collapsed ? "none" : "";
-      if (toggle) toggle.textContent  = collapsed ? "▶" : "▼";
+      if (body)   body.style.display = collapsed ? "none" : "";
+      if (toggle) toggle.textContent = collapsed ? "▶" : "▼";
     });
 
     // Limpiar
     document.getElementById("kb-pizarra-limpiar")?.addEventListener("click", () => {
-      if (!texto.value.trim() || confirm("¿Limpiar la pizarra?")) {
-        texto.value = "";
+      if (!texto.innerText.trim() || confirm("¿Limpiar la pizarra?")) {
+        texto.innerHTML = "";
         localStorage.removeItem(LS_KEY);
       }
     });
 
     // Guardar como documento en la KB
     document.getElementById("kb-pizarra-guardar")?.addEventListener("click", () => {
-      if (!texto.value.trim()) { toast("⚠️ La pizarra está vacía", "warning"); return; }
+      if (!texto.innerText.trim()) { toast("⚠️ La pizarra está vacía", "warning"); return; }
       kbAbrirModal();
-      // Pre-rellenar el modal con el contenido de la pizarra
       setTimeout(() => {
         const formContent = document.getElementById("kb-form-content") as HTMLTextAreaElement;
-        if (formContent) formContent.value = texto.value;
+        if (formContent) formContent.value = texto.innerText;
       }, 80);
     });
   }
@@ -7873,6 +8060,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     kbInited = true;
     kbSetupEvents();
     kbSetupPizarra();
+    kbSetupTransferencia();
 
     // Panel de acceso: solo para ERICK (propietario)
     if (usuario.nombre === "ERICK") {
