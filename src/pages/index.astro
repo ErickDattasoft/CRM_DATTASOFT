@@ -3880,13 +3880,14 @@ verificarSesion();
     limite60.setDate(limite60.getDate() - 60);
     bitacoraLog = bitacoraLog.filter(e => new Date(e.fecha) >= limite60);
     guardarLocal("crm_bitacora", bitacoraLog);
-    if (firebaseEnabled) guardarBitacora(bitacoraLog).catch(() => {});
+    if (firebaseEnabled) guardarBitacora(bitacoraLog).catch(err => console.error("[Bitácora] Error al guardar en Firebase:", err));
   }
 
   // Listener para el evento de login (cruzar scope IIFE ↔ auth)
   document.addEventListener("crm:login", () => {
     aplicarPermisosNavegacion();
     logBitacora("Sesión iniciada", "🔐");
+    initKB();
   }, { once: false });
 
   function renderBitacora() {
@@ -7465,6 +7466,18 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     toast("✅ Documento guardado");
   }
 
+  async function kbRecuperarEnFirestore(localDocs: KBDoc[]) {
+    toast("🔄 Recuperando KB en Firestore...", "info");
+    let ok = 0, err = 0;
+    for (const d of localDocs) {
+      try {
+        await crearDocKB({ title: d.title, category: d.category, file_type: d.file_type, content: d.content, tags: d.tags || [] });
+        ok++;
+      } catch { err++; }
+    }
+    toast(`✅ ${ok} documentos recuperados en Firestore${err ? ` · ${err} errores` : ""}`, err ? "warning" : "success");
+  }
+
   async function kbEliminar(id: string) {
     if (!confirm("¿Eliminar este documento? Esta acción no se puede deshacer.")) return;
     if (firebaseEnabled) {
@@ -8086,13 +8099,35 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     }
 
     if (firebaseEnabled && !kbUnsubscribe) {
+      // Mostrar cache local mientras llegan los datos de Firestore
+      try { const c = localStorage.getItem("crm_kb"); if (c) { kbDocs = JSON.parse(c); kbRenderList(); } } catch {}
       kbUnsubscribe = suscribirKB((docs: KBDoc[]) => {
-        kbDocs = docs.sort((a, b) => {
-          const ta = a.updated_at?.seconds || 0, tb = b.updated_at?.seconds || 0;
-          return tb - ta;
-        });
-        kbRenderList();
-        if (kbSelId) kbAbrirDoc(kbSelId);
+        if (docs.length > 0) {
+          kbDocs = docs.sort((a, b) => {
+            const ta = a.updated_at?.seconds || 0, tb = b.updated_at?.seconds || 0;
+            return tb - ta;
+          });
+          localStorage.setItem("crm_kb", JSON.stringify(kbDocs));
+          kbRenderList();
+          if (kbSelId) kbAbrirDoc(kbSelId);
+        } else {
+          // Firestore vacío — recuperar desde cache local si existe
+          const cached = localStorage.getItem("crm_kb");
+          if (cached) {
+            try {
+              const localDocs: KBDoc[] = JSON.parse(cached);
+              if (localDocs.length > 0) {
+                kbDocs = localDocs;
+                kbRenderList();
+                kbRecuperarEnFirestore(localDocs);
+              } else {
+                kbDocs = []; kbRenderList();
+              }
+            } catch { kbDocs = []; kbRenderList(); }
+          } else {
+            kbDocs = []; kbRenderList();
+          }
+        }
       });
     } else if (!firebaseEnabled) {
       try { kbDocs = JSON.parse(localStorage.getItem("crm_kb") || "[]"); } catch { kbDocs = []; }
