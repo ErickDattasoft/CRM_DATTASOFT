@@ -24,4 +24,4 @@ jobs:
       - name: Deploy to Cloudflare Pages
         run: npx wrangler pages deploy dist --project-name crm-dattasoft
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_KEY }}
