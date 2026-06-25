@@ -2709,6 +2709,7 @@ try {
                 </div>
                 <div class="kb-doc-actions">
                   <button id="kb-btn-copy" class="btn btn-ghost btn-sm" title="Copiar contenido al portapapeles">📋 Copiar</button>
+                  <button id="kb-btn-download" class="btn btn-ghost btn-sm" title="Descargar como archivo">⬇ Descargar</button>
                   <button id="kb-btn-edit" class="btn btn-ghost btn-sm">✏️ Editar</button>
                   <button id="kb-btn-del" class="btn btn-sm" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); color:#f87171;" title="Eliminar documento">🗑️</button>
                 </div>
@@ -7230,9 +7231,14 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
     const wrap = document.getElementById("kb-content-wrap");
     if (wrap) {
+      const ps1Note = doc.file_type === "ps1"
+        ? `<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;margin-bottom:8px;background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.2);border-radius:var(--radius-sm);font-size:0.75rem;color:#fbbf24;">
+            ⚠️ Si no corre con doble clic: clic derecho → <strong>Propiedades → Desbloquear</strong>, o pega el contenido directo en la terminal PowerShell.
+           </div>`
+        : "";
       const contentHtml = doc.file_type === "md"
         ? `<div class="kb-md">${kbRenderMarkdown(doc.content)}</div>`
-        : `<div class="kb-script">${kbEsc(doc.content)}</div>`;
+        : ps1Note + `<div class="kb-script">${kbEsc(doc.content)}</div>`;
 
       const rel = kbRelacionados(doc);
       const relHtml = rel.length ? `
@@ -7443,6 +7449,22 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       const doc = kbDocs.find(d => d._id === kbSelId);
       if (!doc) return;
       navigator.clipboard.writeText(doc.content).then(() => toast("📋 Contenido copiado al portapapeles"));
+    });
+
+    // Descargar como archivo
+    document.getElementById("kb-btn-download")?.addEventListener("click", () => {
+      const doc = kbDocs.find(d => d._id === kbSelId);
+      if (!doc) return;
+      const ext = doc.file_type === "md" ? "md" : doc.file_type === "ps1" ? "ps1" : "bat";
+      const mime = ext === "md" ? "text/markdown" : "text/plain";
+      const blob = new Blob([doc.content], { type: mime });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href     = url;
+      a.download = `${doc.title}.${ext}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast(`⬇ Descargando ${doc.title}.${ext}`);
     });
 
     // Editar
