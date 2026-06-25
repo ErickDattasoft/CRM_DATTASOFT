@@ -2650,6 +2650,21 @@ try {
           <button id="kb-btn-nuevo" class="btn btn-primary btn-sm">+ Nuevo documento</button>
         </div>
 
+        <!-- Confirmación de categoría para carga de carpeta -->
+        <div id="kb-folder-confirm" style="display:none; margin-bottom:10px; background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.25); border-radius:var(--radius-md); padding:10px 14px;">
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <span style="font-size:0.82rem; color:var(--text-main);">📂 <strong id="kb-folder-name"></strong> — <span id="kb-folder-count" style="color:var(--text-muted);"></span></span>
+            <span style="font-size:0.8rem; color:var(--text-muted); white-space:nowrap;">Guardar como:</span>
+            <select id="kb-folder-cat" style="font-size:0.82rem; padding:4px 8px; border-radius:var(--radius-sm); background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-main); cursor:pointer;">
+              <option value="solucion">🛠 Solución / Error</option>
+              <option value="empresa">🏢 Empresa</option>
+              <option value="script">⚡ Script</option>
+            </select>
+            <button id="kb-folder-ok" class="btn btn-primary btn-sm">✓ Cargar</button>
+            <button id="kb-folder-cancel" class="btn btn-ghost btn-sm">Cancelar</button>
+          </div>
+        </div>
+
         <!-- Barra de progreso de carga masiva -->
         <div id="kb-upload-progress" style="display:none; margin-bottom:10px;">
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
@@ -7324,11 +7339,11 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     toast("🗑️ Documento eliminado");
   }
 
-  async function kbCargarArchivo(file: File): Promise<string | null> {
+  async function kbCargarArchivo(file: File, forcedCategory?: KBDoc["category"]): Promise<string | null> {
     const text = await file.text();
     const title = file.name.replace(/\.(md|ps1|bat|txt)$/i, "");
     const file_type = kbGuessType(file.name);
-    const category  = kbGuessCat(file.name);
+    const category  = forcedCategory || kbGuessCat(file.name);
     const tags: string[] = [];
     const data = { title, category, file_type, content: text, tags };
     if (firebaseEnabled) {
@@ -7339,7 +7354,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     }
   }
 
-  async function kbSubidaMasiva(files: FileList | File[]) {
+  async function kbSubidaMasiva(files: FileList | File[], forcedCategory?: KBDoc["category"]) {
     const lista = Array.from(files).filter(f => /\.(md|ps1|bat|txt)$/i.test(f.name));
     if (!lista.length) { toast("⚠️ No se encontraron archivos .md .ps1 .bat", "warning"); return; }
 
@@ -7350,6 +7365,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const errorsEl    = document.getElementById("kb-upload-errors");
     if (progressEl) progressEl.style.display = "block";
     if (errorsEl) errorsEl.textContent = "";
+    if (barEl) barEl.style.width = "0%";
 
     const total = lista.length;
     let done = 0, errors = 0;
@@ -7366,7 +7382,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const BATCH = 8;
     for (let i = 0; i < lista.length; i += BATCH) {
       const lote = lista.slice(i, i + BATCH);
-      const resultados = await Promise.allSettled(lote.map(f => kbCargarArchivo(f)));
+      const resultados = await Promise.allSettled(lote.map(f => kbCargarArchivo(f, forcedCategory)));
       resultados.forEach((r, idx) => {
         done++;
         if (r.status === "rejected" || (r.status === "fulfilled" && !r.value)) {
@@ -7455,13 +7471,52 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       (e.target as HTMLInputElement).value = "";
     });
 
-    // Upload: carpeta completa
-    document.getElementById("kb-upload-folder")?.addEventListener("change", async (e) => {
+    // Upload: carpeta completa — muestra confirmación de categoría
+    let pendingFolderFiles: FileList | null = null;
+    document.getElementById("kb-upload-folder")?.addEventListener("change", (e) => {
       const files = (e.target as HTMLInputElement).files;
       if (uploadMenu) uploadMenu.style.display = "none";
       if (!files?.length) return;
-      await kbSubidaMasiva(files);
-      (e.target as HTMLInputElement).value = "";
+      pendingFolderFiles = files;
+
+      // Detectar nombre de carpeta y preseleccionar categoría
+      const firstPath = (files[0] as any).webkitRelativePath as string || "";
+      const folderName = firstPath.split("/")[0] || "Carpeta";
+      const fn = folderName.toLowerCase();
+      const catGuess: KBDoc["category"] =
+        /empresa|client|company/.test(fn) ? "empresa" :
+        /script|ps1|bat|cmd|auto/.test(fn) ? "script" : "solucion";
+
+      const validFiles = Array.from(files).filter(f => /\.(md|ps1|bat|txt)$/i.test(f.name));
+      const confirmEl = document.getElementById("kb-folder-confirm");
+      const nameEl    = document.getElementById("kb-folder-name");
+      const countEl   = document.getElementById("kb-folder-count");
+      const catEl     = document.getElementById("kb-folder-cat") as HTMLSelectElement;
+      if (nameEl)  nameEl.textContent  = folderName;
+      if (countEl) countEl.textContent = `${validFiles.length} archivos`;
+      if (catEl)   catEl.value         = catGuess;
+      if (confirmEl) confirmEl.style.display = "block";
+    });
+
+    document.getElementById("kb-folder-ok")?.addEventListener("click", async () => {
+      const catEl = document.getElementById("kb-folder-cat") as HTMLSelectElement;
+      const cat   = (catEl?.value || "solucion") as KBDoc["category"];
+      const confirmEl = document.getElementById("kb-folder-confirm");
+      if (confirmEl) confirmEl.style.display = "none";
+      if (!pendingFolderFiles) return;
+      const files = pendingFolderFiles;
+      pendingFolderFiles = null;
+      await kbSubidaMasiva(files, cat);
+      const folderInput = document.getElementById("kb-upload-folder") as HTMLInputElement;
+      if (folderInput) folderInput.value = "";
+    });
+
+    document.getElementById("kb-folder-cancel")?.addEventListener("click", () => {
+      const confirmEl = document.getElementById("kb-folder-confirm");
+      if (confirmEl) confirmEl.style.display = "none";
+      pendingFolderFiles = null;
+      const folderInput = document.getElementById("kb-upload-folder") as HTMLInputElement;
+      if (folderInput) folderInput.value = "";
     });
 
     // Drag & drop sobre el panel principal (kb-split)
