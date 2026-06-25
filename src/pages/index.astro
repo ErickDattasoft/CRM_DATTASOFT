@@ -1597,7 +1597,8 @@ try {
   }
   .kb-toggle-btn.active { background: var(--brand-primary); border-color: var(--brand-primary); color: #fff; }
   .kb-toggle-btn:hover:not(.active) { border-color: var(--brand-primary); color: var(--brand-primary-hover); }
-  .kb-tabs { display: flex; gap: 2px; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); }
+  .kb-tabs { display: flex; gap: 2px; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); overflow-x: auto; flex-shrink: 0; scrollbar-width: none; }
+  .kb-tabs::-webkit-scrollbar { display: none; }
   .kb-tab {
     padding: 8px 16px; font-size: 0.8rem; font-weight: 600; border: none; background: transparent;
     color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
@@ -7506,6 +7507,19 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         kbCat = btn.dataset.kbCat!;
         document.querySelectorAll(".kb-tab").forEach(t => t.classList.remove("kb-tab-active"));
         btn.classList.add("kb-tab-active");
+
+        // Cerrar visor si el doc activo no pertenece a esta categoría
+        if (kbSelId && kbCat !== "all") {
+          const docActivo = kbDocs.find(d => d._id === kbSelId);
+          if (docActivo && docActivo.category !== kbCat) {
+            kbSelId = null;
+            const emptyEl = document.getElementById("kb-viewer-empty");
+            const viewEl  = document.getElementById("kb-doc-view");
+            if (emptyEl) emptyEl.style.display = "flex";
+            if (viewEl)  viewEl.style.display  = "none";
+          }
+        }
+
         kbRenderList();
       });
     });
