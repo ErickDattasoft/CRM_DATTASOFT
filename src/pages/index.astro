@@ -1616,6 +1616,9 @@ try {
     overflow-y: auto; display: flex; flex-direction: column; padding: 6px; gap: 2px;
   }
   .kb-list-empty { padding: 28px 14px; text-align: center; color: var(--text-light); font-size: 0.8rem; line-height: 1.5; }
+  .kb-list.kb-drop-over { border-color: var(--brand-primary); background: rgba(99,102,241,0.06); }
+  .kb-drop-hint { pointer-events:none; position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(15,17,23,0.85); border-radius:var(--radius-lg); border:2px dashed var(--brand-primary); font-size:1rem; color:var(--brand-primary-hover); font-weight:700; gap:8px; z-index:10; opacity:0; transition:opacity 0.15s; }
+  .kb-split.kb-dragging .kb-drop-hint { opacity:1; }
   .kb-doc-item {
     padding: 10px 12px; border-radius: var(--radius-md); cursor: pointer;
     transition: all 0.15s; border: 1px solid transparent; user-select: none;
@@ -2621,9 +2624,13 @@ try {
             <input id="kb-search-input" type="text" placeholder="Buscar por título o contenido..." autocomplete="off" spellcheck="false">
             <button id="kb-exact-btn" class="kb-toggle-btn" title="Buscar frase exacta (sin separar palabras)">Frase exacta</button>
           </div>
-          <label class="btn btn-ghost btn-sm" style="cursor:pointer; display:flex; align-items:center; gap:5px;" title="Subir archivo .md, .ps1 o .bat">
-            ⬆ Subir archivo
+          <label class="btn btn-ghost btn-sm" style="cursor:pointer; display:flex; align-items:center; gap:5px;" title="Selecciona uno o varios archivos .md .ps1 .bat">
+            ⬆ Archivos
             <input id="kb-upload-input" type="file" accept=".md,.ps1,.bat,.txt" multiple style="display:none;">
+          </label>
+          <label class="btn btn-ghost btn-sm" style="cursor:pointer; display:flex; align-items:center; gap:5px;" title="Sube una carpeta completa con todos sus archivos">
+            📂 Carpeta
+            <input id="kb-upload-folder" type="file" accept=".md,.ps1,.bat,.txt" multiple style="display:none;" webkitdirectory>
           </label>
           <div class="kb-acceso-wrap" id="kb-acceso-wrap" style="display:none;">
             <button id="kb-btn-acceso" class="btn btn-ghost btn-sm" title="Gestionar quién puede ver este panel">👥 Acceso</button>
@@ -2635,6 +2642,18 @@ try {
           <button id="kb-btn-nuevo" class="btn btn-primary btn-sm">+ Nuevo documento</button>
         </div>
 
+        <!-- Barra de progreso de carga masiva -->
+        <div id="kb-upload-progress" style="display:none; margin-bottom:10px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
+            <span style="font-size:0.78rem; font-weight:600; color:var(--text-muted);" id="kb-upload-status">Subiendo archivos...</span>
+            <span style="font-size:0.75rem; color:var(--text-light);" id="kb-upload-counter">0 / 0</span>
+          </div>
+          <div style="background:rgba(255,255,255,0.06); border-radius:var(--radius-full); height:6px; overflow:hidden;">
+            <div id="kb-upload-bar" style="height:100%; background:var(--brand-primary); border-radius:var(--radius-full); width:0%; transition:width 0.2s;"></div>
+          </div>
+          <div id="kb-upload-errors" style="font-size:0.72rem; color:#f87171; margin-top:5px;"></div>
+        </div>
+
         <!-- Pestañas de categoría -->
         <div class="kb-tabs">
           <button class="kb-tab kb-tab-active" data-kb-cat="all">Todo <span class="kb-cnt" id="kb-cnt-all">0</span></button>
@@ -2644,7 +2663,8 @@ try {
         </div>
 
         <!-- Vista dividida: lista + visor -->
-        <div class="kb-split">
+        <div class="kb-split" id="kb-split" style="position:relative;">
+          <div class="kb-drop-hint" id="kb-drop-hint">📂 Suelta los archivos aquí<span style="font-size:0.75rem; font-weight:400; color:var(--text-muted);">.md · .ps1 · .bat</span></div>
 
           <!-- Lista de documentos -->
           <div class="kb-list" id="kb-doc-list">
@@ -7296,18 +7316,64 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     toast("🗑️ Documento eliminado");
   }
 
-  async function kbCargarArchivo(file: File) {
+  async function kbCargarArchivo(file: File): Promise<string | null> {
     const text = await file.text();
     const title = file.name.replace(/\.(md|ps1|bat|txt)$/i, "");
     const file_type = kbGuessType(file.name);
     const category  = kbGuessCat(file.name);
-    const data = { title, category, file_type, content: text };
+    const tags: string[] = [];
+    const data = { title, category, file_type, content: text, tags };
     if (firebaseEnabled) {
-      const newId = await crearDocKB(data);
-      if (newId) kbSelId = newId;
+      return await crearDocKB(data);
     } else {
       kbGuardarLocal(data);
+      return "local_" + Date.now();
     }
+  }
+
+  async function kbSubidaMasiva(files: FileList | File[]) {
+    const lista = Array.from(files).filter(f => /\.(md|ps1|bat|txt)$/i.test(f.name));
+    if (!lista.length) { toast("⚠️ No se encontraron archivos .md .ps1 .bat", "warning"); return; }
+
+    const progressEl  = document.getElementById("kb-upload-progress");
+    const statusEl    = document.getElementById("kb-upload-status");
+    const counterEl   = document.getElementById("kb-upload-counter");
+    const barEl       = document.getElementById("kb-upload-bar");
+    const errorsEl    = document.getElementById("kb-upload-errors");
+    if (progressEl) progressEl.style.display = "block";
+    if (errorsEl) errorsEl.textContent = "";
+
+    const total = lista.length;
+    let done = 0, errors = 0;
+    const errNames: string[] = [];
+
+    const updateProgress = () => {
+      const pct = Math.round((done / total) * 100);
+      if (barEl) barEl.style.width = pct + "%";
+      if (counterEl) counterEl.textContent = `${done} / ${total}`;
+      if (statusEl) statusEl.textContent = done < total ? `Subiendo... (${pct}%)` : errors ? `✅ Listo con ${errors} error(es)` : "✅ Todos subidos";
+    };
+
+    // Subida en lotes de 8 simultáneos
+    const BATCH = 8;
+    for (let i = 0; i < lista.length; i += BATCH) {
+      const lote = lista.slice(i, i + BATCH);
+      const resultados = await Promise.allSettled(lote.map(f => kbCargarArchivo(f)));
+      resultados.forEach((r, idx) => {
+        done++;
+        if (r.status === "rejected" || (r.status === "fulfilled" && !r.value)) {
+          errors++;
+          errNames.push(lote[idx].name);
+        }
+      });
+      updateProgress();
+    }
+
+    if (errNames.length && errorsEl)
+      errorsEl.textContent = `❌ Fallaron: ${errNames.slice(0,5).join(", ")}${errNames.length > 5 ? ` y ${errNames.length-5} más` : ""}`;
+
+    setTimeout(() => { if (progressEl) progressEl.style.display = "none"; }, 3500);
+    toast(`✅ ${done - errors} subidos${errors ? ` · ${errors} errores` : ""}`);
   }
 
   function kbSetupEvents() {
@@ -7361,13 +7427,41 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     // Eliminar
     document.getElementById("kb-btn-del")?.addEventListener("click", () => { if (kbSelId) kbEliminar(kbSelId); });
 
-    // Upload (barra de herramientas)
+    // Upload: archivos individuales o múltiples
     document.getElementById("kb-upload-input")?.addEventListener("change", async (e) => {
       const files = (e.target as HTMLInputElement).files;
       if (!files?.length) return;
-      for (const file of Array.from(files)) await kbCargarArchivo(file);
+      await kbSubidaMasiva(files);
       (e.target as HTMLInputElement).value = "";
-      toast(`✅ ${files.length} archivo(s) cargado(s)`);
+    });
+
+    // Upload: carpeta completa
+    document.getElementById("kb-upload-folder")?.addEventListener("change", async (e) => {
+      const files = (e.target as HTMLInputElement).files;
+      if (!files?.length) return;
+      await kbSubidaMasiva(files);
+      (e.target as HTMLInputElement).value = "";
+    });
+
+    // Drag & drop sobre el panel principal (kb-split)
+    const kbSplit = document.getElementById("kb-split");
+    let dragCounter = 0;
+    kbSplit?.addEventListener("dragenter", (e) => {
+      e.preventDefault();
+      dragCounter++;
+      kbSplit.classList.add("kb-dragging");
+    });
+    kbSplit?.addEventListener("dragleave", () => {
+      dragCounter--;
+      if (dragCounter <= 0) { dragCounter = 0; kbSplit.classList.remove("kb-dragging"); }
+    });
+    kbSplit?.addEventListener("dragover", (e) => e.preventDefault());
+    kbSplit?.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      dragCounter = 0;
+      kbSplit.classList.remove("kb-dragging");
+      const files = (e as DragEvent).dataTransfer?.files;
+      if (files?.length) await kbSubidaMasiva(files);
     });
 
     // Dropzone en modal
