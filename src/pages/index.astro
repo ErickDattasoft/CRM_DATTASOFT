@@ -2739,6 +2739,24 @@ try {
 
         </div><!-- /kb-split -->
 
+        <!-- Pizarra temporal -->
+        <div id="kb-pizarra-wrap" style="margin-top:10px; border:1px solid var(--border-color); border-radius:var(--radius-lg); background:var(--bg-card); overflow:hidden; flex-shrink:0;">
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:7px 12px; border-bottom:1px solid var(--border-color); background:rgba(255,255,255,0.02);">
+            <span style="font-size:0.75rem; font-weight:700; color:var(--text-muted); letter-spacing:0.05em;">📝 PIZARRA TEMPORAL</span>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <span id="kb-pizarra-saved" style="font-size:0.68rem; color:var(--text-light); opacity:0; transition:opacity 0.4s;">✓ guardado</span>
+              <button id="kb-pizarra-guardar" class="btn btn-ghost btn-sm" title="Guardar contenido como nuevo documento en la KB" style="font-size:0.74rem;">⬆ Guardar como doc</button>
+              <button id="kb-pizarra-limpiar" class="btn btn-ghost btn-sm" title="Limpiar pizarra" style="font-size:0.74rem; color:#f87171;">✕ Limpiar</button>
+              <button id="kb-pizarra-toggle" class="btn btn-ghost btn-sm" style="font-size:0.74rem; padding:3px 8px;" title="Colapsar / expandir">▼</button>
+            </div>
+          </div>
+          <div id="kb-pizarra-body">
+            <textarea id="kb-pizarra-texto"
+              placeholder="Escribe aquí notas temporales, comandos, ideas... Se guarda automáticamente en tu navegador."
+              style="width:100%; height:130px; resize:vertical; background:transparent; border:none; outline:none; padding:12px 14px; font-size:0.82rem; font-family:var(--font-mono,monospace); color:var(--text-main); line-height:1.6; box-sizing:border-box;"></textarea>
+          </div>
+        </div>
+
         <!-- Modal: nuevo / editar documento -->
         <div id="kb-modal" class="kb-modal-overlay" style="display:none;">
           <div class="kb-modal-box">
@@ -7792,6 +7810,55 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     });
   }
 
+  function kbSetupPizarra() {
+    const LS_KEY = "crm_kb_pizarra";
+    const texto   = document.getElementById("kb-pizarra-texto")  as HTMLTextAreaElement;
+    const savedEl = document.getElementById("kb-pizarra-saved");
+    const body    = document.getElementById("kb-pizarra-body");
+    const toggle  = document.getElementById("kb-pizarra-toggle");
+    if (!texto) return;
+
+    // Restaurar contenido guardado
+    texto.value = localStorage.getItem(LS_KEY) || "";
+
+    // Auto-guardar en localStorage con debounce
+    let saveTimer: ReturnType<typeof setTimeout>;
+    texto.addEventListener("input", () => {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        localStorage.setItem(LS_KEY, texto.value);
+        if (savedEl) { savedEl.style.opacity = "1"; setTimeout(() => { savedEl.style.opacity = "0"; }, 1500); }
+      }, 600);
+    });
+
+    // Colapsar / expandir
+    let collapsed = false;
+    toggle?.addEventListener("click", () => {
+      collapsed = !collapsed;
+      if (body)   body.style.display  = collapsed ? "none" : "";
+      if (toggle) toggle.textContent  = collapsed ? "▶" : "▼";
+    });
+
+    // Limpiar
+    document.getElementById("kb-pizarra-limpiar")?.addEventListener("click", () => {
+      if (!texto.value.trim() || confirm("¿Limpiar la pizarra?")) {
+        texto.value = "";
+        localStorage.removeItem(LS_KEY);
+      }
+    });
+
+    // Guardar como documento en la KB
+    document.getElementById("kb-pizarra-guardar")?.addEventListener("click", () => {
+      if (!texto.value.trim()) { toast("⚠️ La pizarra está vacía", "warning"); return; }
+      kbAbrirModal();
+      // Pre-rellenar el modal con el contenido de la pizarra
+      setTimeout(() => {
+        const formContent = document.getElementById("kb-form-content") as HTMLTextAreaElement;
+        if (formContent) formContent.value = texto.value;
+      }, 80);
+    });
+  }
+
   function initKB() {
     const usuario = getUsuarioActual();
     const tieneAcceso = kbAcceso.includes(usuario?.nombre || "");
@@ -7805,6 +7872,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     if (kbInited) return;
     kbInited = true;
     kbSetupEvents();
+    kbSetupPizarra();
 
     // Panel de acceso: solo para ERICK (propietario)
     if (usuario.nombre === "ERICK") {
