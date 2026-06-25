@@ -2406,6 +2406,23 @@ try {
         </div>
 
         <div class="card">
+          <div class="card-title">🛡️ Backup Completo de Datos</div>
+          <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">
+            Exporta <strong style="color:var(--text-main);">toda la información del CRM</strong> en un solo archivo JSON: empresas, contactos, tickets, base de conocimiento, usuarios, bitácora y configuración. Guarda ese archivo en Google Drive, OneDrive o USB.
+          </p>
+          <div id="backup-ultimo" style="font-size:0.75rem; color:var(--text-light); margin-bottom:12px; display:none;">
+            Último backup: <span id="backup-ultimo-fecha" style="color:var(--text-main); font-weight:600;"></span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <button id="btn-backup-completo" class="btn btn-primary btn-sm">🛡️ Descargar Backup Completo</button>
+            <span style="font-size:0.72rem; color:var(--text-muted);">Archivo: <code>crm-backup-AAAA-MM-DD.json</code></span>
+          </div>
+          <div id="backup-alerta" style="display:none; margin-top:12px; padding:10px 14px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px; font-size:0.8rem; color:#f59e0b;">
+            ⚠️ <span id="backup-alerta-msg"></span> — Se recomienda hacer backup cada semana.
+          </div>
+        </div>
+
+        <div class="card">
           <div class="card-title">🔖 Puntos de Restauración (GitHub)</div>
           <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">
             Crea etiquetas (tags) en GitHub para marcar versiones estables del CRM. Necesitas un Personal Access Token de GitHub con permiso <strong style="color:var(--text-main);">repo</strong>.
@@ -2689,6 +2706,7 @@ try {
               <div id="kb-acceso-user-list"></div>
             </div>
           </div>
+          <button id="kb-btn-export" class="btn btn-ghost btn-sm" title="Exportar todos los documentos como backup JSON">💾 Backup</button>
           <button id="kb-btn-nuevo" class="btn btn-primary btn-sm">+ Nuevo documento</button>
         </div>
 
@@ -3215,7 +3233,9 @@ async function initLoginUI() {
     </button>`).join("");
   grid.querySelectorAll<HTMLButtonElement>(".login-user-btn").forEach(btn => {
     btn.addEventListener("click", () => {
-      selectedUser = activos.find(u => u.id === btn.dataset.id) || null;
+      // Leer usuarios frescos de localStorage (Firebase pudo haberlos actualizado ya)
+      const usuariosFrescos = getUsuarios();
+      selectedUser = (usuariosFrescos.length ? usuariosFrescos : activos).find(u => u.id === btn.dataset.id) || null;
       if (!selectedUser) return;
       document.getElementById("login-step-user")!.style.display = "none";
       document.getElementById("login-step-pass")!.style.display = "block";
@@ -3233,11 +3253,16 @@ async function intentarLogin() {
   const pass = inp?.value;
   if (!pass) { if (errEl) errEl.textContent = "Ingresa tu contraseña."; return; }
   const hash = await sha256(pass);
-  if (hash !== selectedUser.passHash) {
+  // Re-leer usuario desde localStorage para obtener el hash más reciente (Firebase pudo haberlo actualizado)
+  const usuariosActuales = getUsuarios();
+  const usuarioActualizado = usuariosActuales.find(u => u.id === selectedUser!.id);
+  const hashEsperado = usuarioActualizado?.passHash ?? selectedUser.passHash;
+  if (hash !== hashEsperado) {
     if (errEl) errEl.textContent = "Contraseña incorrecta.";
     if (inp) { inp.value = ""; inp.focus(); }
     return;
   }
+  if (usuarioActualizado) selectedUser = usuarioActualizado;
   sessionStorage.setItem(SESSION_KEY, JSON.stringify({ nombre: selectedUser.nombre, rol: selectedUser.rol }));
   document.getElementById("login-overlay")?.classList.add("hidden");
   if (errEl) errEl.textContent = "";
@@ -5698,6 +5723,7 @@ verificarSesion();
   }
 
   function renderConfig() {
+    actualizarUIBackup();
     document.getElementById("cfg-correo-soporte").value = configTickets.correoSoporte || "";
 
     // Cargar proveedor de correo guardado
@@ -6525,6 +6551,99 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     a.remove();
     toast("📥 JSON exportado");
   });
+
+  // ============================================================
+  // BACKUP COMPLETO
+  // ============================================================
+  const BACKUP_KEY = "crm_ultimo_backup";
+
+  async function descargarBackupCompleto() {
+    const backup = {
+      version: "2.0",
+      app: "CRM DATTASOFT",
+      fecha: new Date().toISOString(),
+      datos: {
+        clientes,
+        contactos,
+        tickets,
+        versionesMercado,
+        cartasTecnicas,
+        plantillaMensaje,
+        configTickets,
+        bitacora: bitacoraLog,
+        usuarios: safeParseLocal("crm_usuarios", []),
+        knowledge_base: kbDocs.length ? kbDocs : safeParseLocal("crm_kb", []),
+        papelera,
+        acercaDe,
+        eventos
+      }
+    };
+    const json = JSON.stringify(backup, null, 2);
+    const filename = `crm-backup-${new Date().toISOString().slice(0, 10)}.json`;
+
+    if ("showSaveFilePicker" in window) {
+      try {
+        const fh = await (window as any).showSaveFilePicker({
+          suggestedName: filename,
+          types: [{ description: "Backup CRM JSON", accept: { "application/json": [".json"] } }]
+        });
+        const writable = await fh.createWritable();
+        await writable.write(json);
+        await writable.close();
+      } catch (e: any) {
+        if (e?.name === "AbortError") return; // usuario canceló
+        // Fallback si falla la API
+        const blob = new Blob([json], { type: "application/json" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+        URL.revokeObjectURL(a.href);
+      }
+    } else {
+      // Fallback para Firefox / Safari / móvil
+      const blob = new Blob([json], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    localStorage.setItem(BACKUP_KEY, new Date().toISOString());
+    actualizarUIBackup();
+    toast("✅ Backup completo guardado");
+    logBitacora("Backup completo guardado", "🛡️");
+  }
+
+  function actualizarUIBackup() {
+    const ultimo = localStorage.getItem(BACKUP_KEY);
+    const elUltimo = document.getElementById("backup-ultimo");
+    const elFecha = document.getElementById("backup-ultimo-fecha");
+    const elAlerta = document.getElementById("backup-alerta");
+    const elAlertaMsg = document.getElementById("backup-alerta-msg");
+    if (!ultimo) {
+      if (elAlerta) { elAlerta.style.display = "block"; if (elAlertaMsg) elAlertaMsg.textContent = "Nunca se ha hecho un backup"; }
+      return;
+    }
+    const dias = Math.floor((Date.now() - new Date(ultimo).getTime()) / 86400000);
+    if (elUltimo) { elUltimo.style.display = "block"; }
+    if (elFecha) { elFecha.textContent = new Date(ultimo).toLocaleDateString("es-MX", { day:"2-digit", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" }); }
+    if (elAlerta) {
+      if (dias >= 7) {
+        elAlerta.style.display = "block";
+        if (elAlertaMsg) elAlertaMsg.textContent = `Han pasado ${dias} días desde el último backup`;
+      } else {
+        elAlerta.style.display = "none";
+      }
+    }
+  }
+
+  function checkBackupAlerta() {
+    const ultimo = localStorage.getItem(BACKUP_KEY);
+    if (!ultimo) return;
+    const dias = Math.floor((Date.now() - new Date(ultimo).getTime()) / 86400000);
+    if (dias >= 7) toast(`⚠️ El último backup fue hace ${dias} días — Ve a Configuración para descargarlo`, "warning");
+  }
+
+  document.getElementById("btn-backup-completo")?.addEventListener("click", descargarBackupCompleto);
+  setTimeout(checkBackupAlerta, 5000);
 
   document.getElementById("btnExportarTicketsJSON")?.addEventListener("click", () => {
     const str = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tickets, null, 2));
@@ -7681,6 +7800,17 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
     // Nuevo documento
     document.getElementById("kb-btn-nuevo")?.addEventListener("click", () => kbAbrirModal());
+    document.getElementById("kb-btn-export")?.addEventListener("click", () => {
+      if (!kbDocs.length) { toast("⚠️ No hay documentos para exportar", "warning"); return; }
+      const backup = { fecha: new Date().toISOString(), total: kbDocs.length, documentos: kbDocs };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `kb-backup-${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast(`✅ Backup exportado: ${kbDocs.length} documentos`);
+    });
 
     // Modal: cerrar
     document.getElementById("kb-modal-close")?.addEventListener("click", kbCerrarModal);
