@@ -1,6 +1,5 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, onSnapshot, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 
 // Configuración de Firebase usando las variables de entorno de Astro
 const firebaseConfig = {
@@ -13,9 +12,8 @@ export const firebaseEnabled = Boolean(
   firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.projectId
 );
 
-const app     = firebaseEnabled ? initializeApp(firebaseConfig) : null;
-const db      = firebaseEnabled ? getFirestore(app) : null;
-const storage = firebaseEnabled ? getStorage(app) : null;
+const app = firebaseEnabled ? initializeApp(firebaseConfig) : null;
+const db  = firebaseEnabled ? getFirestore(app) : null;
 
 /**
  * Suscribe al documento principal del CRM con onSnapshot para sync en tiempo real.
@@ -298,53 +296,3 @@ export async function eliminarTicketPublico(fbId) {
   }
 }
 
-// ================================================================
-// TRANSFERENCIA DE ARCHIVOS (Storage)
-// ================================================================
-
-export function subirArchivo(file, onProgress) {
-  return new Promise((resolve, reject) => {
-    if (!storage) { reject(new Error("Storage no disponible")); return; }
-    const path = `transferencias/${Date.now()}_${file.name}`;
-    const storageRef = ref(storage, path);
-    const task = uploadBytesResumable(storageRef, file);
-    task.on("state_changed",
-      snap => onProgress(Math.round(snap.bytesTransferred / snap.totalBytes * 100)),
-      reject,
-      async () => {
-        const url = await getDownloadURL(task.snapshot.ref);
-        resolve({ url, path, name: file.name, size: file.size });
-      }
-    );
-  });
-}
-
-export async function eliminarArchivoTransferencia(path) {
-  try {
-    await deleteObject(ref(storage, path));
-    return true;
-  } catch (e) { console.error("[Storage] Error al eliminar:", e); return false; }
-}
-
-export async function guardarRegistroTransferencia(data) {
-  try {
-    const docRef = await addDoc(collection(db, "transferencias"), {
-      ...data, created_at: serverTimestamp()
-    });
-    return docRef.id;
-  } catch (e) { console.error("[Storage] Error al guardar registro:", e); return null; }
-}
-
-export async function cargarTransferencias() {
-  try {
-    const snap = await getDocs(collection(db, "transferencias"));
-    return snap.docs.map(d => ({ _id: d.id, ...d.data() }));
-  } catch (e) { return []; }
-}
-
-export async function eliminarRegistroTransferencia(id) {
-  try {
-    await deleteDoc(doc(db, "transferencias", id));
-    return true;
-  } catch (e) { return false; }
-}
