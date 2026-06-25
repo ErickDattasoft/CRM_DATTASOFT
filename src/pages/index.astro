@@ -2679,7 +2679,6 @@ try {
               <option value="solucion">🛠 Solución / Error</option>
               <option value="empresa">🏢 Empresa</option>
               <option value="script">⚡ Script</option>
-              <option value="sql">🗄️ SQL / Queries</option>
             </select>
             <button id="kb-folder-ok" class="btn btn-primary btn-sm">✓ Cargar</button>
             <button id="kb-folder-cancel" class="btn btn-ghost btn-sm">Cancelar</button>
@@ -2704,7 +2703,6 @@ try {
           <button class="kb-tab" data-kb-cat="empresa">🏢 Empresas <span class="kb-cnt" id="kb-cnt-empresa">0</span></button>
           <button class="kb-tab" data-kb-cat="solucion">🛠 Soluciones <span class="kb-cnt" id="kb-cnt-solucion">0</span></button>
           <button class="kb-tab" data-kb-cat="script">⚡ Scripts <span class="kb-cnt" id="kb-cnt-script">0</span></button>
-          <button class="kb-tab" data-kb-cat="sql">🗄️ SQL <span class="kb-cnt" id="kb-cnt-sql">0</span></button>
         </div>
 
         <!-- Vista dividida: lista + visor -->
@@ -2801,7 +2799,6 @@ try {
                     <option value="solucion">🛠 Solución / Error</option>
                     <option value="empresa">🏢 Empresa</option>
                     <option value="script">⚡ Script</option>
-                    <option value="sql">🗄️ SQL / Queries</option>
                   </select>
                 </div>
                 <div class="form-group" style="margin:0;">
@@ -7118,7 +7115,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   interface KBDoc {
     _id: string;
     title: string;
-    category: "empresa" | "solucion" | "script" | "sql";
+    category: "empresa" | "solucion" | "script";
     content: string;
     file_type: "md" | "ps1" | "bat" | "sql";
     tags: string[];
@@ -7163,7 +7160,6 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   function kbFmtCat(cat: string): { label: string; cls: string } {
     if (cat === "empresa")  return { label: "🏢 Empresa",  cls: "kb-b-cat-empresa" };
     if (cat === "script")   return { label: "⚡ Script",   cls: "kb-b-cat-script" };
-    if (cat === "sql")      return { label: "🗄️ SQL",      cls: "kb-b-cat-sql" };
     return { label: "🛠 Solución", cls: "kb-b-cat-solucion" };
   }
 
@@ -7174,11 +7170,10 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     if (ext === "sql") return "sql";
     return "md";
   }
-  function kbGuessCat(filename: string): "empresa" | "solucion" | "script" | "sql" {
+  function kbGuessCat(filename: string): "empresa" | "solucion" | "script" {
     const n = filename.toLowerCase();
     if (n.includes("empresa") || n.includes("client")) return "empresa";
-    if (n.includes("sql") || n.includes("quer") || n.includes("consulta")) return "sql";
-    if (n.includes("script") || n.includes(".ps1") || n.includes(".bat")) return "script";
+    if (n.includes("script") || n.includes(".ps1") || n.includes(".bat") || n.includes("sql") || n.includes("quer")) return "script";
     return "solucion";
   }
 
@@ -7241,9 +7236,8 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const empresa = kbDocs.filter(d => d.category === "empresa").length;
     const solucion= kbDocs.filter(d => d.category === "solucion").length;
     const script  = kbDocs.filter(d => d.category === "script").length;
-    const sql     = kbDocs.filter(d => d.category === "sql").length;
     const setN = (id: string, n: number) => { const el = document.getElementById(id); if (el) el.textContent = String(n); };
-    setN("kb-cnt-all", total); setN("kb-cnt-empresa", empresa); setN("kb-cnt-solucion", solucion); setN("kb-cnt-script", script); setN("kb-cnt-sql", sql);
+    setN("kb-cnt-all", total); setN("kb-cnt-empresa", empresa); setN("kb-cnt-solucion", solucion); setN("kb-cnt-script", script);
 
     if (!docs.length) {
       list.innerHTML = `<div class="kb-list-empty">${kbDocs.length ? "🔍 Sin resultados." : "📭 Sin documentos.<br>Sube archivos o crea uno nuevo."}</div>`;
@@ -7693,8 +7687,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       const fn = folderName.toLowerCase();
       const catGuess: KBDoc["category"] =
         /empresa|client|company/.test(fn) ? "empresa" :
-        /sql|quer|consulta/.test(fn)       ? "sql"     :
-        /script|ps1|bat|cmd|auto/.test(fn) ? "script"  : "solucion";
+        /script|ps1|bat|cmd|auto|sql|quer/.test(fn) ? "script" : "solucion";
 
       const validFiles = Array.from(files).filter(f => /\.(md|ps1|bat|txt)$/i.test(f.name));
       const confirmEl = document.getElementById("kb-folder-confirm");
