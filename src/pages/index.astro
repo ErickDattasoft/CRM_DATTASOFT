@@ -2624,14 +2624,22 @@ try {
             <input id="kb-search-input" type="text" placeholder="Buscar por título o contenido..." autocomplete="off" spellcheck="false">
             <button id="kb-exact-btn" class="kb-toggle-btn" title="Buscar frase exacta (sin separar palabras)">Frase exacta</button>
           </div>
-          <label class="btn btn-ghost btn-sm" style="cursor:pointer; display:flex; align-items:center; gap:5px;" title="Selecciona uno o varios archivos .md .ps1 .bat">
-            ⬆ Archivos
-            <input id="kb-upload-input" type="file" accept=".md,.ps1,.bat,.txt" multiple style="display:none;">
-          </label>
-          <label class="btn btn-ghost btn-sm" style="cursor:pointer; display:flex; align-items:center; gap:5px;" title="Sube una carpeta completa con todos sus archivos">
-            📂 Carpeta
-            <input id="kb-upload-folder" type="file" accept=".md,.ps1,.bat,.txt" multiple style="display:none;" webkitdirectory>
-          </label>
+          <div style="position:relative;" id="kb-upload-wrap">
+            <button id="kb-upload-btn" class="btn btn-ghost btn-sm" style="display:flex; align-items:center; gap:5px;">
+              ⬆ Cargar <span style="font-size:0.65rem; opacity:0.6;">▼</span>
+            </button>
+            <div id="kb-upload-menu" style="display:none; position:absolute; top:calc(100% + 4px); left:0; z-index:200; background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-md); box-shadow:var(--shadow-lg); min-width:180px; overflow:hidden;">
+              <label style="display:flex; align-items:center; gap:10px; padding:10px 14px; cursor:pointer; font-size:0.82rem; color:var(--text-main); transition:background 0.15s;" onmouseover="this.style.background='rgba(99,102,241,0.08)'" onmouseout="this.style.background=''">
+                📄 Archivos sueltos
+                <input id="kb-upload-input" type="file" accept=".md,.ps1,.bat,.txt" multiple style="display:none;">
+              </label>
+              <div style="height:1px; background:var(--border-color);"></div>
+              <label style="display:flex; align-items:center; gap:10px; padding:10px 14px; cursor:pointer; font-size:0.82rem; color:var(--text-main); transition:background 0.15s;" onmouseover="this.style.background='rgba(99,102,241,0.08)'" onmouseout="this.style.background=''">
+                📂 Carpeta completa
+                <input id="kb-upload-folder" type="file" accept=".md,.ps1,.bat,.txt" multiple style="display:none;" webkitdirectory>
+              </label>
+            </div>
+          </div>
           <div class="kb-acceso-wrap" id="kb-acceso-wrap" style="display:none;">
             <button id="kb-btn-acceso" class="btn btn-ghost btn-sm" title="Gestionar quién puede ver este panel">👥 Acceso</button>
             <div class="kb-acceso-panel" id="kb-acceso-panel">
@@ -7427,9 +7435,21 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     // Eliminar
     document.getElementById("kb-btn-del")?.addEventListener("click", () => { if (kbSelId) kbEliminar(kbSelId); });
 
+    // Menú desplegable de carga
+    const uploadBtn  = document.getElementById("kb-upload-btn");
+    const uploadMenu = document.getElementById("kb-upload-menu");
+    uploadBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const open = uploadMenu?.style.display === "none";
+      if (uploadMenu) uploadMenu.style.display = open ? "block" : "none";
+    });
+    document.addEventListener("click", () => { if (uploadMenu) uploadMenu.style.display = "none"; });
+    uploadMenu?.addEventListener("click", (e) => e.stopPropagation());
+
     // Upload: archivos individuales o múltiples
     document.getElementById("kb-upload-input")?.addEventListener("change", async (e) => {
       const files = (e.target as HTMLInputElement).files;
+      if (uploadMenu) uploadMenu.style.display = "none";
       if (!files?.length) return;
       await kbSubidaMasiva(files);
       (e.target as HTMLInputElement).value = "";
@@ -7438,6 +7458,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     // Upload: carpeta completa
     document.getElementById("kb-upload-folder")?.addEventListener("change", async (e) => {
       const files = (e.target as HTMLInputElement).files;
+      if (uploadMenu) uploadMenu.style.display = "none";
       if (!files?.length) return;
       await kbSubidaMasiva(files);
       (e.target as HTMLInputElement).value = "";
