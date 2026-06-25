@@ -1574,7 +1574,7 @@ try {
   .sidebar.collapsed .sidebar-logout-btn .logout-label { display: none; }
 
   /* ===== BASE DE CONOCIMIENTO (KB) ===== */
-  #section-knowledge { display: none; flex-direction: column; gap: 0; height: 100%; }
+  #section-knowledge { display: none; flex-direction: column; gap: 0; height: 100%; overflow-y: auto; }
   #section-knowledge.active { display: flex; }
   .kb-toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
   .kb-search-wrap {
@@ -7261,19 +7261,6 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         ${tagsHtml ? `<div class="kb-tags-row" style="margin-top:5px;">${tagsHtml}</div>` : ""}
       </div>`;
     }).join("");
-    list.querySelectorAll<HTMLElement>(".kb-doc-item").forEach(el => {
-      el.addEventListener("click", (e) => {
-        const tagChip = (e.target as HTMLElement).closest(".kb-tag-chip");
-        if (tagChip) {
-          e.stopPropagation();
-          const tag = (tagChip as HTMLElement).dataset.tag!;
-          kbTagFilter = kbTagFilter === tag ? null : tag;
-          kbRenderList();
-          return;
-        }
-        kbAbrirDoc(el.dataset.kid!);
-      });
-    });
   }
 
   function kbRelacionados(doc: KBDoc): KBDoc[] {
@@ -7588,6 +7575,24 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       });
     });
 
+    // Click y doble clic delegados en el contenedor (sobreviven re-renders)
+    const docList = document.getElementById("kb-doc-list");
+    docList?.addEventListener("click", (e) => {
+      const tagChip = (e.target as HTMLElement).closest<HTMLElement>(".kb-tag-chip");
+      if (tagChip) {
+        kbTagFilter = kbTagFilter === tagChip.dataset.tag ? null : tagChip.dataset.tag!;
+        kbRenderList();
+        return;
+      }
+      const item = (e.target as HTMLElement).closest<HTMLElement>(".kb-doc-item");
+      if (item?.dataset.kid) kbAbrirDoc(item.dataset.kid);
+    });
+    docList?.addEventListener("dblclick", (e) => {
+      if ((e.target as HTMLElement).closest(".kb-tag-chip")) return;
+      const item = (e.target as HTMLElement).closest<HTMLElement>(".kb-doc-item");
+      if (item?.dataset.kid) kbAbrirModal(item.dataset.kid);
+    });
+
     // Orden alfabético
     document.getElementById("kb-sort-az")?.addEventListener("click", () => {
       kbSort = "asc";
@@ -7600,14 +7605,6 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       document.getElementById("kb-sort-za")?.classList.add("active");
       document.getElementById("kb-sort-az")?.classList.remove("active");
       kbRenderList();
-    });
-
-    // Doble clic en lista → editar (delegado en contenedor para sobrevivir re-renders)
-    document.getElementById("kb-doc-list")?.addEventListener("dblclick", (e) => {
-      const item = (e.target as HTMLElement).closest<HTMLElement>(".kb-doc-item");
-      if (!item) return;
-      if ((e.target as HTMLElement).closest(".kb-tag-chip")) return;
-      kbAbrirModal(item.dataset.kid!);
     });
 
     // Nuevo documento
