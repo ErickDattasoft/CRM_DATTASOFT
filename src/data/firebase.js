@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, onSnapshot, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 
 // Configuración de Firebase usando las variables de entorno de Astro
 const firebaseConfig = {
@@ -14,6 +14,24 @@ export const firebaseEnabled = Boolean(
 
 const app = firebaseEnabled ? initializeApp(firebaseConfig) : null;
 const db = firebaseEnabled ? getFirestore(app) : null;
+
+/**
+ * Suscribe al documento principal del CRM con onSnapshot para sync en tiempo real.
+ * callback(datos, hasPendingWrites) — llama inmediatamente con el estado actual y cada vez que cambie.
+ * Retorna la función de unsuscribe para limpiar el listener.
+ */
+export function suscribirCRM(callback) {
+  if (!firebaseEnabled) return () => {};
+  const docRef = doc(db, "agenda", "datos");
+  return onSnapshot(
+    docRef,
+    (docSnap) => callback(
+      docSnap.exists() ? docSnap.data() : null,
+      docSnap.metadata.hasPendingWrites
+    ),
+    (error) => console.error("[CRM] Error en listener Firebase:", error)
+  );
+}
 
 /**
  * Carga todos los datos del CRM desde Firestore (clientes, versiones, cartas, plantilla, tickets, contactos, config).
@@ -157,6 +175,112 @@ export async function guardarEventosFB(eventos) {
     console.error("Error al guardar eventos en Firestore:", error);
     return false;
   }
+}
+
+/**
+ * Guarda la papelera de tickets en Firestore.
+ */
+export async function guardarPapelera(papelera) {
+  try {
+    const docRef = doc(db, "agenda", "datos");
+    await setDoc(docRef, { papelera }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error al guardar papelera en Firestore:", error);
+    return false;
+  }
+}
+
+/**
+ * Guarda el contenido del Acerca De en Firestore.
+ */
+export async function guardarAcercaDe(acercaDe) {
+  try {
+    const docRef = doc(db, "agenda", "datos");
+    await setDoc(docRef, { acercaDe }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error al guardar Acerca De en Firestore:", error);
+    return false;
+  }
+}
+
+/**
+ * Guarda la configuración del proveedor de correo en Firestore.
+ */
+export async function guardarConfigCorreo(configCorreo) {
+  try {
+    const docRef = doc(db, "agenda", "datos");
+    await setDoc(docRef, { configCorreo }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error al guardar configuración de correo en Firestore:", error);
+    return false;
+  }
+}
+
+/**
+ * Guarda la bitácora del CRM en Firestore.
+ */
+export async function guardarBitacora(bitacora) {
+  try {
+    const docRef = doc(db, "agenda", "datos");
+    await setDoc(docRef, { bitacora }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error al guardar bitácora en Firestore:", error);
+    return false;
+  }
+}
+
+// ================================================================
+// BASE DE CONOCIMIENTO (KB)
+// ================================================================
+
+export async function cargarKB() {
+  try {
+    const snap = await getDocs(collection(db, "knowledge_base"));
+    return snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+  } catch (e) { console.error("[KB] Error al cargar:", e); return []; }
+}
+
+export async function crearDocKB(data) {
+  try {
+    const ref = await addDoc(collection(db, "knowledge_base"), {
+      ...data, created_at: serverTimestamp(), updated_at: serverTimestamp()
+    });
+    return ref.id;
+  } catch (e) { console.error("[KB] Error al crear:", e); return null; }
+}
+
+export async function actualizarDocKB(id, data) {
+  try {
+    await updateDoc(doc(db, "knowledge_base", id), { ...data, updated_at: serverTimestamp() });
+    return true;
+  } catch (e) { console.error("[KB] Error al actualizar:", e); return false; }
+}
+
+export async function eliminarDocKB(id) {
+  try {
+    await deleteDoc(doc(db, "knowledge_base", id));
+    return true;
+  } catch (e) { console.error("[KB] Error al eliminar:", e); return false; }
+}
+
+export async function guardarKBAcceso(kbAcceso) {
+  try {
+    await setDoc(doc(db, "agenda", "datos"), { kbAcceso }, { merge: true });
+    return true;
+  } catch (e) { console.error("[KB] Error al guardar acceso:", e); return false; }
+}
+
+export function suscribirKB(callback) {
+  if (!firebaseEnabled) return () => {};
+  return onSnapshot(
+    collection(db, "knowledge_base"),
+    snap => callback(snap.docs.map(d => ({ _id: d.id, ...d.data() }))),
+    err => console.error("[KB] Error en listener:", err)
+  );
 }
 
 /**

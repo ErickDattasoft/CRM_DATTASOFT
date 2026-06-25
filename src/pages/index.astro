@@ -49,6 +49,7 @@ try {
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     /* ===== RESET & VARIABLES ===== */
     :root {
@@ -450,7 +451,7 @@ try {
       border-bottom: 1px solid var(--border-subtle); font-size: 0.78rem;
     }
     .bitacora-entry:last-child { border-bottom: none; }
-    .bitacora-time { white-space: nowrap; color: var(--text-light); font-size: 0.7rem; flex-shrink: 0; min-width: 78px; }
+    .bitacora-time { white-space: nowrap; color: var(--text-light); font-size: 0.7rem; flex-shrink: 0; min-width: 105px; }
     .bitacora-msg { color: var(--text-main); flex: 1; }
 
     /* ===== BUTTONS ===== */
@@ -1571,6 +1572,167 @@ try {
   }
   .sidebar-logout-btn:hover { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.4); }
   .sidebar.collapsed .sidebar-logout-btn .logout-label { display: none; }
+
+  /* ===== BASE DE CONOCIMIENTO (KB) ===== */
+  #section-knowledge { display: none; flex-direction: column; gap: 0; height: 100%; }
+  #section-knowledge.active { display: flex; }
+  .kb-toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+  .kb-search-wrap {
+    flex: 1; min-width: 240px; display: flex; align-items: center;
+    background: var(--bg-input); border: 1px solid var(--border-color);
+    border-radius: var(--radius-md); padding: 0 12px; gap: 8px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .kb-search-wrap:focus-within { border-color: var(--brand-primary); box-shadow: 0 0 0 3px var(--brand-primary-glow); }
+  .kb-search-icon { color: var(--text-muted); flex-shrink: 0; font-size: 0.95rem; }
+  .kb-search-wrap input {
+    border: none !important; background: transparent !important; box-shadow: none !important;
+    flex: 1; padding: 10px 0; font-size: 0.88rem; color: var(--text-main) !important;
+  }
+  .kb-search-wrap input::placeholder { color: var(--text-light); }
+  .kb-toggle-btn {
+    font-size: 0.7rem; font-weight: 600; padding: 4px 10px; border-radius: var(--radius-full);
+    border: 1px solid var(--border-color); background: transparent; color: var(--text-muted);
+    cursor: pointer; transition: all 0.15s; white-space: nowrap; letter-spacing: 0.02em;
+  }
+  .kb-toggle-btn.active { background: var(--brand-primary); border-color: var(--brand-primary); color: #fff; }
+  .kb-toggle-btn:hover:not(.active) { border-color: var(--brand-primary); color: var(--brand-primary-hover); }
+  .kb-tabs { display: flex; gap: 2px; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); }
+  .kb-tab {
+    padding: 8px 16px; font-size: 0.8rem; font-weight: 600; border: none; background: transparent;
+    color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+    transition: all 0.15s; border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    display: flex; align-items: center; gap: 5px; font-family: var(--font-heading);
+  }
+  .kb-tab:hover { color: var(--text-main); background: rgba(255,255,255,0.03); }
+  .kb-tab.kb-tab-active { color: var(--brand-primary-hover); border-bottom-color: var(--brand-primary); background: rgba(99,102,241,0.06); }
+  .kb-cnt {
+    background: rgba(99,102,241,0.15); color: var(--brand-primary-hover); border-radius: var(--radius-full);
+    padding: 1px 7px; font-size: 0.66rem; font-weight: 700; min-width: 18px; text-align: center;
+  }
+  .kb-split { display: grid; grid-template-columns: 290px 1fr; gap: 12px; flex: 1; min-height: 0; overflow: hidden; }
+  .kb-list {
+    background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg);
+    overflow-y: auto; display: flex; flex-direction: column; padding: 6px; gap: 2px;
+  }
+  .kb-list-empty { padding: 28px 14px; text-align: center; color: var(--text-light); font-size: 0.8rem; line-height: 1.5; }
+  .kb-doc-item {
+    padding: 10px 12px; border-radius: var(--radius-md); cursor: pointer;
+    transition: all 0.15s; border: 1px solid transparent; user-select: none;
+  }
+  .kb-doc-item:hover { background: var(--bg-card-hover); border-color: var(--border-color); }
+  .kb-doc-item.kb-sel { background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.3); }
+  .kb-item-title { font-size: 0.82rem; font-weight: 600; color: var(--text-main); line-height: 1.35; margin-bottom: 5px; word-break: break-word; }
+  .kb-item-foot { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+  .kb-badge { font-size: 0.6rem; font-weight: 700; padding: 2px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .kb-b-md { background: rgba(16,185,129,0.12); color: #34d399; }
+  .kb-b-ps1 { background: rgba(99,102,241,0.12); color: #818cf8; }
+  .kb-b-bat { background: rgba(245,158,11,0.12); color: #fbbf24; }
+  .kb-b-cat-empresa { background: rgba(14,165,233,0.1); color: #38bdf8; }
+  .kb-b-cat-solucion { background: rgba(16,185,129,0.1); color: #34d399; }
+  .kb-b-cat-script { background: rgba(168,85,247,0.1); color: #c084fc; }
+  .kb-item-date { font-size: 0.66rem; color: var(--text-light); margin-left: auto; }
+  .kb-viewer {
+    background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg);
+    display: flex; flex-direction: column; overflow: hidden; min-height: 0;
+  }
+  .kb-viewer-empty {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 40px; text-align: center; gap: 10px;
+  }
+  .kb-ve-icon { font-size: 3.5rem; opacity: 0.4; }
+  .kb-ve-title { font-size: 1rem; font-weight: 700; color: var(--text-muted); font-family: var(--font-heading); }
+  .kb-ve-sub { font-size: 0.78rem; color: var(--text-light); }
+  .kb-doc-header {
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+    padding: 16px 20px; border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0; background: rgba(255,255,255,0.015);
+  }
+  .kb-doc-title-wrap { flex: 1; min-width: 0; }
+  .kb-doc-h { font-size: 1.05rem; font-weight: 800; color: var(--text-bright); font-family: var(--font-heading); line-height: 1.3; word-break: break-word; }
+  .kb-doc-submeta { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .kb-doc-actions { display: flex; gap: 6px; flex-shrink: 0; align-items: center; }
+  .kb-content-wrap { flex: 1; overflow-y: auto; padding: 20px 24px; }
+  /* Markdown */
+  .kb-md { font-size: 0.87rem; color: var(--text-main); line-height: 1.7; }
+  .kb-md h1 { font-size: 1.25rem; font-weight: 800; color: var(--text-bright); margin: 0 0 14px; font-family: var(--font-heading); }
+  .kb-md h2 { font-size: 1rem; font-weight: 700; color: var(--brand-primary-hover); margin: 22px 0 8px; padding-bottom: 6px; border-bottom: 1px solid rgba(99,102,241,0.2); font-family: var(--font-heading); }
+  .kb-md h3 { font-size: 0.88rem; font-weight: 700; color: var(--text-main); margin: 14px 0 6px; }
+  .kb-md h4 { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); margin: 10px 0 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .kb-md p { margin: 0 0 10px; }
+  .kb-md ul, .kb-md ol { padding-left: 20px; margin: 0 0 10px; }
+  .kb-md li { margin-bottom: 4px; }
+  .kb-md code { background: rgba(99,102,241,0.1); color: #818cf8; padding: 1px 6px; border-radius: 4px; font-size: 0.82rem; font-family: 'Courier New', monospace; }
+  .kb-md pre { background: #0a0c14; border: 1px solid rgba(255,255,255,0.07); border-radius: var(--radius-md); padding: 14px 16px; margin: 10px 0 14px; overflow-x: auto; }
+  .kb-md pre code { background: transparent; color: #c9d1d9; padding: 0; font-size: 0.81rem; }
+  .kb-md blockquote { border-left: 3px solid var(--brand-primary); padding: 8px 14px; background: rgba(99,102,241,0.06); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; margin: 10px 0; color: var(--text-muted); }
+  .kb-md hr { border: none; border-top: 1px solid var(--border-color); margin: 18px 0; }
+  .kb-md a { color: var(--brand-secondary); }
+  .kb-md strong { color: var(--text-bright); font-weight: 700; }
+  .kb-md table { width: 100%; border-collapse: collapse; margin: 10px 0 14px; font-size: 0.82rem; }
+  .kb-md th { background: var(--bg-table-header); padding: 8px 10px; text-align: left; font-weight: 700; color: var(--text-muted); border: 1px solid var(--border-color); }
+  .kb-md td { padding: 7px 10px; border: 1px solid var(--border-color); color: var(--text-main); }
+  .kb-md tr:hover td { background: var(--bg-table-row-hover); }
+  /* Script viewer */
+  .kb-script { background: #0a0c14; border: 1px solid rgba(255,255,255,0.07); border-radius: var(--radius-md); padding: 16px; font-family: 'Courier New', monospace; font-size: 0.82rem; color: #c9d1d9; white-space: pre-wrap; word-break: break-word; line-height: 1.6; }
+  /* Highlight búsqueda */
+  mark.kb-hl { background: rgba(251,191,36,0.28); color: var(--text-bright); border-radius: 2px; padding: 0 1px; font-style: normal; }
+  /* Modal KB */
+  .kb-modal-overlay { position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,0.72); display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+  .kb-modal-box { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-xl); width: 100%; max-width: 800px; max-height: 92vh; display: flex; flex-direction: column; box-shadow: var(--shadow-xl); }
+  .kb-modal-header { padding: 18px 22px 14px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+  .kb-modal-title { font-size: 1rem; font-weight: 800; color: var(--text-bright); font-family: var(--font-heading); }
+  .kb-modal-body { padding: 18px 22px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px; }
+  .kb-modal-footer { padding: 14px 22px 18px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
+  .kb-modal-body .form-group { margin: 0; }
+  .kb-modal-body textarea { font-family: 'Courier New', monospace; font-size: 0.82rem; resize: vertical; min-height: 220px; }
+  .kb-dropzone {
+    border: 2px dashed rgba(99,102,241,0.3); border-radius: var(--radius-md); padding: 18px;
+    text-align: center; cursor: pointer; transition: all 0.2s; color: var(--text-muted); font-size: 0.82rem;
+  }
+  .kb-dropzone:hover, .kb-dropzone.kb-drag { border-color: var(--brand-primary); background: rgba(99,102,241,0.05); color: var(--text-main); }
+  /* Tags */
+  .kb-tag-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(99,102,241,0.1); color: var(--brand-primary-hover);
+    border: 1px solid rgba(99,102,241,0.2); border-radius: var(--radius-full);
+    font-size: 0.68rem; font-weight: 600; padding: 2px 8px; cursor: pointer;
+    transition: all 0.15s; user-select: none;
+  }
+  .kb-tag-chip:hover, .kb-tag-chip.kb-tag-active { background: var(--brand-primary); color: #fff; border-color: var(--brand-primary); }
+  .kb-tags-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+  /* Relacionados */
+  .kb-relacionados { border-top: 1px solid var(--border-color); padding: 14px 24px 20px; flex-shrink: 0; }
+  .kb-rel-title { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .kb-rel-list { display: flex; flex-direction: column; gap: 4px; }
+  .kb-rel-item {
+    display: flex; align-items: center; gap: 8px; padding: 7px 10px;
+    border-radius: var(--radius-md); cursor: pointer; transition: all 0.15s;
+    border: 1px solid transparent; font-size: 0.8rem;
+  }
+  .kb-rel-item:hover { background: rgba(99,102,241,0.08); border-color: rgba(99,102,241,0.2); }
+  .kb-rel-item-title { color: var(--text-main); font-weight: 500; flex: 1; }
+  .kb-rel-shared { font-size: 0.66rem; color: var(--text-light); white-space: nowrap; }
+  /* Panel de acceso */
+  .kb-acceso-wrap { position: relative; }
+  .kb-acceso-panel {
+    position: absolute; top: calc(100% + 6px); right: 0; z-index: 200;
+    background: var(--bg-card); border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg); padding: 14px 16px; min-width: 220px;
+    box-shadow: var(--shadow-lg); display: none; flex-direction: column; gap: 6px;
+  }
+  .kb-acceso-panel.open { display: flex; }
+  .kb-acceso-panel-title { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .kb-acceso-user { display: flex; align-items: center; gap: 8px; padding: 5px 4px; border-radius: 6px; cursor: pointer; }
+  .kb-acceso-user:hover { background: rgba(99,102,241,0.06); }
+  .kb-acceso-user input { width: auto; accent-color: var(--brand-primary); cursor: pointer; }
+  .kb-acceso-user-name { font-size: 0.82rem; font-weight: 600; color: var(--text-main); }
+  .kb-acceso-user-rol { font-size: 0.66rem; color: var(--text-light); background: rgba(255,255,255,0.05); padding: 1px 5px; border-radius: 3px; }
+  @media (max-width: 900px) {
+    .kb-split { grid-template-columns: 1fr; height: auto; }
+    .kb-list { max-height: 220px; }
+    .kb-viewer { min-height: 400px; }
+  }
   </style>
 </head>
 <body>
@@ -1639,6 +1801,11 @@ try {
       <div class="nav-item" data-section="eventos" data-tooltip="Eventos">
         <span class="nav-icon">📅</span>
         <span class="nav-label">Eventos</span>
+      </div>
+      <div class="sidebar-section-label" id="kb-nav-label" style="display:none;">Mi Espacio</div>
+      <div class="nav-item" data-section="knowledge" data-tooltip="Base de Conocimiento" id="nav-kb" style="display:none;">
+        <span class="nav-icon">📚</span>
+        <span class="nav-label">Base de Conocimiento</span>
       </div>
       <div class="sidebar-section-label">Sistema</div>
       <div class="nav-item" data-section="versiones" data-tooltip="Versiones CONTPAQi">
@@ -2442,6 +2609,125 @@ try {
         </div>
       </div><!-- /section-eventos -->
 
+      <!-- ============================== -->
+      <!-- SECTION: BASE DE CONOCIMIENTO  -->
+      <!-- ============================== -->
+      <div class="section" id="section-knowledge">
+
+        <!-- Toolbar: búsqueda + botones -->
+        <div class="kb-toolbar">
+          <div class="kb-search-wrap">
+            <span class="kb-search-icon">🔍</span>
+            <input id="kb-search-input" type="text" placeholder="Buscar por título o contenido..." autocomplete="off" spellcheck="false">
+            <button id="kb-exact-btn" class="kb-toggle-btn" title="Buscar frase exacta (sin separar palabras)">Frase exacta</button>
+          </div>
+          <label class="btn btn-ghost btn-sm" style="cursor:pointer; display:flex; align-items:center; gap:5px;" title="Subir archivo .md, .ps1 o .bat">
+            ⬆ Subir archivo
+            <input id="kb-upload-input" type="file" accept=".md,.ps1,.bat,.txt" multiple style="display:none;">
+          </label>
+          <div class="kb-acceso-wrap" id="kb-acceso-wrap" style="display:none;">
+            <button id="kb-btn-acceso" class="btn btn-ghost btn-sm" title="Gestionar quién puede ver este panel">👥 Acceso</button>
+            <div class="kb-acceso-panel" id="kb-acceso-panel">
+              <div class="kb-acceso-panel-title">Acceso al panel</div>
+              <div id="kb-acceso-user-list"></div>
+            </div>
+          </div>
+          <button id="kb-btn-nuevo" class="btn btn-primary btn-sm">+ Nuevo documento</button>
+        </div>
+
+        <!-- Pestañas de categoría -->
+        <div class="kb-tabs">
+          <button class="kb-tab kb-tab-active" data-kb-cat="all">Todo <span class="kb-cnt" id="kb-cnt-all">0</span></button>
+          <button class="kb-tab" data-kb-cat="empresa">🏢 Empresas <span class="kb-cnt" id="kb-cnt-empresa">0</span></button>
+          <button class="kb-tab" data-kb-cat="solucion">🛠 Soluciones <span class="kb-cnt" id="kb-cnt-solucion">0</span></button>
+          <button class="kb-tab" data-kb-cat="script">⚡ Scripts <span class="kb-cnt" id="kb-cnt-script">0</span></button>
+        </div>
+
+        <!-- Vista dividida: lista + visor -->
+        <div class="kb-split">
+
+          <!-- Lista de documentos -->
+          <div class="kb-list" id="kb-doc-list">
+            <div class="kb-list-empty">📭 Sin documentos.<br>Sube archivos o crea uno nuevo.</div>
+          </div>
+
+          <!-- Visor de documentos -->
+          <div class="kb-viewer">
+            <div class="kb-viewer-empty" id="kb-viewer-empty">
+              <div class="kb-ve-icon">📚</div>
+              <div class="kb-ve-title">Base de Conocimiento</div>
+              <div class="kb-ve-sub">Selecciona un documento o crea uno nuevo</div>
+            </div>
+            <div id="kb-doc-view" style="display:none; flex-direction:column; height:100%;">
+              <div class="kb-doc-header">
+                <div class="kb-doc-title-wrap">
+                  <div class="kb-doc-h" id="kb-view-title"></div>
+                  <div class="kb-doc-submeta" id="kb-view-meta"></div>
+                </div>
+                <div class="kb-doc-actions">
+                  <button id="kb-btn-copy" class="btn btn-ghost btn-sm" title="Copiar contenido al portapapeles">📋 Copiar</button>
+                  <button id="kb-btn-edit" class="btn btn-ghost btn-sm">✏️ Editar</button>
+                  <button id="kb-btn-del" class="btn btn-sm" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); color:#f87171;" title="Eliminar documento">🗑️</button>
+                </div>
+              </div>
+              <div class="kb-content-wrap" id="kb-content-wrap"></div>
+            </div>
+          </div>
+
+        </div><!-- /kb-split -->
+
+        <!-- Modal: nuevo / editar documento -->
+        <div id="kb-modal" class="kb-modal-overlay" style="display:none;">
+          <div class="kb-modal-box">
+            <div class="kb-modal-header">
+              <div class="kb-modal-title" id="kb-modal-title">Nuevo documento</div>
+              <button class="modal-close" id="kb-modal-close">×</button>
+            </div>
+            <div class="kb-modal-body">
+              <div class="kb-dropzone" id="kb-dropzone" tabindex="0">
+                🗂 Arrastra aquí un archivo <strong>.md</strong>, <strong>.ps1</strong> o <strong>.bat</strong> — o haz clic para seleccionar
+                <input type="file" id="kb-drop-input" accept=".md,.ps1,.bat,.txt" style="display:none;">
+              </div>
+              <div class="form-group">
+                <label>Título del documento</label>
+                <input id="kb-form-title" type="text" placeholder="Ej: Error 0000254 — Al ejecutar póliza contabilidad">
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div class="form-group" style="margin:0;">
+                  <label>Categoría</label>
+                  <select id="kb-form-cat">
+                    <option value="solucion">🛠 Solución / Error</option>
+                    <option value="empresa">🏢 Empresa</option>
+                    <option value="script">⚡ Script</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin:0;">
+                  <label>Tipo de archivo</label>
+                  <select id="kb-form-type">
+                    <option value="md">Markdown (.md)</option>
+                    <option value="ps1">PowerShell (.ps1)</option>
+                    <option value="bat">Batch (.bat)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label>Etiquetas <span style="font-size:0.7rem; color:var(--text-light); font-weight:400;">(separadas por coma — para relacionar documentos)</span></label>
+                <input id="kb-form-tags" type="text" placeholder="Ej: error-254, poliza, contabilidad, windows-10, sql-2019">
+              </div>
+              <div class="form-group" style="margin:0; flex:1;">
+                <label>Contenido</label>
+                <textarea id="kb-form-content" rows="14" placeholder="Escribe o pega el contenido del documento..."></textarea>
+              </div>
+            </div>
+            <div class="kb-modal-footer">
+              <button id="kb-form-cancel" class="btn btn-ghost">Cancelar</button>
+              <button id="kb-form-save" class="btn btn-primary">💾 Guardar documento</button>
+            </div>
+          </div>
+        </div><!-- /kb-modal -->
+
+      </div><!-- /section-knowledge -->
+
     </div><!-- /content-scroll -->
   </div><!-- /main-content -->
 </div><!-- /app-layout -->
@@ -2657,15 +2943,21 @@ try {
         <a href="https://github.com/ErickDattasoft/CRM_DATTASOFT" target="_blank" style="display:flex; align-items:center; gap:8px; color:var(--brand-primary-hover); text-decoration:none; background:var(--bg-input); padding:10px 12px; border-radius:var(--radius-md); transition:var(--transition-base);">
           <span style="font-size:1.1rem;">🐙</span> GitHub — ErickDattasoft/CRM_DATTASOFT
         </a>
-        <a href="https://crm-dattasoft.pages.dev" target="_blank" style="display:flex; align-items:center; gap:8px; color:var(--brand-success); text-decoration:none; background:var(--bg-input); padding:10px 12px; border-radius:var(--radius-md); transition:var(--transition-base);">
+        <a href="https://crm-dattasoft.pages.dev" target="_blank" style="display:flex; align-items:center; gap:8px; color:var(--brand-success); text-decoration:none; background:var(--bg-input); padding:10px 12px; border-radius:var(--transition-base);">
           <span style="font-size:1.1rem;">☁️</span> Cloudflare Pages — crm-dattasoft.pages.dev
         </a>
-        <a href="https://console.firebase.google.com/project/agenda-crm-netlify" target="_blank" style="display:flex; align-items:center; gap:8px; color:var(--brand-warning); text-decoration:none; background:var(--bg-input); padding:10px 12px; border-radius:var(--radius-md); transition:var(--transition-base);">
-          <span style="font-size:1.1rem;">🔥</span> Firebase — agenda-crm-netlify
+        <a href="https://console.firebase.google.com/project/agenda-crm-netlify/firestore" target="_blank" style="display:flex; align-items:center; gap:8px; color:var(--brand-warning); text-decoration:none; background:var(--bg-input); padding:10px 12px; border-radius:var(--radius-md); transition:var(--transition-base);">
+          <span style="font-size:1.1rem;">🔥</span> Firebase Firestore — agenda-crm-netlify
+        </a>
+        <a href="https://app.brevo.com" target="_blank" style="display:flex; align-items:center; gap:8px; color:#06b6d4; text-decoration:none; background:var(--bg-input); padding:10px 12px; border-radius:var(--radius-md); transition:var(--transition-base);">
+          <span style="font-size:1.1rem;">✉️</span> Brevo — Envío de correos (300/día gratis)
+        </a>
+        <a href="https://dash.cloudflare.com" target="_blank" style="display:flex; align-items:center; gap:8px; color:#f97316; text-decoration:none; background:var(--bg-input); padding:10px 12px; border-radius:var(--radius-md); transition:var(--transition-base);">
+          <span style="font-size:1.1rem;">🟠</span> Cloudflare Dashboard — Pages & Workers
         </a>
       </div>
       <div style="text-align:center; font-size:0.72rem; color:var(--text-light); padding-top:6px; border-top:1px solid var(--border-subtle);">
-        Stack: Astro · Firebase Firestore · Cloudflare Pages · SheetJS · PWA
+        Astro 6 · Firebase 12 Firestore (tiempo real) · Cloudflare Pages · Brevo API · SheetJS · PWA
       </div>
     </div>
     <!-- Formulario de edición (solo ERICK) -->
@@ -2749,7 +3041,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, cargarDatosCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB } from "../data/firebase.js";
+import { firebaseEnabled, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, suscribirKB, crearDocKB, actualizarDocKB, eliminarDocKB, guardarKBAcceso } from "../data/firebase.js";
 
 // ── Multi-user Auth ───────────────────────────────────────────
 async function sha256(str: string): Promise<string> {
@@ -2873,6 +3165,10 @@ verificarSesion();
   let tickets = [];
   let papelera = [];
   let bitacoraLog = [];
+  let acercaDe = { version: "v3.0.0", fecha: "Junio 2026", notas: "" };
+  let configCorreo = { provider: "brevo", apiKey: "" };
+  let unsubscribeCRM = null;
+  let primeraCargaFB = true;
   let adjuntosTicketActual = []; // archivos adjuntos en formulario activo
   let plantillaMensaje = "Hola [contacto] de [empresa].\n\nTe saludamos de parte del equipo de DATTASOFT By INFOXPERT. Te escribimos para comentarte que ya se encuentran disponibles las últimas versiones oficiales y estables para tus sistemas CONTPAQi.\n\nRevisando tu perfil, notamos que tienes la oportunidad de actualizar los siguientes módulos:\n\n[sistemas_pendientes]\n\nMantenerlos al día te garantiza la mayor estabilidad, seguridad y el cumplimiento de los cambios fiscales más recientes. Estamos para atenderles con gusto.\n\nSaludos cordiales,\nEquipo DATTASOFT BY INFOXPERT";
 
@@ -2979,8 +3275,6 @@ verificarSesion();
         }));
       }
     }
-    papelera = safeParseLocal("crm_papelera", []);
-    bitacoraLog = safeParseLocal("crm_bitacora", []);
     const cfgLocal = safeParseLocal("crm_config_tickets", null);
     if (cfgLocal) configTickets = { ...configTickets, ...cfgLocal };
 
@@ -3083,7 +3377,8 @@ verificarSesion();
     tickets: { title: "Soporte — Tickets", sub: "Sistema de tickets de soporte técnico" },
     configuracion: { title: "Configuración", sub: "Ajustes del sistema de tickets y campos" },
     bitacora: { title: "Bitácora de Acciones", sub: "Registro de actividades del CRM" },
-    eventos: { title: "Eventos", sub: "Gestión de eventos, invitados y asistencia" }
+    eventos: { title: "Eventos", sub: "Gestión de eventos, invitados y asistencia" },
+    knowledge: { title: "Base de Conocimiento", sub: "Búsqueda de soluciones, datos de empresas y scripts de soporte" }
   };
 
   function navegarA(sectionId, filtroEstado = "") {
@@ -3098,16 +3393,15 @@ verificarSesion();
     if (sectionId === "empresas") renderEmpresas();
     if (sectionId === "contactos") renderContactos();
     if (sectionId === "tickets") {
-      if (filtroEstado) {
-        const sel = document.getElementById("selectFiltroEstado");
-        if (sel) sel.value = filtroEstado;
-      }
+      const sel = document.getElementById("selectFiltroEstado");
+      if (sel) sel.value = filtroEstado; // "" resetea el filtro, valor específico lo aplica
       renderTickets();
     }
     if (sectionId === "configuracion") renderConfig();
     if (sectionId === "bitacora") renderBitacora();
     if (sectionId === "configuracion") renderUsuariosPanel();
     if (sectionId === "eventos") renderSeccionEventos();
+    if (sectionId === "knowledge") initKB();
   }
 
   // Click en stat-cards del dashboard
@@ -3273,12 +3567,56 @@ verificarSesion();
     return out;
   }
 
-  async function inicializarApp() {
+  // Detecta si algún formulario de edición está abierto (para no interrumpirlo con actualizaciones remotas)
+  function hayFormularioActivo() {
+    const formsInline = ["formulario-empresa", "formulario-contacto", "formulario-ticket", "formulario-evento"];
+    if (formsInline.some(id => { const el = document.getElementById(id); return el && !el.classList.contains("hidden"); })) return true;
+    const modalesForm = ["modal-empresa-rapida", "modal-acerca-de"];
+    return modalesForm.some(id => { const m = document.getElementById(id); return m && m.style.display !== "none" && m.style.display !== ""; });
+  }
+
+  // Aplica datos recibidos de Firebase a las variables en memoria
+  function aplicarDatosFirebase(datos) {
+    clientes = datos.clientes || [];
+    versionesMercado = datos.versionesMercado || {};
+    cartasTecnicas = datos.cartasTecnicas || {};
+    plantillaMensaje = datos.plantillaMensaje || plantillaMensaje;
+    tickets = datos.tickets || [];
+    contactos = datos.contactos || [];
+    if (datos.configTickets) configTickets = { ...configTickets, ...datos.configTickets };
+    if (datos.usuarios && datos.usuarios.length > 0) saveUsuariosLocal(datos.usuarios);
+    if (datos.eventos && datos.eventos.length > 0) eventos = datos.eventos;
+    if (datos.bitacora && datos.bitacora.length > 0) bitacoraLog = datos.bitacora;
+    if (datos.papelera) papelera = datos.papelera;
+    if (datos.acercaDe) acercaDe = datos.acercaDe;
+    if (datos.configCorreo) configCorreo = datos.configCorreo;
+    document.dispatchEvent(new CustomEvent("crm:datosFirebase", { detail: datos }));
+  }
+
+  // Re-renderiza todas las secciones principales tras una actualización remota
+  function renderCompleto() {
+    renderDashboard();
+    renderEmpresas();
+    renderContactos();
+    renderTickets();
+    actualizarBadgePapelera();
+    checkLicenciasPorVencer();
+    const secActiva = document.querySelector(".nav-item.active")?.dataset.section;
+    if (secActiva === "bitacora") renderBitacora();
+    if (secActiva === "eventos") renderSeccionEventos();
+    if (secActiva === "versiones") initMarketForms();
+    if (secActiva === "configuracion") renderConfig();
+  }
+
+  function inicializarApp() {
+    // Limpiar listener previo si existe (ej. al cambiar modo local/online)
+    if (unsubscribeCRM) { unsubscribeCRM(); unsubscribeCRM = null; }
+    primeraCargaFB = true;
+
     if (crmLocalOnly) {
       cargarDesdeLocalStorage("📡 Modo Local Activo. Cargando desde Local Storage...");
       return;
     }
-
     if (!firebaseEnabled) {
       mostrarEstado("⚠️ Firebase no configurado. Usando Local Storage.", 3000);
       cargarDesdeLocalStorage();
@@ -3286,93 +3624,98 @@ verificarSesion();
     }
 
     mostrarEstado("🔄 Conectando a Firebase...");
-    try {
-      const datos = await Promise.race([
-        cargarDatosCRM(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Firebase timeout")), 7000))
-      ]);
-      if (datos) {
-        clientes = datos.clientes || [];
-        versionesMercado = datos.versionesMercado || {};
-        cartasTecnicas = datos.cartasTecnicas || {};
-        plantillaMensaje = datos.plantillaMensaje || plantillaMensaje;
-        tickets = datos.tickets || [];
-        contactos = datos.contactos || [];
-        if (datos.configTickets) {
-          configTickets = { ...configTickets, ...datos.configTickets };
-        }
-        if (datos.usuarios && datos.usuarios.length > 0) {
-          saveUsuariosLocal(datos.usuarios);
-        }
-        if (datos.eventos && datos.eventos.length > 0) {
-          eventos = datos.eventos;
-          guardarLocal("crm_eventos", eventos);
-        }
-        // Siempre respaldar en localStorage después de cargar de Firebase
-        guardarLocal("crm_clientes", clientes);
-        guardarLocal("crm_contactos", contactos);
-        guardarLocal("crm_tickets", tickets);
-        guardarLocal("crm_versiones", versionesMercado);
-        guardarLocal("crm_cartas", cartasTecnicas);
-        if (plantillaMensaje) localStorage.setItem("crm_plantilla", plantillaMensaje);
-        console.log("[CRM DEBUG] inicializarApp => datos desde Firebase: clientes=", clientes.length, "contactos=", contactos.length);
-        mostrarEstado(`🔌 Cargados ${clientes.length} empresas desde Firebase`, 2500);
-      } else {
-        // Firestore vacío — antes de sembrar, revisar si hay datos en localStorage
-        const localClientes = safeParseLocal("crm_clientes", null);
-        const localContactos = safeParseLocal("crm_contactos", null);
-        const localTickets = safeParseLocal("crm_tickets", null);
 
-        if (localClientes && localClientes.length > 0) {
-          // Recuperar datos de localStorage y migrarlos a Firebase
-          mostrarEstado("📦 Restaurando datos desde respaldo local...");
-          clientes = localClientes;
-          contactos = localContactos || [];
-          tickets = localTickets || [];
-          versionesMercado = safeParseLocal("crm_versiones", {});
-          cartasTecnicas = safeParseLocal("crm_cartas", {});
-          plantillaMensaje = localStorage.getItem("crm_plantilla") || plantillaMensaje;
-          await guardarClientes(clientes);
-          await guardarContactos(contactos);
-          await guardarTickets(tickets);
-          await guardarConfiguracion(versionesMercado, cartasTecnicas);
-          await guardarPlantilla(plantillaMensaje);
-          mostrarEstado(`✅ ${clientes.length} empresas restauradas de respaldo local`, 3000);
+    // Timeout de seguridad solo para la primera carga
+    const timeoutInicial = setTimeout(() => {
+      if (primeraCargaFB) {
+        primeraCargaFB = false;
+        console.error("[CRM] Firebase: timeout en carga inicial");
+        mostrarEstado("⚠️ Error de conexión a Firebase. Reintentando en la próxima carga.", 4000);
+        cargarDesdeLocalStorage();
+      }
+    }, 7000);
+
+    unsubscribeCRM = suscribirCRM(async (datos, hasPendingWrites) => {
+      try {
+        if (primeraCargaFB) {
+          // ── PRIMERA CARGA ─────────────────────────────────────────────
+          clearTimeout(timeoutInicial);
+          primeraCargaFB = false;
+
+          if (datos) {
+            aplicarDatosFirebase(datos);
+            // Respaldo en localStorage (caché para offline)
+            guardarLocal("crm_clientes", clientes);
+            guardarLocal("crm_contactos", contactos);
+            guardarLocal("crm_tickets", tickets);
+            guardarLocal("crm_versiones", versionesMercado);
+            guardarLocal("crm_cartas", cartasTecnicas);
+            if (plantillaMensaje) localStorage.setItem("crm_plantilla", plantillaMensaje);
+            console.log("[CRM] Firebase cargado: clientes=", clientes.length, "contactos=", contactos.length);
+            mostrarEstado(`🔌 Cargados ${clientes.length} empresas desde Firebase`, 2500);
+          } else {
+            // Firebase vacío — migrar desde respaldo local si existe
+            const localClientes = safeParseLocal("crm_clientes", null);
+            const localContactos = safeParseLocal("crm_contactos", null);
+            const localTickets = safeParseLocal("crm_tickets", null);
+            if (localClientes && localClientes.length > 0) {
+              mostrarEstado("📦 Restaurando datos desde respaldo local...");
+              clientes = localClientes;
+              contactos = localContactos || [];
+              tickets = localTickets || [];
+              versionesMercado = safeParseLocal("crm_versiones", {});
+              cartasTecnicas = safeParseLocal("crm_cartas", {});
+              plantillaMensaje = localStorage.getItem("crm_plantilla") || plantillaMensaje;
+              await guardarClientes(clientes);
+              await guardarContactos(contactos);
+              await guardarTickets(tickets);
+              await guardarConfiguracion(versionesMercado, cartasTecnicas);
+              await guardarPlantilla(plantillaMensaje);
+              mostrarEstado(`✅ ${clientes.length} empresas restauradas de respaldo local`, 3000);
+            } else {
+              clientes = []; contactos = []; tickets = [];
+              mostrarEstado("⚠️ Firebase vacío y sin respaldo local. Ve a Configuración → Importar datos.", 6000);
+            }
+          }
+
+          listaSistemas.forEach(s => {
+            const k = s.toUpperCase().trim();
+            if (versionesMercado[k] === undefined) versionesMercado[k] = "";
+            if (cartasTecnicas[k] === undefined) cartasTecnicas[k] = "";
+          });
+          document.getElementById("txtPlantillaMensaje").value = plantillaMensaje;
+          initMarketForms();
+          renderDashboard();
+          renderEmpresas();
+          renderContactos();
+          renderConfig();
+          ocultarEstado();
+          initStickyHeaders();
+          checkLicenciasPorVencer();
+          if (sessionStorage.getItem("crm_new_login") === "1") {
+            sessionStorage.removeItem("crm_new_login");
+            logBitacora("Sesión iniciada", "🔐");
+          }
+
         } else {
-          // Sin datos locales ni en Firebase — NO sembrar automáticamente
-          // Esto evita sobreescribir Firebase con datos de ejemplo por error de conexión
-          clientes = [];
-          contactos = [];
-          tickets = [];
-          mostrarEstado("⚠️ Firebase vacío y sin respaldo local. Ve a Configuración → Importar datos.", 6000);
+          // ── ACTUALIZACIÓN REMOTA (otro dispositivo guardó algo) ───────
+          if (hasPendingWrites) return; // Escritura propia aún pendiente, ignorar
+
+          aplicarDatosFirebase(datos);
+
+          if (hayFormularioActivo()) return; // Form abierto: datos listos en memoria, UI se actualiza al cerrar
+
+          renderCompleto();
+        }
+      } catch (err) {
+        if (primeraCargaFB) {
+          primeraCargaFB = false;
+          console.error("[CRM] Error en carga inicial Firebase:", err);
+          mostrarEstado("⚠️ Error de conexión a Firebase. Reintentando en la próxima carga.", 4000);
+          cargarDesdeLocalStorage();
         }
       }
-
-      listaSistemas.forEach(s => {
-        const k = s.toUpperCase().trim();
-        if (versionesMercado[k] === undefined) versionesMercado[k] = "";
-        if (cartasTecnicas[k] === undefined) cartasTecnicas[k] = "";
-      });
-
-      document.getElementById("txtPlantillaMensaje").value = plantillaMensaje;
-      initMarketForms();
-      renderDashboard();
-      renderEmpresas();
-      renderContactos();
-      renderConfig();
-      ocultarEstado();
-      initStickyHeaders();
-      checkLicenciasPorVencer();
-      // Registrar inicio de sesión en bitácora (solo la primera vez, no en recargas normales)
-      if (sessionStorage.getItem("crm_new_login") === "1") {
-        sessionStorage.removeItem("crm_new_login");
-        logBitacora("Sesión iniciada", "🔐");
-      }
-    } catch (err) {
-      console.error("Error Firebase, fallback local:", err);
-      mostrarEstado("⚠️ Error de conexión a Firebase. Reintentando en la próxima carga.", 4000);
-      cargarDesdeLocalStorage();
-    }
+    });
   }
 
   async function guardarLocal(key, data) {
@@ -3386,8 +3729,11 @@ verificarSesion();
     const u = getUsuarioActual();
     const entry = { fecha: new Date().toISOString(), msg, icon, usuario: u?.nombre || "Sistema" };
     bitacoraLog.unshift(entry);
-    if (bitacoraLog.length > 200) bitacoraLog.length = 200;
-    guardarLocal("crm_bitacora", bitacoraLog);
+    // Purgar entradas con más de 60 días
+    const limite60 = new Date();
+    limite60.setDate(limite60.getDate() - 60);
+    bitacoraLog = bitacoraLog.filter(e => new Date(e.fecha) >= limite60);
+    if (firebaseEnabled) guardarBitacora(bitacoraLog).catch(() => {});
   }
 
   function renderBitacora() {
@@ -3397,18 +3743,25 @@ verificarSesion();
       cont.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:24px; font-size:0.85rem;">Sin actividad registrada.</div>';
       return;
     }
-    cont.innerHTML = bitacoraLog.slice(0, 100).map(e => `
+    const hoy = new Date().getFullYear();
+    cont.innerHTML = bitacoraLog.map(e => {
+      const d = new Date(e.fecha);
+      const opts = d.getFullYear() !== hoy
+        ? { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' }
+        : { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' };
+      return `
       <div class="bitacora-entry">
-        <span class="bitacora-time">${new Date(e.fecha).toLocaleString('es-MX', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</span>
+        <span class="bitacora-time">${d.toLocaleString('es-MX', opts)}</span>
         ${e.usuario ? `<span style="font-size:0.68rem; color:#818cf8; font-weight:700; background:rgba(99,102,241,0.12); padding:1px 6px; border-radius:3px; white-space:nowrap; flex-shrink:0;">${e.usuario}</span>` : ""}
         <span class="bitacora-msg">${e.icon} ${e.msg}</span>
-      </div>`).join("");
+      </div>`;
+    }).join("");
   }
 
   document.getElementById("btnLimpiarBitacora")?.addEventListener("click", () => {
     if (!confirm("¿Limpiar toda la bitácora?")) return;
     bitacoraLog = [];
-    guardarLocal("crm_bitacora", bitacoraLog);
+    if (firebaseEnabled) guardarBitacora(bitacoraLog).catch(() => {});
     renderBitacora();
   });
 
@@ -3439,10 +3792,9 @@ verificarSesion();
   // MODAL ACERCA DE
   // ============================================================
   function cargarDatosAcercaDe() {
-    const datos = JSON.parse(localStorage.getItem("crm_acerca_de") || "{}");
-    const version = datos.version || "v2.0.0";
-    const fecha = datos.fecha || "Junio 2025";
-    const notas = datos.notas || "";
+    const version = acercaDe.version || "v3.0.0";
+    const fecha = acercaDe.fecha || "Junio 2026";
+    const notas = acercaDe.notas || "";
     const vTxt = document.getElementById("acerca-version-txt");
     const fTxt = document.getElementById("acerca-fecha-txt");
     const nDisp = document.getElementById("acerca-notas-display");
@@ -3466,10 +3818,9 @@ verificarSesion();
     if (m) m.style.display = "none";
   });
   document.getElementById("btnEditarAcercaDe")?.addEventListener("click", () => {
-    const datos = JSON.parse(localStorage.getItem("crm_acerca_de") || "{}");
-    document.getElementById("acerca-edit-version").value = datos.version || "v2.0.0";
-    document.getElementById("acerca-edit-fecha").value = datos.fecha || "Junio 2025";
-    document.getElementById("acerca-edit-notas").value = datos.notas || "";
+    document.getElementById("acerca-edit-version").value = acercaDe.version || "v3.0.0";
+    document.getElementById("acerca-edit-fecha").value = acercaDe.fecha || "Junio 2026";
+    document.getElementById("acerca-edit-notas").value = acercaDe.notas || "";
     document.getElementById("acerca-de-vista").style.display = "none";
     document.getElementById("acerca-de-form").style.display = "flex";
   });
@@ -3478,12 +3829,12 @@ verificarSesion();
     document.getElementById("acerca-de-form").style.display = "none";
   });
   document.getElementById("btnGuardarAcercaDe")?.addEventListener("click", () => {
-    const datos = {
+    acercaDe = {
       version: document.getElementById("acerca-edit-version").value.trim() || "v2.0.0",
       fecha: document.getElementById("acerca-edit-fecha").value.trim() || "Junio 2025",
       notas: document.getElementById("acerca-edit-notas").value.trim()
     };
-    localStorage.setItem("crm_acerca_de", JSON.stringify(datos));
+    if (firebaseEnabled) guardarAcercaDe(acercaDe).catch(() => {});
     cargarDatosAcercaDe();
     document.getElementById("acerca-de-vista").style.display = "flex";
     document.getElementById("acerca-de-form").style.display = "none";
@@ -3523,9 +3874,7 @@ verificarSesion();
       const t = papelera.splice(i, 1)[0];
       delete t.fechaEliminado;
       tickets.push(t);
-      guardarLocal("crm_papelera", papelera);
-      guardarLocal("crm_tickets", tickets);
-      if (!crmLocalOnly) { await guardarTickets(tickets); }
+      if (firebaseEnabled) { guardarPapelera(papelera).catch(() => {}); await guardarTickets(tickets); }
       logBitacora(`Ticket #${t.numero} restaurado de papelera`, "↩️");
       toast(`↩️ Ticket #${t.numero} restaurado`);
       actualizarBadgePapelera();
@@ -3537,7 +3886,7 @@ verificarSesion();
       const i = parseInt(e.target.closest("button").dataset.idx);
       if (!confirm("¿Eliminar definitivamente? Esta acción no se puede deshacer.")) return;
       const t = papelera.splice(i, 1)[0];
-      guardarLocal("crm_papelera", papelera);
+      if (firebaseEnabled) guardarPapelera(papelera).catch(() => {});
       logBitacora(`Ticket #${t.numero} eliminado definitivamente`, "🔥");
       toast(`🔥 Ticket eliminado definitivamente`);
       actualizarBadgePapelera();
@@ -3565,7 +3914,7 @@ verificarSesion();
     if (!papelera.length) return;
     if (!confirm(`¿Vaciar papelera? Se eliminarán ${papelera.length} ticket(s) permanentemente.`)) return;
     papelera = [];
-    guardarLocal("crm_papelera", papelera);
+    if (firebaseEnabled) guardarPapelera(papelera).catch(() => {});
     logBitacora("Papelera vaciada", "🔥");
     toast("🔥 Papelera vaciada");
     actualizarBadgePapelera();
@@ -4230,8 +4579,10 @@ verificarSesion();
   async function eliminarEmpresa(e) {
     const idx = parseInt(e.target.closest("button").dataset.idx);
     if (!confirm("¿Eliminar esta empresa?")) return;
+    const nombreEmp = clientes[idx]?.EMPRESA || "desconocida";
     clientes.splice(idx, 1);
     guardarLocal("crm_clientes", clientes);
+    logBitacora(`Empresa "${nombreEmp}" eliminada`, "🗑️");
     if (crmLocalOnly) {
       toast("🗑️ Empresa eliminada (Local)");
       renderEmpresas();
@@ -4264,8 +4615,8 @@ verificarSesion();
   function getMailProviderConfig() {
     const fromInput = document.getElementById("cfg-correo-soporte")?.value.trim();
     return {
-      provider: localStorage.getItem("crm_mail_provider") || "resend",
-      apiKey: localStorage.getItem("crm_mail_apikey") || "",
+      provider: configCorreo.provider || "brevo",
+      apiKey: configCorreo.apiKey || "",
       from: fromInput || configTickets.correoSoporte || "",
     };
   }
@@ -4280,13 +4631,13 @@ verificarSesion();
         body: JSON.stringify({ to, subject, html: cuerpo, replyTo, from: fromEmail }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || response.statusText);
+      if (!response.ok) throw new Error(data.error || data.message || JSON.stringify(data));
       toast("✉️ Correo enviado correctamente");
-      return true;
+      return { ok: true };
     } catch (error) {
       console.error("Error enviando email:", error);
       toast(`⚠️ No se pudo enviar: ${error.message}`, "error");
-      return false;
+      return { ok: false, error: error.message };
     }
   }
 
@@ -4302,7 +4653,7 @@ verificarSesion();
       subject,
       text: body,
     });
-    if (!sent) {
+    if (!sent?.ok) {
       const mailLink = `mailto:${c.CORREO}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       window.open(mailLink, "_blank");
     }
@@ -4355,7 +4706,7 @@ verificarSesion();
       subject,
       text: body,
     });
-    if (!sent) {
+    if (!sent?.ok) {
       window.open(`mailto:${emails.join(",")}?subject=${encodeURIComponent(subject)}`, "_blank");
     }
   });
@@ -4537,9 +4888,11 @@ verificarSesion();
       empresa: document.getElementById("form-ct-empresa").value
     };
 
-    if (idx === "") contactos.push(obj);
+    const isEditCt = idx !== "";
+    if (!isEditCt) contactos.push(obj);
     else contactos[parseInt(idx)] = obj;
 
+    logBitacora(`Contacto "${nombre}"${obj.empresa ? ` (${obj.empresa})` : ""} ${isEditCt ? "actualizado" : "creado"}`, "👤");
     guardarLocal("crm_contactos", contactos);
     if (crmLocalOnly) {
       toast("💾 Contacto guardado (Local)");
@@ -4560,7 +4913,11 @@ verificarSesion();
   async function eliminarContacto(e) {
     const idx = parseInt(e.target.closest("button").dataset.idx);
     if (!confirm("¿Eliminar este contacto?")) return;
+    const ct = contactos[idx];
+    const nombreCt = ct?.nombre || "desconocido";
+    const empresaCt = ct?.empresa || "";
     contactos.splice(idx, 1);
+    logBitacora(`Contacto "${nombreCt}"${empresaCt ? ` (${empresaCt})` : ""} eliminado`, "🗑️");
     guardarLocal("crm_contactos", contactos);
     if (crmLocalOnly) {
       toast("🗑️ Contacto eliminado (Local)");
@@ -4922,8 +5279,8 @@ verificarSesion();
           <p style="font-size:12px; color:#6b7280; font-family:sans-serif;">DATTASOFT BY INFOXPERT — Sistema de Tickets</p>
         `;
         const sent = await enviarEmailConProveedor({ to: mailTo, subject: mailSubject, html: htmlTicket, replyTo: mailCC || "" });
-        if (sent) toast(`✉️ Notificación enviada a ${mailTo}`);
-        else toast("⚠️ No se pudo enviar el correo (revisa configuración de Resend)", 5000);
+        if (sent?.ok) { toast(`✉️ Notificación enviada a ${mailTo}`); logBitacora(`✉️ Correo enviado a ${mailTo} — Ticket #${num}`, "📧"); }
+        else toast(`⚠️ No se pudo enviar: ${sent?.error || "error desconocido"}`, 5000);
       } else if (enviarCorreo && !mailTo) {
         toast("⚠️ El contacto no tiene correo registrado", 4000);
       }
@@ -4934,7 +5291,7 @@ verificarSesion();
         descripcion, notasInternas, cc, cco, referido, solicitado, canalizado, realizado,
         adjuntos: [...adjuntosExistentes, ...adjuntosTicketActual],
         fechaActualizacion: new Date().toISOString() });
-      logBitacora(`Ticket #${t.numero} actualizado: ${estado}`, "✏️");
+      logBitacora(`Ticket #${t.numero} "${t.asunto}" actualizado a ${estado}${prioridad ? ` · ${prioridad}` : ""}`, "✏️");
     }
 
     guardarLocal("crm_tickets", tickets);
@@ -4983,10 +5340,9 @@ verificarSesion();
     const [t] = tickets.splice(idx, 1);
     t.fechaEliminado = new Date().toISOString();
     papelera.unshift(t);
-    guardarLocal("crm_tickets", tickets);
-    guardarLocal("crm_papelera", papelera);
     logBitacora(`Ticket #${t.numero} "${t.asunto}" movido a papelera`, "🗑️");
     actualizarBadgePapelera();
+    if (firebaseEnabled) { guardarPapelera(papelera).catch(() => {}); }
     if (crmLocalOnly) {
       toast("🗑️ Ticket en papelera (Local)");
       renderTickets();
@@ -5184,12 +5540,10 @@ verificarSesion();
     document.getElementById("cfg-correo-soporte").value = configTickets.correoSoporte || "";
 
     // Cargar proveedor de correo guardado
-    const savedProvider = localStorage.getItem("crm_mail_provider") || "resend";
-    const savedApiKey = localStorage.getItem("crm_mail_apikey") || "";
-    const providerRadio = document.querySelector(`input[name="cfg-mail-provider"][value="${savedProvider}"]`);
+    const providerRadio = document.querySelector(`input[name="cfg-mail-provider"][value="${configCorreo.provider || "brevo"}"]`);
     if (providerRadio) providerRadio.checked = true;
     const apiKeyInput = document.getElementById("cfg-mail-apikey");
-    if (apiKeyInput) apiKeyInput.value = savedApiKey;
+    if (apiKeyInput) apiKeyInput.value = configCorreo.apiKey || "";
 
     const localOnlyCheckbox = document.getElementById("cfg-local-only");
     if (localOnlyCheckbox) {
@@ -5252,16 +5606,16 @@ verificarSesion();
       resultEl.textContent = "Enviando...";
       resultEl.style.color = "var(--text-muted)";
       resultEl.style.display = "inline";
-      const ok = await enviarEmailConProveedor({
+      const res = await enviarEmailConProveedor({
         to: dest,
         subject: "✅ Prueba de correo — DATTASOFT CRM",
         html: `<div style="font-family:sans-serif;padding:20px;"><h2 style="color:#6366f1;">DATTASOFT CRM</h2><p>Este es un correo de prueba enviado desde el CRM.</p><p style="color:#64748b;font-size:0.85em;">Si recibes este mensaje, el envío de correos está funcionando correctamente.</p></div>`
       });
-      if (ok) {
+      if (res?.ok) {
         resultEl.textContent = `✅ Enviado correctamente a ${dest}`;
         resultEl.style.color = "#34d399";
       } else {
-        resultEl.textContent = "❌ Falló el envío — revisa la configuración";
+        resultEl.textContent = `❌ Error: ${res?.error || "fallo desconocido"}`;
         resultEl.style.color = "#f87171";
       }
     });
@@ -5307,11 +5661,12 @@ verificarSesion();
     });
     configTickets.correoSoporte = document.getElementById("cfg-correo-soporte").value.trim();
 
-    // Guardar proveedor de correo en localStorage
     const selectedProvider = document.querySelector('input[name="cfg-mail-provider"]:checked')?.value || "";
-    if (selectedProvider) localStorage.setItem("crm_mail_provider", selectedProvider);
     const apiKeyVal = document.getElementById("cfg-mail-apikey")?.value.trim() || "";
-    if (apiKeyVal) localStorage.setItem("crm_mail_apikey", apiKeyVal);
+    if (selectedProvider || apiKeyVal) {
+      configCorreo = { provider: selectedProvider || configCorreo.provider, apiKey: apiKeyVal || configCorreo.apiKey };
+      if (firebaseEnabled) guardarConfigCorreo(configCorreo).catch(() => {});
+    }
 
 const localOnlyCheckbox = document.getElementById("cfg-local-only");
       if (localOnlyCheckbox) {
@@ -6652,6 +7007,483 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const m = document.getElementById(id);
     m?.addEventListener("click", e => { if (e.target === m) m.style.display = "none"; });
   });
+
+  // ============================================================
+  // BASE DE CONOCIMIENTO (KB) — solo ERICK
+  // ============================================================
+  interface KBDoc {
+    _id: string;
+    title: string;
+    category: "empresa" | "solucion" | "script";
+    content: string;
+    file_type: "md" | "ps1" | "bat";
+    tags: string[];
+    created_at?: any;
+    updated_at?: any;
+  }
+
+  let kbDocs: KBDoc[] = [];
+  let kbSelId: string | null = null;
+  let kbCat = "all";
+  let kbExact = false;
+  let kbTagFilter: string | null = null;
+  let kbEditId: string | null = null;
+  let kbUnsubscribe: (() => void) | null = null;
+  let kbInited = false;
+  let kbAcceso: string[] = (() => {
+    try { return JSON.parse(localStorage.getItem("crm_kb_acceso") || '["ERICK"]'); } catch { return ["ERICK"]; }
+  })();
+
+  function kbNorm(s: string): string {
+    return (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  }
+  function kbEsc(s: string): string {
+    return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function kbFmtDate(ts: any): string {
+    if (!ts) return "";
+    const d: Date = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
+  }
+  function kbFmtType(type: string): { ext: string; cls: string } {
+    if (type === "ps1") return { ext: ".ps1", cls: "kb-b-ps1" };
+    if (type === "bat") return { ext: ".bat", cls: "kb-b-bat" };
+    return { ext: ".md", cls: "kb-b-md" };
+  }
+  function kbFmtCat(cat: string): { label: string; cls: string } {
+    if (cat === "empresa")  return { label: "🏢 Empresa",  cls: "kb-b-cat-empresa" };
+    if (cat === "script")   return { label: "⚡ Script",   cls: "kb-b-cat-script" };
+    return { label: "🛠 Solución", cls: "kb-b-cat-solucion" };
+  }
+
+  function kbGuessType(filename: string): "md" | "ps1" | "bat" {
+    const ext = filename.split(".").pop()?.toLowerCase() || "";
+    if (ext === "ps1") return "ps1";
+    if (ext === "bat") return "bat";
+    return "md";
+  }
+  function kbGuessCat(filename: string): "empresa" | "solucion" | "script" {
+    const n = filename.toLowerCase();
+    if (n.includes("empresa") || n.includes("client")) return "empresa";
+    if (n.includes("script") || n.includes(".ps1") || n.includes(".bat")) return "script";
+    return "solucion";
+  }
+
+  function kbFiltrar(): KBDoc[] {
+    const q = kbNorm((document.getElementById("kb-search-input") as HTMLInputElement)?.value || "");
+    let docs = kbCat === "all" ? kbDocs : kbDocs.filter(d => d.category === kbCat);
+    if (kbTagFilter) docs = docs.filter(d => (d.tags || []).map(t => kbNorm(t)).includes(kbNorm(kbTagFilter!)));
+    if (!q) return docs;
+    return docs.filter(d => {
+      const t = kbNorm(d.title), c = kbNorm(d.content), tg = kbNorm((d.tags || []).join(" "));
+      if (kbExact) return t.includes(q) || c.includes(q) || tg.includes(q);
+      return q.trim().split(/\s+/).every(w => t.includes(w) || c.includes(w) || tg.includes(w));
+    });
+  }
+
+  function kbHighlight(text: string, q: string): string {
+    if (!q) return kbEsc(text);
+    const safe = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return kbEsc(text).replace(new RegExp(safe, "gi"), m => `<mark class="kb-hl">${m}</mark>`);
+  }
+
+  function kbRenderMarkdown(md: string): string {
+    try {
+      const mk = (window as any).marked;
+      if (mk) {
+        mk.setOptions({ breaks: true, gfm: true });
+        return mk.parse(md);
+      }
+    } catch {}
+    return `<pre style="white-space:pre-wrap; font-size:0.85rem;">${kbEsc(md)}</pre>`;
+  }
+
+  function kbRenderList() {
+    const list = document.getElementById("kb-doc-list");
+    if (!list) return;
+    const docs = kbFiltrar();
+    const total   = kbDocs.length;
+    const empresa = kbDocs.filter(d => d.category === "empresa").length;
+    const solucion= kbDocs.filter(d => d.category === "solucion").length;
+    const script  = kbDocs.filter(d => d.category === "script").length;
+    const setN = (id: string, n: number) => { const el = document.getElementById(id); if (el) el.textContent = String(n); };
+    setN("kb-cnt-all", total); setN("kb-cnt-empresa", empresa); setN("kb-cnt-solucion", solucion); setN("kb-cnt-script", script);
+
+    if (!docs.length) {
+      list.innerHTML = `<div class="kb-list-empty">${kbDocs.length ? "🔍 Sin resultados." : "📭 Sin documentos.<br>Sube archivos o crea uno nuevo."}</div>`;
+      return;
+    }
+    const q = kbNorm((document.getElementById("kb-search-input") as HTMLInputElement)?.value || "");
+    list.innerHTML = docs.map(d => {
+      const ft = kbFmtType(d.file_type), fc = kbFmtCat(d.category);
+      const titleHtml = q ? kbHighlight(d.title, q) : kbEsc(d.title);
+      const tags = (d.tags || []).slice(0, 3);
+      const tagsHtml = tags.map(t =>
+        `<span class="kb-tag-chip ${kbTagFilter && kbNorm(t) === kbNorm(kbTagFilter) ? "kb-tag-active" : ""}" data-tag="${kbEsc(t)}">#${kbEsc(t)}</span>`
+      ).join("");
+      return `<div class="kb-doc-item ${kbSelId === d._id ? "kb-sel" : ""}" data-kid="${d._id}">
+        <div class="kb-item-title">${titleHtml}</div>
+        <div class="kb-item-foot">
+          <span class="kb-badge ${ft.cls}">${ft.ext}</span>
+          <span class="kb-badge ${fc.cls}">${fc.label}</span>
+          <span class="kb-item-date">${kbFmtDate(d.updated_at)}</span>
+        </div>
+        ${tagsHtml ? `<div class="kb-tags-row" style="margin-top:5px;">${tagsHtml}</div>` : ""}
+      </div>`;
+    }).join("");
+    list.querySelectorAll<HTMLElement>(".kb-doc-item").forEach(el => {
+      el.addEventListener("click", (e) => {
+        const tagChip = (e.target as HTMLElement).closest(".kb-tag-chip");
+        if (tagChip) {
+          e.stopPropagation();
+          const tag = (tagChip as HTMLElement).dataset.tag!;
+          kbTagFilter = kbTagFilter === tag ? null : tag;
+          kbRenderList();
+          return;
+        }
+        kbAbrirDoc(el.dataset.kid!);
+      });
+    });
+  }
+
+  function kbRelacionados(doc: KBDoc): KBDoc[] {
+    if (!doc.tags?.length) return [];
+    const myTags = doc.tags.map(t => kbNorm(t));
+    return kbDocs
+      .filter(d => d._id !== doc._id && (d.tags || []).some(t => myTags.includes(kbNorm(t))))
+      .map(d => ({ doc: d, shared: (d.tags || []).filter(t => myTags.includes(kbNorm(t))).length }))
+      .sort((a, b) => b.shared - a.shared)
+      .slice(0, 6)
+      .map(x => x.doc);
+  }
+
+  function kbAbrirDoc(id: string) {
+    kbSelId = id;
+    const doc = kbDocs.find(d => d._id === id);
+    if (!doc) return;
+    const emptyEl = document.getElementById("kb-viewer-empty");
+    const viewEl  = document.getElementById("kb-doc-view");
+    if (emptyEl) emptyEl.style.display = "none";
+    if (viewEl)  viewEl.style.display = "flex";
+
+    (document.getElementById("kb-view-title") as HTMLElement).textContent = doc.title;
+    const fc = kbFmtCat(doc.category), ft = kbFmtType(doc.file_type);
+    const tagsHtml = (doc.tags || []).map(t =>
+      `<span class="kb-tag-chip" data-tag="${kbEsc(t)}">#${kbEsc(t)}</span>`
+    ).join("");
+    (document.getElementById("kb-view-meta") as HTMLElement).innerHTML =
+      `<span class="kb-badge ${ft.cls}">${ft.ext}</span>
+       <span class="kb-badge ${fc.cls}">${fc.label}</span>
+       ${doc.updated_at ? `<span>· ${kbFmtDate(doc.updated_at)}</span>` : ""}
+       ${tagsHtml ? `<span style="display:flex;gap:4px;flex-wrap:wrap;">${tagsHtml}</span>` : ""}`;
+
+    // Tags en meta son clicables para filtrar
+    document.getElementById("kb-view-meta")?.querySelectorAll<HTMLElement>(".kb-tag-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        kbTagFilter = chip.dataset.tag!;
+        kbRenderList();
+      });
+    });
+
+    const wrap = document.getElementById("kb-content-wrap");
+    if (wrap) {
+      const contentHtml = doc.file_type === "md"
+        ? `<div class="kb-md">${kbRenderMarkdown(doc.content)}</div>`
+        : `<div class="kb-script">${kbEsc(doc.content)}</div>`;
+
+      const rel = kbRelacionados(doc);
+      const relHtml = rel.length ? `
+        <div class="kb-relacionados">
+          <div class="kb-rel-title">📎 Ver también (${rel.length})</div>
+          <div class="kb-rel-list">${rel.map(r => {
+            const rf = kbFmtType(r.file_type), rc = kbFmtCat(r.category);
+            const sharedTags = (r.tags || []).filter(t => (doc.tags || []).map(x => kbNorm(x)).includes(kbNorm(t)));
+            return `<div class="kb-rel-item" data-kid="${r._id}">
+              <span class="kb-badge ${rf.cls}">${rf.ext}</span>
+              <span class="kb-rel-item-title">${kbEsc(r.title)}</span>
+              <span class="kb-rel-shared">${sharedTags.slice(0,2).map(t => "#"+kbEsc(t)).join(" ")}</span>
+            </div>`;
+          }).join("")}</div>
+        </div>` : "";
+
+      wrap.innerHTML = contentHtml + relHtml;
+      wrap.querySelectorAll<HTMLElement>(".kb-rel-item").forEach(el => {
+        el.addEventListener("click", () => kbAbrirDoc(el.dataset.kid!));
+      });
+    }
+    kbRenderList();
+  }
+
+  function kbAbrirModal(editId?: string) {
+    kbEditId = editId || null;
+    const doc = editId ? kbDocs.find(d => d._id === editId) : null;
+    (document.getElementById("kb-modal-title") as HTMLElement).textContent = doc ? "Editar documento" : "Nuevo documento";
+    (document.getElementById("kb-form-title") as HTMLInputElement).value      = doc?.title   || "";
+    (document.getElementById("kb-form-cat") as HTMLSelectElement).value       = doc?.category || "solucion";
+    (document.getElementById("kb-form-type") as HTMLSelectElement).value      = doc?.file_type || "md";
+    (document.getElementById("kb-form-tags") as HTMLInputElement).value       = (doc?.tags || []).join(", ");
+    (document.getElementById("kb-form-content") as HTMLTextAreaElement).value = doc?.content || "";
+    const modal = document.getElementById("kb-modal");
+    if (modal) modal.style.display = "flex";
+    setTimeout(() => (document.getElementById("kb-form-title") as HTMLInputElement)?.focus(), 80);
+  }
+
+  function kbCerrarModal() {
+    const modal = document.getElementById("kb-modal");
+    if (modal) modal.style.display = "none";
+  }
+
+  function kbGuardarLocal(data: Omit<KBDoc, "_id">, id?: string) {
+    const now = { toDate: () => new Date(), seconds: Date.now() / 1000 };
+    if (id) {
+      const idx = kbDocs.findIndex(d => d._id === id);
+      if (idx >= 0) kbDocs[idx] = { ...kbDocs[idx], ...data, updated_at: now };
+    } else {
+      const newDoc: KBDoc = { _id: "kb_" + Date.now(), ...data, created_at: now, updated_at: now };
+      kbDocs.unshift(newDoc);
+      kbSelId = newDoc._id;
+    }
+    localStorage.setItem("crm_kb", JSON.stringify(kbDocs));
+    kbRenderList();
+    if (kbSelId) kbAbrirDoc(kbSelId);
+  }
+
+  async function kbGuardar() {
+    const title    = (document.getElementById("kb-form-title") as HTMLInputElement).value.trim();
+    const category = (document.getElementById("kb-form-cat") as HTMLSelectElement).value as KBDoc["category"];
+    const file_type= (document.getElementById("kb-form-type") as HTMLSelectElement).value as KBDoc["file_type"];
+    const content  = (document.getElementById("kb-form-content") as HTMLTextAreaElement).value;
+    const tagsRaw  = (document.getElementById("kb-form-tags") as HTMLInputElement).value;
+    const tags     = tagsRaw.split(",").map(t => t.trim()).filter(Boolean);
+    if (!title) { (document.getElementById("kb-form-title") as HTMLInputElement).focus(); toast("⚠️ El título es obligatorio", "warning"); return; }
+
+    const saveBtn = document.getElementById("kb-form-save") as HTMLButtonElement;
+    saveBtn.disabled = true; saveBtn.textContent = "Guardando...";
+
+    const data = { title, category, file_type, content, tags };
+    if (firebaseEnabled) {
+      if (kbEditId) {
+        await actualizarDocKB(kbEditId, data);
+        if (kbSelId === kbEditId) setTimeout(() => kbAbrirDoc(kbEditId!), 200);
+      } else {
+        const newId = await crearDocKB(data);
+        if (newId) kbSelId = newId;
+      }
+    } else {
+      kbGuardarLocal(data, kbEditId || undefined);
+    }
+    saveBtn.disabled = false; saveBtn.textContent = "💾 Guardar documento";
+    kbCerrarModal();
+    toast("✅ Documento guardado");
+  }
+
+  async function kbEliminar(id: string) {
+    if (!confirm("¿Eliminar este documento? Esta acción no se puede deshacer.")) return;
+    if (firebaseEnabled) {
+      await eliminarDocKB(id);
+    } else {
+      kbDocs = kbDocs.filter(d => d._id !== id);
+      localStorage.setItem("crm_kb", JSON.stringify(kbDocs));
+      kbRenderList();
+    }
+    if (kbSelId === id) {
+      kbSelId = null;
+      const emptyEl = document.getElementById("kb-viewer-empty");
+      const viewEl  = document.getElementById("kb-doc-view");
+      if (emptyEl) emptyEl.style.display = "";
+      if (viewEl)  viewEl.style.display = "none";
+    }
+    toast("🗑️ Documento eliminado");
+  }
+
+  async function kbCargarArchivo(file: File) {
+    const text = await file.text();
+    const title = file.name.replace(/\.(md|ps1|bat|txt)$/i, "");
+    const file_type = kbGuessType(file.name);
+    const category  = kbGuessCat(file.name);
+    const data = { title, category, file_type, content: text };
+    if (firebaseEnabled) {
+      const newId = await crearDocKB(data);
+      if (newId) kbSelId = newId;
+    } else {
+      kbGuardarLocal(data);
+    }
+  }
+
+  function kbSetupEvents() {
+    // Búsqueda
+    document.getElementById("kb-search-input")?.addEventListener("input", kbRenderList);
+
+    // Toggle frase exacta
+    document.getElementById("kb-exact-btn")?.addEventListener("click", () => {
+      kbExact = !kbExact;
+      document.getElementById("kb-exact-btn")?.classList.toggle("active", kbExact);
+      kbRenderList();
+    });
+
+    // Pestañas de categoría
+    document.querySelectorAll<HTMLButtonElement>(".kb-tab").forEach(btn => {
+      btn.addEventListener("click", () => {
+        kbCat = btn.dataset.kbCat!;
+        document.querySelectorAll(".kb-tab").forEach(t => t.classList.remove("kb-tab-active"));
+        btn.classList.add("kb-tab-active");
+        kbRenderList();
+      });
+    });
+
+    // Nuevo documento
+    document.getElementById("kb-btn-nuevo")?.addEventListener("click", () => kbAbrirModal());
+
+    // Modal: cerrar
+    document.getElementById("kb-modal-close")?.addEventListener("click", kbCerrarModal);
+    document.getElementById("kb-form-cancel")?.addEventListener("click", kbCerrarModal);
+    document.getElementById("kb-modal")?.addEventListener("click", (e) => { if (e.target === document.getElementById("kb-modal")) kbCerrarModal(); });
+
+    // Modal: guardar
+    document.getElementById("kb-form-save")?.addEventListener("click", kbGuardar);
+
+    // Escape cierra modal KB
+    document.addEventListener("keydown", (e) => {
+      const modal = document.getElementById("kb-modal");
+      if ((e as KeyboardEvent).key === "Escape" && modal?.style.display !== "none") kbCerrarModal();
+    });
+
+    // Copiar contenido
+    document.getElementById("kb-btn-copy")?.addEventListener("click", () => {
+      const doc = kbDocs.find(d => d._id === kbSelId);
+      if (!doc) return;
+      navigator.clipboard.writeText(doc.content).then(() => toast("📋 Contenido copiado al portapapeles"));
+    });
+
+    // Editar
+    document.getElementById("kb-btn-edit")?.addEventListener("click", () => { if (kbSelId) kbAbrirModal(kbSelId); });
+
+    // Eliminar
+    document.getElementById("kb-btn-del")?.addEventListener("click", () => { if (kbSelId) kbEliminar(kbSelId); });
+
+    // Upload (barra de herramientas)
+    document.getElementById("kb-upload-input")?.addEventListener("change", async (e) => {
+      const files = (e.target as HTMLInputElement).files;
+      if (!files?.length) return;
+      for (const file of Array.from(files)) await kbCargarArchivo(file);
+      (e.target as HTMLInputElement).value = "";
+      toast(`✅ ${files.length} archivo(s) cargado(s)`);
+    });
+
+    // Dropzone en modal
+    const dropzone = document.getElementById("kb-dropzone");
+    const dropInput = document.getElementById("kb-drop-input") as HTMLInputElement;
+    dropzone?.addEventListener("click", () => dropInput?.click());
+    dropzone?.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("kb-drag"); });
+    dropzone?.addEventListener("dragleave", () => dropzone.classList.remove("kb-drag"));
+    dropzone?.addEventListener("drop", async (e) => {
+      e.preventDefault(); dropzone.classList.remove("kb-drag");
+      const file = (e as DragEvent).dataTransfer?.files[0];
+      if (!file) return;
+      const text = await file.text();
+      (document.getElementById("kb-form-title") as HTMLInputElement).value = file.name.replace(/\.(md|ps1|bat|txt)$/i, "");
+      (document.getElementById("kb-form-type") as HTMLSelectElement).value = kbGuessType(file.name);
+      (document.getElementById("kb-form-cat") as HTMLSelectElement).value  = kbGuessCat(file.name);
+      (document.getElementById("kb-form-content") as HTMLTextAreaElement).value = text;
+    });
+    dropInput?.addEventListener("change", async () => {
+      const file = dropInput.files?.[0];
+      if (!file) return;
+      const text = await file.text();
+      (document.getElementById("kb-form-title") as HTMLInputElement).value = file.name.replace(/\.(md|ps1|bat|txt)$/i, "");
+      (document.getElementById("kb-form-type") as HTMLSelectElement).value = kbGuessType(file.name);
+      (document.getElementById("kb-form-cat") as HTMLSelectElement).value  = kbGuessCat(file.name);
+      (document.getElementById("kb-form-content") as HTMLTextAreaElement).value = text;
+    });
+  }
+
+  function kbRenderAccesoPanel() {
+    const panel = document.getElementById("kb-acceso-user-list");
+    if (!panel) return;
+    const usuarios = getUsuarios().filter(u => u.activo);
+    panel.innerHTML = usuarios.map(u => {
+      const checked = kbAcceso.includes(u.nombre) ? "checked" : "";
+      const isOwner = u.nombre === "ERICK";
+      return `<label class="kb-acceso-user">
+        <input type="checkbox" data-uname="${u.nombre}" ${checked} ${isOwner ? "disabled" : ""}>
+        <span class="kb-acceso-user-name">${u.nombre}</span>
+        <span class="kb-acceso-user-rol">${isOwner ? "Propietario" : u.rol}</span>
+      </label>`;
+    }).join("");
+    panel.querySelectorAll<HTMLInputElement>("input[type=checkbox]:not([disabled])").forEach(cb => {
+      cb.addEventListener("change", async () => {
+        const name = cb.dataset.uname!;
+        kbAcceso = cb.checked
+          ? [...new Set([...kbAcceso, name])]
+          : kbAcceso.filter(n => n !== name);
+        localStorage.setItem("crm_kb_acceso", JSON.stringify(kbAcceso));
+        if (firebaseEnabled) await guardarKBAcceso(kbAcceso);
+        toast(`${cb.checked ? "✅" : "🚫"} Acceso ${cb.checked ? "otorgado a" : "removido de"} ${name}`);
+      });
+    });
+  }
+
+  function initKB() {
+    const usuario = getUsuarioActual();
+    const tieneAcceso = kbAcceso.includes(usuario?.nombre || "");
+    if (!usuario || !tieneAcceso) return;
+
+    const navKB = document.getElementById("nav-kb");
+    const lblKB = document.getElementById("kb-nav-label");
+    if (navKB) navKB.style.display = "";
+    if (lblKB) lblKB.style.display = "";
+
+    if (kbInited) return;
+    kbInited = true;
+    kbSetupEvents();
+
+    // Panel de acceso: solo para ERICK (propietario)
+    if (usuario.nombre === "ERICK") {
+      const wrap = document.getElementById("kb-acceso-wrap");
+      if (wrap) wrap.style.display = "";
+      document.getElementById("kb-btn-acceso")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const panel = document.getElementById("kb-acceso-panel");
+        if (!panel) return;
+        const open = panel.classList.toggle("open");
+        if (open) kbRenderAccesoPanel();
+      });
+      document.addEventListener("click", (e) => {
+        const wrap = document.getElementById("kb-acceso-wrap");
+        if (wrap && !wrap.contains(e.target as Node)) {
+          document.getElementById("kb-acceso-panel")?.classList.remove("open");
+        }
+      });
+    }
+
+    if (firebaseEnabled && !kbUnsubscribe) {
+      kbUnsubscribe = suscribirKB((docs: KBDoc[]) => {
+        kbDocs = docs.sort((a, b) => {
+          const ta = a.updated_at?.seconds || 0, tb = b.updated_at?.seconds || 0;
+          return tb - ta;
+        });
+        kbRenderList();
+        if (kbSelId) kbAbrirDoc(kbSelId);
+      });
+    } else if (!firebaseEnabled) {
+      try { kbDocs = JSON.parse(localStorage.getItem("crm_kb") || "[]"); } catch { kbDocs = []; }
+      kbRenderList();
+    }
+  }
+
+  // Sincronizar kbAcceso desde Firebase cuando llegan datos del CRM
+  document.addEventListener("crm:datosFirebase", (e: Event) => {
+    const datos = (e as CustomEvent).detail;
+    if (datos?.kbAcceso && Array.isArray(datos.kbAcceso)) {
+      kbAcceso = datos.kbAcceso;
+      localStorage.setItem("crm_kb_acceso", JSON.stringify(kbAcceso));
+    }
+    const usuario = getUsuarioActual();
+    if (usuario && kbAcceso.includes(usuario.nombre) && !kbInited) initKB();
+  });
+
+  // Inicializar KB si ya hay sesión activa con acceso
+  initKB();
 })();
 </script>
 </body>
