@@ -2400,7 +2400,7 @@ try {
           </div>
         </div>
 
-        <div class="card">
+        <div class="card" style="display:none;">
           <div class="card-title">📡 Almacenamiento y Conexión</div>
           <div class="form-group" style="flex-direction: row; align-items: center; gap: 10px;">
             <input id="cfg-local-only" type="checkbox" style="width: auto; cursor: pointer;">
@@ -2408,9 +2408,6 @@ try {
               Usar solo almacenamiento local (desactivar conexión con Firebase)
             </label>
           </div>
-          <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 8px; line-height: 1.4;">
-            Activa esta casilla si experimentas errores de permisos de Firebase o deseas trabajar de manera 100% desconectada. Los datos se guardarán localmente en el navegador de forma inmediata.
-          </p>
         </div>
 
         <div class="card">
@@ -2998,8 +2995,8 @@ try {
         </div>
       </div>
       <div class="form-actions" style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end;">
-        <button class="btn btn-success" id="btnXlsConfirmUpload">☁️ Subir a Firebase</button>
-        <button class="btn btn-secondary" id="btnXlsConfirmLocal">💾 Guardar solo local</button>
+        <button class="btn btn-success" id="btnXlsConfirmUpload">☁️ Confirmar y subir a Firebase</button>
+        <button class="btn btn-ghost btn-sm" id="btnCerrarXlsSummary2">Cancelar</button>
       </div>
     </div>
   </div>
@@ -3330,7 +3327,9 @@ verificarSesion();
   let adjuntosTicketActual = []; // archivos adjuntos en formulario activo
   let plantillaMensaje = "Hola [contacto] de [empresa].\n\nTe saludamos de parte del equipo de DATTASOFT By INFOXPERT. Te escribimos para comentarte que ya se encuentran disponibles las últimas versiones oficiales y estables para tus sistemas CONTPAQi.\n\nRevisando tu perfil, notamos que tienes la oportunidad de actualizar los siguientes módulos:\n\n[sistemas_pendientes]\n\nMantenerlos al día te garantiza la mayor estabilidad, seguridad y el cumplimiento de los cambios fiscales más recientes. Estamos para atenderles con gusto.\n\nSaludos cordiales,\nEquipo DATTASOFT BY INFOXPERT";
 
-  let crmLocalOnly = localStorage.getItem("crm_local_only") === "true";
+  // Si Firebase está disponible, siempre forzar modo Firebase (ignorar flag local accidental)
+  let crmLocalOnly = firebaseEnabled ? false : (localStorage.getItem("crm_local_only") === "true");
+  if (firebaseEnabled) localStorage.removeItem("crm_local_only");
 
   let configTickets = {
     tipos: ["General", "Soporte Técnico", "Consultoría Sitio", "Consultoría Remoto", "Instalación", "Correo Electrónico"],
@@ -6148,11 +6147,11 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
             }
           });
 
-          // Guardar en localStorage primero para previsualizar
-          localStorage.setItem('crm_clientes', JSON.stringify(clientesArr));
-          localStorage.setItem('crm_contactos', JSON.stringify(contactosArr));
-          toast(`✅ Importado ${clientesArr.length} empresas y ${contactosArr.length} contactos (guardado local). Correos corregidos: ${emailsCorregidos}. Inválidos: ${emailsInvalidos}.`);
-          cargarDesdeLocalStorage('📥 Importando desde Excel...');
+          // Vista previa: cargar en memoria sin tocar localStorage ni Firebase aún
+          clientes = normalizeImportedClientes(clientesArr || []);
+          contactos = normalizeImportedContactos ? normalizeImportedContactos(contactosArr || []) : (contactosArr || []);
+          renderEmpresas();
+          renderContactos();
 
           // Preparar modal de confirmación/resumen
           const modal = document.getElementById('modal-xls-summary');
@@ -6294,9 +6293,8 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
             modal.style.display = 'flex';
 
             // Setup modal buttons
-            document.getElementById('btnXlsConfirmLocal').onclick = () => {
+            document.getElementById('btnCerrarXlsSummary2').onclick = () => {
               modal.style.display = 'none';
-              toast('💾 Datos guardados localmente');
             };
 
             document.getElementById('btnCerrarXlsSummary').onclick = () => { modal.style.display = 'none'; };
