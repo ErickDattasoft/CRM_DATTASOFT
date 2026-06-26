@@ -2614,12 +2614,14 @@ try {
           <div class="card" style="margin-top:0;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
               <div class="card-title" style="margin-bottom:0;">🏢 Empresas Invitadas</div>
-              <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <input id="ev-buscar-empresa" placeholder="Buscar empresa..." style="font-size:0.8rem; padding:6px 10px; width:200px;" autocomplete="off">
+              <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                <div class="autocomplete-wrap">
+                  <input id="ev-buscar-empresa" placeholder="Buscar empresa..." style="font-size:0.8rem; padding:6px 10px; width:220px;" autocomplete="off">
+                  <div id="ev-empresas-autocomplete" class="autocomplete-list hidden" style="max-height:200px; min-width:280px;"></div>
+                </div>
                 <button class="btn btn-sm btn-primary" id="btnAgregarEmpresaEvento">➕ Agregar empresa</button>
               </div>
             </div>
-            <div id="ev-empresas-autocomplete" class="autocomplete-list hidden" style="max-height:160px;"></div>
             <div class="table-wrap" style="max-height:340px;">
               <table>
                 <thead>
