@@ -2629,6 +2629,7 @@ try {
                   <tr>
                     <th style="min-width:160px;">Empresa</th>
                     <th style="min-width:120px; font-size:0.72rem;">Sistema / Área</th>
+                    <th style="min-width:110px; font-size:0.72rem;">Invitado por</th>
                     <th style="text-align:center; width:80px; font-size:0.72rem;">Invitado<br><span style="font-weight:400;">(contactado)</span></th>
                     <th style="text-align:center; width:120px; font-size:0.72rem;">Respuesta</th>
                     <th style="min-width:120px; font-size:0.72rem;">Notas</th>
@@ -7002,7 +7003,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     if (!tbody) return;
     const empresas = ev.empresas || [];
     if (!empresas.length) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:20px; font-style:italic;">Sin empresas. Usa el buscador para agregar.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:20px; font-style:italic;">Sin empresas. Usa el buscador para agregar.</td></tr>';
       return;
     }
     tbody.innerHTML = "";
@@ -7019,9 +7020,17 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       const historialBadge = historial.length
         ? `<span title="${historialTip}" style="cursor:help; font-size:0.68rem; padding:2px 6px; border-radius:999px; background:${asistidos.length ? "rgba(16,185,129,0.15)" : "rgba(100,116,139,0.15)"}; color:${asistidos.length ? "#34d399" : "#94a3b8"}; white-space:nowrap;">📋 ${historial.length} evento${historial.length>1?"s":""}${asistidos.length ? " · ✅"+asistidos.length : ""}</span>`
         : `<span style="font-size:0.65rem; color:var(--text-muted);">—</span>`;
+      const INV_POR_OPTS = ["ERICK","ARTURO","GELMI","GABY","Otro"];
+      const invPorVal = INV_POR_OPTS.includes(emp.invitadoPor) ? emp.invitadoPor : (emp.invitadoPor && emp.invitadoPor !== "" ? "Otro" : "");
+      const invPorManual = invPorVal === "Otro" ? (emp.invitadoPorManual || emp.invitadoPor || "") : (emp.invitadoPorManual || "");
+      const invPorSelOpts = ['<option value="">—</option>', ...INV_POR_OPTS.map(n => `<option value="${n}" ${invPorVal === n ? "selected" : ""}>${n}</option>`)].join("");
       tr.innerHTML = `
         <td style="font-weight:600; font-size:0.85rem;">${emp.nombre}<br><span style="font-size:0.68rem; font-weight:400;">${historialBadge}</span></td>
         <td><input class="ev-emp-sistema" data-idx="${i}" value="${emp.sistema || ""}" placeholder="Sistema/área" style="font-size:0.78rem; padding:4px 8px; width:100%;"></td>
+        <td>
+          <select class="ev-emp-invpor" data-idx="${i}" style="font-size:0.78rem; padding:4px 6px; width:100%;">${invPorSelOpts}</select>
+          <input class="ev-emp-invpor-manual" data-idx="${i}" value="${invPorManual.replace(/"/g,"&quot;")}" placeholder="Nombre..." style="font-size:0.75rem; padding:3px 6px; width:100%; margin-top:3px; ${invPorVal === "Otro" ? "" : "display:none;"}">
+        </td>
         <td style="text-align:center;"><input type="checkbox" class="ev-emp-invitado" data-idx="${i}" ${emp.invitado ? "checked" : ""} style="width:16px;height:16px;accent-color:#6366f1;cursor:pointer;" title="Marcar si se le contactó"></td>
         <td><select class="ev-emp-respuesta" data-idx="${i}" style="font-size:0.75rem; padding:4px 6px; width:100%;">${selOpts}</select></td>
         <td><input class="ev-emp-notas" data-idx="${i}" value="${(emp.notas || "").replace(/"/g, "&quot;")}" placeholder="Notas..." style="font-size:0.75rem; padding:4px 8px; width:100%;"></td>
@@ -7050,6 +7059,19 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       ev2.empresas[+e.target.dataset.idx].notas = e.target.value.trim();
       guardarEventos();
     }));
+    tbody.querySelectorAll(".ev-emp-invpor").forEach(sel => sel.addEventListener("change", e => {
+      const ev2 = getEventoActivo(); if (!ev2) return;
+      const idx = +e.target.dataset.idx;
+      ev2.empresas[idx].invitadoPor = e.target.value;
+      const manualInput = e.target.closest("td").querySelector(".ev-emp-invpor-manual");
+      if (manualInput) manualInput.style.display = e.target.value === "Otro" ? "" : "none";
+      guardarEventos();
+    }));
+    tbody.querySelectorAll(".ev-emp-invpor-manual").forEach(inp => inp.addEventListener("change", e => {
+      const ev2 = getEventoActivo(); if (!ev2) return;
+      ev2.empresas[+e.target.dataset.idx].invitadoPorManual = e.target.value.trim();
+      guardarEventos();
+    }));
     tbody.querySelectorAll(".ev-btn-quitar-emp").forEach(btn => btn.addEventListener("click", e => {
       const ev2 = getEventoActivo(); if (!ev2) return;
       ev2.empresas.splice(+e.target.closest("button").dataset.idx, 1);
@@ -7073,7 +7095,12 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       const selOpts = respOpts.map(r => `<option value="${r}" ${ext.respuesta === r ? "selected" : ""}>${respLabels[r]}</option>`).join("");
       tr.innerHTML = `
         <td><input class="ev-ext-nombre" data-idx="${i}" value="${(ext.nombre || "").replace(/"/g, "&quot;")}" placeholder="Nombre completo" style="font-size:0.82rem; padding:4px 8px; width:100%;"></td>
-        <td><input class="ev-ext-fuente" data-idx="${i}" value="${(ext.fuente || "").replace(/"/g, "&quot;")}" placeholder="Facebook, Instagram, Web..." style="font-size:0.78rem; padding:4px 8px; width:100%;"></td>
+        <td>
+          <select class="ev-ext-fuente" data-idx="${i}" style="font-size:0.78rem; padding:4px 8px; width:100%;">
+            ${["Redes Sociales","Facebook","Instagram","Recomendación","Web / Internet","Evento anterior","Otros"].map(f => `<option value="${f}" ${(ext.fuente || "Redes Sociales") === f ? "selected" : ""}>${f}</option>`).join("")}
+          </select>
+          <input class="ev-ext-fuente-manual" data-idx="${i}" value="${(ext.fuenteManual||"").replace(/"/g,"&quot;")}" placeholder="Especificar..." style="font-size:0.75rem; padding:3px 6px; width:100%; margin-top:3px; ${ext.fuente === 'Otros' ? '' : 'display:none;'}">
+        </td>
         <td style="text-align:center;"><input type="checkbox" class="ev-ext-invitado" data-idx="${i}" ${ext.invitado ? "checked" : ""} style="width:16px;height:16px;accent-color:#6366f1;cursor:pointer;" title="Marcar si se le contactó"></td>
         <td><select class="ev-ext-respuesta" data-idx="${i}" style="font-size:0.75rem; padding:4px 6px; width:100%;">${selOpts}</select></td>
         <td><input class="ev-ext-notas" data-idx="${i}" value="${(ext.notas || "").replace(/"/g, "&quot;")}" placeholder="Notas..." style="font-size:0.75rem; padding:4px 8px; width:100%;"></td>
@@ -7092,13 +7119,26 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       ev2.extras[+e.target.dataset.idx].respuesta = e.target.value;
       guardarEventos(); actualizarStatsEvento(ev2);
     }));
-    ["nombre","fuente","notas"].forEach(campo => {
+    ["nombre","notas"].forEach(campo => {
       tbody.querySelectorAll(`.ev-ext-${campo}`).forEach(inp => inp.addEventListener("change", e => {
         const ev2 = getEventoActivo(); if (!ev2) return;
         ev2.extras[+e.target.dataset.idx][campo] = e.target.value.trim();
         guardarEventos();
       }));
     });
+    tbody.querySelectorAll(".ev-ext-fuente").forEach(sel => sel.addEventListener("change", e => {
+      const ev2 = getEventoActivo(); if (!ev2) return;
+      const idx = +e.target.dataset.idx;
+      ev2.extras[idx].fuente = e.target.value;
+      const manualInput = e.target.closest("td").querySelector(".ev-ext-fuente-manual");
+      if (manualInput) manualInput.style.display = e.target.value === "Otros" ? "" : "none";
+      guardarEventos();
+    }));
+    tbody.querySelectorAll(".ev-ext-fuente-manual").forEach(inp => inp.addEventListener("change", e => {
+      const ev2 = getEventoActivo(); if (!ev2) return;
+      ev2.extras[+e.target.dataset.idx].fuenteManual = e.target.value.trim();
+      guardarEventos();
+    }));
     tbody.querySelectorAll(".ev-btn-quitar-ext").forEach(btn => btn.addEventListener("click", e => {
       const ev2 = getEventoActivo(); if (!ev2) return;
       ev2.extras.splice(+e.target.closest("button").dataset.idx, 1);
@@ -7203,12 +7243,14 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   // Buscar empresa para agregar al evento
   const evBuscarInput = document.getElementById("ev-buscar-empresa");
   const evAutoList = document.getElementById("ev-empresas-autocomplete");
-  evBuscarInput?.addEventListener("input", () => {
+  function mostrarEmpresasAutoComplete() {
     const val = evBuscarInput.value.toLowerCase().trim();
-    if (!val || val.length < 2) { evAutoList.classList.add("hidden"); return; }
     const ev = getEventoActivo(); if (!ev) return;
     const yaAgregadas = new Set((ev.empresas || []).map(e => e.nombre));
-    const matches = clientes.filter(c => (c.EMPRESA || "").toLowerCase().includes(val) && !yaAgregadas.has(c.EMPRESA)).slice(0, 10);
+    const matches = clientes.filter(c => {
+      const nombre = (c.EMPRESA || "");
+      return (!val || nombre.toLowerCase().includes(val)) && !yaAgregadas.has(nombre);
+    }).slice(0, 15);
     if (!matches.length) { evAutoList.classList.add("hidden"); return; }
     evAutoList.innerHTML = matches.map(c => `<div class="autocomplete-item" data-nombre="${c.EMPRESA}">${c.EMPRESA}</div>`).join("");
     evAutoList.classList.remove("hidden");
@@ -7223,7 +7265,9 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         evAutoList.classList.add("hidden");
       });
     });
-  });
+  }
+  evBuscarInput?.addEventListener("input", mostrarEmpresasAutoComplete);
+  evBuscarInput?.addEventListener("focus", mostrarEmpresasAutoComplete);
   document.getElementById("btnAgregarEmpresaEvento")?.addEventListener("click", () => {
     const val = evBuscarInput.value.trim();
     if (!val) { evBuscarInput.focus(); return; }
