@@ -1,0 +1,12 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Solo permite acceso a sesiones autenticadas con Firebase Auth.
+    // El CRM usa autenticación anónima automática al cargar la app,
+    // por lo que usuarios legítimos siempre tienen token válido.
+    // Accesos externos sin token (bots, scrapers, otras apps) son bloqueados.
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

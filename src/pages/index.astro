@@ -3188,7 +3188,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, suscribirKB, crearDocKB, actualizarDocKB, eliminarDocKB, guardarKBAcceso } from "../data/firebase.js";
+import { firebaseEnabled, authListo, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, suscribirKB, crearDocKB, actualizarDocKB, eliminarDocKB, guardarKBAcceso } from "../data/firebase.js";
 
 // ── Multi-user Auth ───────────────────────────────────────────
 async function sha256(str: string): Promise<string> {
@@ -6761,9 +6761,9 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   }
 
   // ============================================================
-  // INIT
+  // INIT — esperar Firebase Auth antes de conectar Firestore
   // ============================================================
-  inicializarApp();
+  authListo.then(() => inicializarApp());
 
   // ============================================================
   // COLUMN RESIZE (drag borde de columna como Excel)

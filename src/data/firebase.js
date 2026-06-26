@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, onSnapshot, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "firebase/auth";
 
 // Configuración de Firebase usando las variables de entorno de Astro
 const firebaseConfig = {
@@ -12,8 +13,29 @@ export const firebaseEnabled = Boolean(
   firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.projectId
 );
 
-const app = firebaseEnabled ? initializeApp(firebaseConfig) : null;
-const db  = firebaseEnabled ? getFirestore(app) : null;
+const app  = firebaseEnabled ? initializeApp(firebaseConfig) : null;
+const db   = firebaseEnabled ? getFirestore(app) : null;
+const auth = firebaseEnabled ? getAuth(app) : null;
+
+// Iniciar sesión anónima automáticamente al cargar el módulo.
+// Resuelve una promesa cuando el auth está listo para que Firestore
+// no reciba llamadas antes de tener credenciales.
+let _authResolve;
+export const authListo = new Promise(res => { _authResolve = res; });
+
+if (auth) {
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      _authResolve(user);
+    } else {
+      signInAnonymously(auth)
+        .then(cred => _authResolve(cred.user))
+        .catch(err => { console.warn("[CRM] Auth anónima falló:", err); _authResolve(null); });
+    }
+  });
+} else {
+  _authResolve(null);
+}
 
 /**
  * Suscribe al documento principal del CRM con onSnapshot para sync en tiempo real.
