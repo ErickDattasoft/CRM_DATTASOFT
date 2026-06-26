@@ -1745,9 +1745,17 @@ try {
   .kb-acceso-user-name { font-size: 0.82rem; font-weight: 600; color: var(--text-main); }
   .kb-acceso-user-rol { font-size: 0.66rem; color: var(--text-light); background: rgba(255,255,255,0.05); padding: 1px 5px; border-radius: 3px; }
   @media (max-width: 900px) {
-    .kb-split { grid-template-columns: 1fr; height: auto; }
-    .kb-list { max-height: 220px; }
-    .kb-viewer { min-height: 400px; }
+    #section-knowledge { height: auto; overflow-y: visible; }
+    .kb-split {
+      grid-template-columns: 1fr;
+      flex: 0 0 auto;
+      min-height: unset;
+      height: auto;
+      overflow: visible;
+    }
+    #kb-resizer { display: none; }
+    .kb-list { max-height: 260px; overflow-y: auto; }
+    .kb-viewer { min-height: 360px; }
   }
   </style>
 </head>
@@ -2693,9 +2701,9 @@ try {
                 <input id="kb-upload-folder" type="file" accept=".md,.ps1,.bat,.sql,.txt" multiple style="display:none;" webkitdirectory>
               </label>
               <div style="height:1px; background:var(--border-color);"></div>
-              <label style="display:flex; align-items:center; gap:10px; padding:10px 14px; cursor:pointer; font-size:0.82rem; color:var(--text-main); transition:background 0.15s;" onmouseover="this.style.background='rgba(20,184,166,0.08)'" onmouseout="this.style.background=''" title="Sube archivos actualizados — si el nombre ya existe lo actualiza, no duplica">
+              <label style="display:flex; align-items:center; gap:10px; padding:10px 14px; cursor:pointer; font-size:0.82rem; color:var(--text-main); transition:background 0.15s;" onmouseover="this.style.background='rgba(20,184,166,0.08)'" onmouseout="this.style.background=''" title="Selecciona una carpeta — actualiza archivos existentes y crea nuevos">
                 🔄 Indexar / Actualizar
-                <input id="kb-index-input" type="file" accept=".md,.ps1,.bat,.sql,.txt" multiple style="display:none;">
+                <input id="kb-index-input" type="file" accept=".md,.ps1,.bat,.sql,.txt" multiple style="display:none;" webkitdirectory>
               </label>
             </div>
           </div>
