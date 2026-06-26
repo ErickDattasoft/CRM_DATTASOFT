@@ -3740,15 +3740,35 @@ verificarSesion();
 
   // Aplica datos recibidos de Firebase a las variables en memoria
   function aplicarDatosFirebase(datos) {
+    if (!datos) return;
     clientes = datos.clientes || [];
-    versionesMercado = datos.versionesMercado || {};
-    cartasTecnicas = datos.cartasTecnicas || {};
-    plantillaMensaje = datos.plantillaMensaje || plantillaMensaje;
+    // Sólo sobreescribir si Firebase realmente tiene el campo (no undefined).
+    // Si el campo no existe en el doc, conservamos lo que hay en memoria.
+    if (datos.versionesMercado !== undefined) versionesMercado = datos.versionesMercado;
+    if (datos.cartasTecnicas !== undefined) cartasTecnicas = datos.cartasTecnicas;
+    if (datos.plantillaMensaje !== undefined) plantillaMensaje = datos.plantillaMensaje;
     tickets = datos.tickets || [];
     contactos = datos.contactos || [];
     if (datos.configTickets) configTickets = { ...configTickets, ...datos.configTickets };
     if (datos.usuarios && datos.usuarios.length > 0) saveUsuariosLocal(datos.usuarios);
-    if (datos.eventos && datos.eventos.length > 0) eventos = datos.eventos;
+    // Merge eventos: Firebase es fuente de verdad sólo cuando tiene datos.
+    // Si Firebase tiene menos eventos que la memoria local (race condition entre
+    // guardarEventosFB y otra escritura), mezclamos para no perder eventos recientes.
+    if (datos.eventos !== undefined && datos.eventos !== null) {
+      if (datos.eventos.length >= eventos.length) {
+        eventos = datos.eventos;
+      } else if (datos.eventos.length > 0) {
+        const fbIds = new Set(datos.eventos.map((e: any) => e.id));
+        const soloLocales = eventos.filter((e: any) => !fbIds.has(e.id));
+        if (soloLocales.length > 0) {
+          eventos = [...datos.eventos, ...soloLocales];
+          if (!crmLocalOnly && firebaseEnabled) guardarEventosFB(eventos);
+        } else {
+          eventos = datos.eventos;
+        }
+      }
+      // Si Firebase devuelve array vacío, conservamos eventos locales (evita borrar si FB aún no confirmó)
+    }
     // Bitácora NO se toca aquí — se carga solo en primeraCargaFB y se actualiza
     // únicamente desde logBitacora(), para evitar que writes ajenos sobreescriban
     // entradas recientes aún no confirmadas por el servidor.
@@ -3809,6 +3829,28 @@ verificarSesion();
 
           if (datos) {
             aplicarDatosFirebase(datos);
+
+            // Si Firebase no tiene versiones/cartas/eventos, recuperar del caché local
+            // para no perder datos que sólo existían en localStorage
+            if (datos.versionesMercado === undefined) {
+              const localV = safeParseLocal("crm_versiones", null);
+              if (localV && Object.values(localV).some((v: any) => v)) {
+                versionesMercado = localV;
+                guardarConfiguracion(versionesMercado, cartasTecnicas); // subir a Firebase
+              }
+            }
+            if (datos.cartasTecnicas === undefined) {
+              const localC = safeParseLocal("crm_cartas", null);
+              if (localC && Object.values(localC).some((v: any) => v)) cartasTecnicas = localC;
+            }
+            if ((datos.eventos === undefined || datos.eventos === null || datos.eventos.length === 0)) {
+              const localEv = safeParseLocal("crm_eventos", null);
+              if (localEv && localEv.length > 0 && localEv.length > eventos.length) {
+                eventos = localEv;
+                guardarEventosFB(eventos); // subir a Firebase
+              }
+            }
+
             // Carga inicial de bitácora: fusionar Firebase + entradas locales aún no confirmadas
             if (datos.bitacora && datos.bitacora.length > 0) {
               const fechasFB = new Set(datos.bitacora.map(e => e.fecha));
@@ -3822,8 +3864,10 @@ verificarSesion();
             guardarLocal("crm_clientes", clientes);
             guardarLocal("crm_contactos", contactos);
             guardarLocal("crm_tickets", tickets);
-            guardarLocal("crm_versiones", versionesMercado);
-            guardarLocal("crm_cartas", cartasTecnicas);
+            // Solo actualizar caché local de versiones/cartas si Firebase tiene datos reales
+            if (Object.values(versionesMercado).some((v: any) => v)) guardarLocal("crm_versiones", versionesMercado);
+            if (Object.values(cartasTecnicas).some((v: any) => v)) guardarLocal("crm_cartas", cartasTecnicas);
+            if (eventos.length > 0) guardarLocal("crm_eventos", eventos);
             if (plantillaMensaje) localStorage.setItem("crm_plantilla", plantillaMensaje);
             console.log("[CRM] Firebase cargado: clientes=", clientes.length, "contactos=", contactos.length);
             mostrarEstado(`🔌 Cargados ${clientes.length} empresas desde Firebase`, 2500);
