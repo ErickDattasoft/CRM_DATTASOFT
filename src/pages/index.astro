@@ -3741,14 +3741,14 @@ verificarSesion();
   // Aplica datos recibidos de Firebase a las variables en memoria
   function aplicarDatosFirebase(datos) {
     if (!datos) return;
-    clientes = datos.clientes || [];
-    // Sólo sobreescribir si Firebase realmente tiene el campo (no undefined).
-    // Si el campo no existe en el doc, conservamos lo que hay en memoria.
+    // Regla: solo sobreescribir un campo si Firebase TIENE ese campo (no undefined).
+    // Si el campo no existe en el doc de Firestore, conservar lo que hay en memoria.
+    if (datos.clientes !== undefined) clientes = datos.clientes || [];
     if (datos.versionesMercado !== undefined) versionesMercado = datos.versionesMercado;
     if (datos.cartasTecnicas !== undefined) cartasTecnicas = datos.cartasTecnicas;
     if (datos.plantillaMensaje !== undefined) plantillaMensaje = datos.plantillaMensaje;
-    tickets = datos.tickets || [];
-    contactos = datos.contactos || [];
+    if (datos.tickets !== undefined) tickets = datos.tickets || [];
+    if (datos.contactos !== undefined) contactos = datos.contactos || [];
     if (datos.configTickets) configTickets = { ...configTickets, ...datos.configTickets };
     if (datos.usuarios && datos.usuarios.length > 0) saveUsuariosLocal(datos.usuarios);
     // Merge eventos: Firebase es fuente de verdad sólo cuando tiene datos.
