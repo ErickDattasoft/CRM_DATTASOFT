@@ -7312,9 +7312,15 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   }
   evBuscarInput?.addEventListener("input", mostrarEmpresasAutoComplete);
   evBuscarInput?.addEventListener("focus", mostrarEmpresasAutoComplete);
-  document.getElementById("btnAgregarEmpresaEvento")?.addEventListener("click", () => {
+  const btnAgregarEmpresaEvento = document.getElementById("btnAgregarEmpresaEvento");
+  btnAgregarEmpresaEvento?.addEventListener("click", () => {
     const val = evBuscarInput.value.trim();
-    if (!val) { evBuscarInput.focus(); return; }
+    if (!val) {
+      // Mostrar lista completa y enfocar el input
+      mostrarEmpresasAutoComplete();
+      evBuscarInput.focus();
+      return;
+    }
     const ev2 = getEventoActivo(); if (!ev2) return;
     if (!ev2.empresas) ev2.empresas = [];
     const yaExiste = ev2.empresas.some(e => e.nombre.toLowerCase() === val.toLowerCase());
@@ -7326,7 +7332,13 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     evAutoList.classList.add("hidden");
   });
   document.addEventListener("click", e => {
-    if (!evAutoList?.contains(e.target) && e.target !== evBuscarInput) evAutoList?.classList.add("hidden");
+    // No cerrar si el click fue en el input, en el autocomplete o en el botón agregar
+    if (
+      evAutoList?.contains(e.target) ||
+      e.target === evBuscarInput ||
+      e.target === btnAgregarEmpresaEvento
+    ) return;
+    evAutoList?.classList.add("hidden");
   });
 
   // Agregar invitado externo
