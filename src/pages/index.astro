@@ -4339,7 +4339,7 @@ verificarSesion();
       if (iv) versionesMercado[k] = iv.value.trim();
       if (ic) cartasTecnicas[k] = ic.value.trim();
     });
-    if (crmLocalOnly) {
+    if (crmLocalOnly || !firebaseEnabled) {
       guardarLocal("crm_versiones", versionesMercado);
       guardarLocal("crm_cartas", cartasTecnicas);
       toast("💾 Versiones guardadas (Local)");
@@ -4349,9 +4349,17 @@ verificarSesion();
       return;
     }
     mostrarEstado("💾 Guardando versiones...");
-    const ok = await guardarConfiguracion(versionesMercado, cartasTecnicas);
-    if (ok) { toast("💾 Versiones guardadas"); ocultarEstado(); logBitacora("Versiones oficiales actualizadas", "🚀"); }
-    else { guardarLocal("crm_versiones", versionesMercado); guardarLocal("crm_cartas", cartasTecnicas); mostrarEstado("⚠️ Guardado localmente", 3000); }
+    const res = await guardarConfiguracion(versionesMercado, cartasTecnicas);
+    if (res.ok) {
+      toast("💾 Versiones guardadas en Firebase");
+      ocultarEstado();
+      logBitacora("Versiones oficiales actualizadas", "🚀");
+    } else {
+      guardarLocal("crm_versiones", versionesMercado);
+      guardarLocal("crm_cartas", cartasTecnicas);
+      mostrarEstado(`⚠️ Error Firebase: ${res.msg}`, 6000);
+      console.error("[Versiones] Error al guardar en Firebase:", res.msg);
+    }
     updateMarketStatusIndicators();
     renderEmpresas();
   });

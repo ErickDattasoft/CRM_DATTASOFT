@@ -72,10 +72,10 @@ export async function guardarConfiguracion(versionesMercado, cartasTecnicas) {
   try {
     const docRef = doc(db, "agenda", "datos");
     await setDoc(docRef, { versionesMercado, cartasTecnicas }, { merge: true });
-    return true;
+    return { ok: true };
   } catch (error) {
     console.error("Error al guardar configuración en Firestore:", error);
-    return false;
+    return { ok: false, msg: error?.message || error?.code || String(error) };
   }
 }
 
