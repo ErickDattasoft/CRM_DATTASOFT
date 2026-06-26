@@ -3742,12 +3742,12 @@ verificarSesion();
     if (!datos) return;
     // Regla: solo sobreescribir un campo si Firebase TIENE ese campo (no undefined).
     // Si el campo no existe en el doc de Firestore, conservar lo que hay en memoria.
-    if (datos.clientes !== undefined) clientes = datos.clientes || [];
-    if (datos.versionesMercado !== undefined) versionesMercado = datos.versionesMercado;
-    if (datos.cartasTecnicas !== undefined) cartasTecnicas = datos.cartasTecnicas;
+    if (datos.clientes !== undefined && (datos.clientes.length > 0 || clientes.length === 0)) clientes = datos.clientes || [];
+    if (datos.versionesMercado !== undefined && Object.values(datos.versionesMercado).some((v: any) => v)) versionesMercado = datos.versionesMercado;
+    if (datos.cartasTecnicas !== undefined && Object.values(datos.cartasTecnicas).some((v: any) => v)) cartasTecnicas = datos.cartasTecnicas;
     if (datos.plantillaMensaje !== undefined) plantillaMensaje = datos.plantillaMensaje;
-    if (datos.tickets !== undefined) tickets = datos.tickets || [];
-    if (datos.contactos !== undefined) contactos = datos.contactos || [];
+    if (datos.tickets !== undefined && (datos.tickets.length > 0 || tickets.length === 0)) tickets = datos.tickets || [];
+    if (datos.contactos !== undefined && (datos.contactos.length > 0 || contactos.length === 0)) contactos = datos.contactos || [];
     if (datos.configTickets) configTickets = { ...configTickets, ...datos.configTickets };
     if (datos.usuarios && datos.usuarios.length > 0) saveUsuariosLocal(datos.usuarios);
     // Merge eventos: Firebase es fuente de verdad sólo cuando tiene datos.
@@ -3809,6 +3809,17 @@ verificarSesion();
 
     mostrarEstado("🔄 Conectando a Firebase...");
 
+    // Pre-cargar caché de localStorage mientras llega Firebase, para que el
+    // autocomplete y la UI respondan inmediatamente sin esperar la red.
+    {
+      const _lc = safeParseLocal("crm_clientes", []);
+      const _lcont = safeParseLocal("crm_contactos", []);
+      const _lt = safeParseLocal("crm_tickets", []);
+      if (_lc.length > 0) { clientes = _lc; renderEmpresas(); renderDashboard(); }
+      if (_lcont.length > 0) { contactos = _lcont; }
+      if (_lt.length > 0) { tickets = _lt; }
+    }
+
     // Timeout de seguridad solo para la primera carga
     const timeoutInicial = setTimeout(() => {
       if (primeraCargaFB) {
@@ -3849,6 +3860,28 @@ verificarSesion();
                 guardarEventosFB(eventos); // subir a Firebase
               }
             }
+            // Si Firebase no tiene clientes/contactos/tickets, recuperar del caché local
+            if ((datos.clientes === undefined || datos.clientes.length === 0) && clientes.length === 0) {
+              const localCl = safeParseLocal("crm_clientes", null);
+              if (localCl && localCl.length > 0) {
+                clientes = localCl;
+                guardarClientes(clientes); // subir a Firebase
+              }
+            }
+            if ((datos.contactos === undefined || datos.contactos.length === 0) && contactos.length === 0) {
+              const localCo = safeParseLocal("crm_contactos", null);
+              if (localCo && localCo.length > 0) {
+                contactos = localCo;
+                guardarContactos(contactos);
+              }
+            }
+            if ((datos.tickets === undefined || datos.tickets.length === 0) && tickets.length === 0) {
+              const localTk = safeParseLocal("crm_tickets", null);
+              if (localTk && localTk.length > 0) {
+                tickets = localTk;
+                guardarTickets(tickets);
+              }
+            }
 
             // Carga inicial de bitácora: fusionar Firebase + entradas locales aún no confirmadas
             if (datos.bitacora && datos.bitacora.length > 0) {
@@ -3859,10 +3892,10 @@ verificarSesion();
               );
               guardarLocal("crm_bitacora", bitacoraLog);
             }
-            // Respaldo en localStorage (caché para offline)
-            guardarLocal("crm_clientes", clientes);
-            guardarLocal("crm_contactos", contactos);
-            guardarLocal("crm_tickets", tickets);
+            // Respaldo en localStorage (caché para offline) — solo si hay datos reales
+            if (clientes.length > 0) guardarLocal("crm_clientes", clientes);
+            if (contactos.length > 0) guardarLocal("crm_contactos", contactos);
+            if (tickets.length > 0) guardarLocal("crm_tickets", tickets);
             // Solo actualizar caché local de versiones/cartas si Firebase tiene datos reales
             if (Object.values(versionesMercado).some((v: any) => v)) guardarLocal("crm_versiones", versionesMercado);
             if (Object.values(cartasTecnicas).some((v: any) => v)) guardarLocal("crm_cartas", cartasTecnicas);
@@ -7290,61 +7323,71 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     toast("🗑️ Evento eliminado");
   });
 
-  // Buscar empresa para agregar al evento
-  const evBuscarInput = document.getElementById("ev-buscar-empresa");
-  const evAutoList = document.getElementById("ev-empresas-autocomplete");
+  // Buscar empresa para agregar al evento — usa event delegation para ser
+  // robusto ante re-renders del panel sin perder los listeners.
   function mostrarEmpresasAutoComplete() {
-    const val = evBuscarInput.value.toLowerCase().trim();
+    const input = document.getElementById("ev-buscar-empresa") as HTMLInputElement;
+    const list  = document.getElementById("ev-empresas-autocomplete");
+    if (!input || !list) return;
+    const val = input.value.toLowerCase().trim();
     const ev = getEventoActivo(); if (!ev) return;
-    const yaAgregadas = new Set((ev.empresas || []).map(e => e.nombre));
-    const matches = clientes.filter(c => {
+    const yaAgregadas = new Set((ev.empresas || []).map((e: any) => e.nombre));
+    const matches = clientes.filter((c: any) => {
       const nombre = (c.EMPRESA || "");
       return (!val || nombre.toLowerCase().includes(val)) && !yaAgregadas.has(nombre);
     }).slice(0, 15);
-    if (!matches.length) { evAutoList.classList.add("hidden"); return; }
-    evAutoList.innerHTML = matches.map(c => `<div class="autocomplete-item" data-nombre="${c.EMPRESA}">${c.EMPRESA}</div>`).join("");
-    evAutoList.classList.remove("hidden");
-    evAutoList.querySelectorAll(".autocomplete-item").forEach(item => {
+    if (!matches.length) { list.classList.add("hidden"); return; }
+    list.innerHTML = matches.map((c: any) => `<div class="autocomplete-item" data-nombre="${c.EMPRESA}">${c.EMPRESA}</div>`).join("");
+    list.classList.remove("hidden");
+    list.querySelectorAll(".autocomplete-item").forEach(item => {
       item.addEventListener("click", () => {
         const ev2 = getEventoActivo(); if (!ev2) return;
         if (!ev2.empresas) ev2.empresas = [];
-        ev2.empresas.push({ nombre: item.dataset.nombre, sistema: "", invitado: false, respuesta: "PENDIENTE", notas: "" });
+        const nombre = (item as HTMLElement).dataset.nombre || "";
+        ev2.empresas.push({ nombre, sistema: "", invitadoPor: "", invitadoPorManual: "", invitado: false, respuesta: "PENDIENTE", notas: "" });
         guardarEventos();
         mostrarPanelEvento(ev2);
-        evBuscarInput.value = "";
-        evAutoList.classList.add("hidden");
+        input.value = "";
+        list.classList.add("hidden");
       });
     });
   }
-  evBuscarInput?.addEventListener("input", mostrarEmpresasAutoComplete);
-  evBuscarInput?.addEventListener("focus", mostrarEmpresasAutoComplete);
-  const btnAgregarEmpresaEvento = document.getElementById("btnAgregarEmpresaEvento");
-  btnAgregarEmpresaEvento?.addEventListener("click", () => {
-    const val = evBuscarInput.value.trim();
+
+  // Event delegation: escucha input y focus en el documento, filtra por id
+  document.addEventListener("input", (e: Event) => {
+    if ((e.target as HTMLElement)?.id === "ev-buscar-empresa") mostrarEmpresasAutoComplete();
+  });
+  document.addEventListener("focusin", (e: Event) => {
+    if ((e.target as HTMLElement)?.id === "ev-buscar-empresa") mostrarEmpresasAutoComplete();
+  });
+  document.addEventListener("click", (e: Event) => {
+    const target = e.target as HTMLElement;
+    const list   = document.getElementById("ev-empresas-autocomplete");
+    const input  = document.getElementById("ev-buscar-empresa");
+    const btn    = document.getElementById("btnAgregarEmpresaEvento");
+    if (!list) return;
+    if (list.contains(target) || target === input || target === btn) return;
+    list.classList.add("hidden");
+  });
+
+  document.getElementById("btnAgregarEmpresaEvento")?.addEventListener("click", () => {
+    const input = document.getElementById("ev-buscar-empresa") as HTMLInputElement;
+    const list  = document.getElementById("ev-empresas-autocomplete");
+    const val   = input?.value.trim() || "";
     if (!val) {
-      // Mostrar lista completa y enfocar el input
       mostrarEmpresasAutoComplete();
-      evBuscarInput.focus();
+      input?.focus();
       return;
     }
     const ev2 = getEventoActivo(); if (!ev2) return;
     if (!ev2.empresas) ev2.empresas = [];
-    const yaExiste = ev2.empresas.some(e => e.nombre.toLowerCase() === val.toLowerCase());
+    const yaExiste = ev2.empresas.some((e: any) => e.nombre.toLowerCase() === val.toLowerCase());
     if (yaExiste) { toast("⚠️ La empresa ya está en el evento"); return; }
-    ev2.empresas.push({ nombre: val.toUpperCase(), sistema: "", invitado: false, respuesta: "PENDIENTE", notas: "" });
+    ev2.empresas.push({ nombre: val.toUpperCase(), sistema: "", invitadoPor: "", invitadoPorManual: "", invitado: false, respuesta: "PENDIENTE", notas: "" });
     guardarEventos();
     mostrarPanelEvento(ev2);
-    evBuscarInput.value = "";
-    evAutoList.classList.add("hidden");
-  });
-  document.addEventListener("click", e => {
-    // No cerrar si el click fue en el input, en el autocomplete o en el botón agregar
-    if (
-      evAutoList?.contains(e.target) ||
-      e.target === evBuscarInput ||
-      e.target === btnAgregarEmpresaEvento
-    ) return;
-    evAutoList?.classList.add("hidden");
+    if (input) input.value = "";
+    list?.classList.add("hidden");
   });
 
   // Agregar invitado externo
