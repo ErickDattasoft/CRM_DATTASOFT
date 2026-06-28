@@ -306,6 +306,20 @@ export function suscribirKB(callback) {
 }
 
 /**
+ * Guarda el logotipo de empresa (base64 comprimido) en Firestore.
+ */
+export async function guardarLogo(logoBase64) {
+  try {
+    const docRef = doc(db, "agenda", "datos");
+    await setDoc(docRef, { logoEmpresa: logoBase64 }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error al guardar logo:", error);
+    return false;
+  }
+}
+
+/**
  * Elimina un ticket del área pública (tras ser importado al CRM o rechazado).
  */
 export async function eliminarTicketPublico(fbId) {

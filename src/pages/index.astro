@@ -1761,7 +1761,7 @@ try {
   }
 
   /* ===== SOPORTE: historial de búsqueda ===== */
-  .kb-search-outer { position: relative; flex: 1; min-width: 240px; display: flex; flex-direction: column; }
+  .kb-search-outer { position: relative; flex: 1; min-width: 240px; }
   .kb-search-history {
     position: absolute; top: calc(100% + 3px); left: 0; right: 0; z-index: 600;
     background: var(--bg-card); border: 1px solid var(--border-color);
@@ -2741,7 +2741,7 @@ try {
           </div>
           <button id="kb-sort-az" class="btn btn-ghost btn-sm kb-toggle-btn active" title="Orden A → Z">A→Z</button>
           <button id="kb-sort-za" class="btn btn-ghost btn-sm kb-toggle-btn" title="Orden Z → A">Z→A</button>
-          <button id="kb-btn-split" class="btn btn-ghost btn-sm kb-toggle-btn" title="Dividir vista: abrir dos documentos al mismo tiempo">⬜ Split</button>
+          <button id="kb-btn-split" class="btn btn-ghost btn-sm kb-toggle-btn" title="Dividir vista: abrir dos documentos al mismo tiempo" style="letter-spacing:0;">▐▌ Split</button>
           <div style="position:relative;" id="kb-upload-wrap">
             <button id="kb-upload-btn" class="btn btn-ghost btn-sm" style="display:flex; align-items:center; gap:5px;">
               ⬆ Cargar <span style="font-size:0.65rem; opacity:0.6;">▼</span>
@@ -3276,7 +3276,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, suscribirKB, crearDocKB, actualizarDocKB, eliminarDocKB, guardarKBAcceso } from "../data/firebase.js";
+import { firebaseEnabled, authListo, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, suscribirKB, crearDocKB, actualizarDocKB, eliminarDocKB, guardarKBAcceso, guardarLogo } from "../data/firebase.js";
 
 // ── Multi-user Auth ───────────────────────────────────────────
 async function sha256(str: string): Promise<string> {
@@ -3862,6 +3862,14 @@ verificarSesion();
     if (datos.papelera) papelera = datos.papelera;
     if (datos.acercaDe) acercaDe = datos.acercaDe;
     if (datos.configCorreo) configCorreo = datos.configCorreo;
+    if (datos.logoEmpresa !== undefined) {
+      if (datos.logoEmpresa) {
+        localStorage.setItem("crm_logo", datos.logoEmpresa);
+      } else {
+        localStorage.removeItem("crm_logo");
+      }
+      logoCargar();
+    }
     document.dispatchEvent(new CustomEvent("crm:datosFirebase", { detail: datos }));
   }
 
@@ -7639,7 +7647,11 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   function kbRenderHistorial() {
     const el = document.getElementById("kb-search-history");
     if (!el) return;
-    if (!kbHistorial.length) { el.classList.remove("open"); return; }
+    if (!kbHistorial.length) {
+      el.innerHTML = `<div class="kb-hist-item" style="color:var(--text-light); cursor:default; justify-content:center; font-style:italic;">Sin búsquedas recientes — escribe y presiona Enter para guardar</div>`;
+      el.classList.add("open");
+      return;
+    }
     el.innerHTML = kbHistorial.map((h, i) =>
       `<div class="kb-hist-item" data-q="${kbEsc(h)}">
         <span style="color:var(--text-muted); font-size:0.85rem;">🕐</span>
@@ -8080,7 +8092,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const kbHistEl = document.getElementById("kb-search-history");
     kbSearchInput?.addEventListener("input", kbRenderList);
     kbSearchInput?.addEventListener("focus", () => {
-      if (!kbSearchInput.value.trim() && kbHistorial.length) kbRenderHistorial();
+      if (!kbSearchInput.value.trim()) kbRenderHistorial();
     });
     kbSearchInput?.addEventListener("blur", () => {
       setTimeout(() => kbHistEl?.classList.remove("open"), 220);
@@ -8720,22 +8732,54 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   // ── LOGO EMPRESA ─────────────────────────────────────────────────────
   logoCargar();
 
-  document.getElementById("logo-file-input")?.addEventListener("change", (e) => {
+  async function comprimirLogo(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const MAX = 128;
+        let w = img.naturalWidth, h = img.naturalHeight;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL("image/png", 0.9));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Error al leer imagen")); };
+      img.src = url;
+    });
+  }
+
+  document.getElementById("logo-file-input")?.addEventListener("change", async (e) => {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const base64 = ev.target?.result as string;
+    try {
+      const base64 = await comprimirLogo(file);
       localStorage.setItem("crm_logo", base64);
       logoCargar();
-      toast("✅ Logo guardado");
-    };
-    reader.readAsDataURL(file);
+      if (firebaseEnabled) {
+        toast("⏳ Guardando logo...", "info");
+        const ok = await guardarLogo(base64);
+        toast(ok ? "✅ Logo guardado y sincronizado" : "⚠️ Logo guardado solo localmente", ok ? "success" : "warning");
+      } else {
+        toast("✅ Logo guardado");
+      }
+    } catch {
+      toast("❌ Error al cargar la imagen", "error");
+    }
+    (e.target as HTMLInputElement).value = "";
   });
 
-  document.getElementById("logo-remove-btn")?.addEventListener("click", () => {
+  document.getElementById("logo-remove-btn")?.addEventListener("click", async () => {
     localStorage.removeItem("crm_logo");
     logoCargar();
+    if (firebaseEnabled) {
+      await guardarLogo("");
+    }
     toast("Logo eliminado");
   });
 
