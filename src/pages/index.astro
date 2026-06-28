@@ -1756,7 +1756,41 @@ try {
     #kb-resizer { display: none; }
     .kb-list { max-height: 260px; overflow-y: auto; }
     .kb-viewer { min-height: 360px; }
+    #kb-panels-wrap { flex-direction: column !important; }
+    #kb-panel-2 { border-left: none !important; border-top: 1px solid var(--border-color); }
   }
+
+  /* ===== SOPORTE: historial de búsqueda ===== */
+  .kb-search-outer { position: relative; flex: 1; min-width: 240px; display: flex; flex-direction: column; }
+  .kb-search-history {
+    position: absolute; top: calc(100% + 3px); left: 0; right: 0; z-index: 600;
+    background: var(--bg-card); border: 1px solid var(--border-color);
+    border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
+    display: none; max-height: 220px; overflow-y: auto;
+  }
+  .kb-search-history.open { display: block; }
+  .kb-hist-item {
+    display: flex; align-items: center; gap: 8px; padding: 7px 12px;
+    cursor: pointer; font-size: 0.8rem; color: var(--text-main); transition: background 0.12s;
+  }
+  .kb-hist-item:hover { background: rgba(99,102,241,0.08); }
+  .kb-hist-del { margin-left: auto; opacity: 0; font-size: 0.72rem; color: var(--text-light); flex-shrink: 0; }
+  .kb-hist-item:hover .kb-hist-del { opacity: 1; }
+  .kb-hist-footer { padding: 6px 12px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; }
+  .kb-hist-clear-all { font-size: 0.72rem; color: var(--text-light); cursor: pointer; }
+  .kb-hist-clear-all:hover { color: #f87171; }
+  /* ===== SOPORTE: nube de etiquetas ===== */
+  #kb-tag-cloud { display: none; flex-wrap: wrap; gap: 5px; padding: 0 0 10px; align-items: center; }
+  .kb-tag-cloud-label { font-size: 0.68rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+  /* ===== SOPORTE: paneles split view ===== */
+  #kb-panels-wrap { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+  #kb-panels-wrap.kb-split-mode { flex-direction: row; }
+  .kb-panel { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  #kb-panel-2 { border-left: 1px solid var(--border-color); }
+  /* ===== Logo empresa ===== */
+  #sidebar-logo-img { width: 36px; height: 36px; object-fit: contain; border-radius: var(--radius-md); flex-shrink: 0; display: none; }
+  #cfg-logo-preview { width: 72px; height: 72px; border: 1px dashed var(--border-color); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 2rem; background: var(--bg-input); overflow: hidden; flex-shrink: 0; }
+  #cfg-logo-preview img { width: 100%; height: 100%; object-fit: contain; display: none; }
   </style>
 </head>
 <body>
@@ -1793,7 +1827,8 @@ try {
   <!-- ===== SIDEBAR ===== -->
   <aside class="sidebar" id="main-sidebar">
     <div class="sidebar-brand">
-      <div class="sidebar-brand-logo">📊</div>
+      <div class="sidebar-brand-logo" id="sidebar-brand-logo-el">📊</div>
+      <img id="sidebar-logo-img" alt="Logo empresa">
       <div>
         <div class="sidebar-brand-text" style="font-size:0.85rem; line-height:1.2;">DATTASOFT<br><span style="font-size:0.68rem; font-weight:600; opacity:0.85;">BY INFOXPERT</span></div>
         <div class="sidebar-brand-sub">CRM Técnico</div>
@@ -1826,10 +1861,10 @@ try {
         <span class="nav-icon">📅</span>
         <span class="nav-label">Eventos</span>
       </div>
-      <div class="sidebar-section-label" id="kb-nav-label" style="display:none;">Mi Espacio</div>
-      <div class="nav-item" data-section="knowledge" data-tooltip="Base de Conocimiento" id="nav-kb" style="display:none;">
+      <div class="sidebar-section-label" id="kb-nav-label" style="display:none;">Conocimiento</div>
+      <div class="nav-item" data-section="knowledge" data-tooltip="SOPORTE" id="nav-kb" style="display:none;">
         <span class="nav-icon">📚</span>
-        <span class="nav-label">Base de Conocimiento</span>
+        <span class="nav-label">SOPORTE</span>
       </div>
       <div class="sidebar-section-label">Sistema</div>
       <div class="nav-item" data-section="versiones" data-tooltip="Versiones CONTPAQi">
@@ -2357,6 +2392,23 @@ try {
       <!-- SECTION: CONFIGURACIÓN         -->
       <!-- ============================== -->
       <div class="section" id="section-configuracion">
+        <!-- Card: Logo empresa -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title">🏷️ Logotipo de Empresa</div>
+          <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+            <div id="cfg-logo-preview">
+              <span id="cfg-logo-preview-emoji" style="font-size:2rem;">📊</span>
+              <img id="cfg-logo-preview-img" alt="Logo">
+            </div>
+            <div style="flex:1; min-width:200px;">
+              <label for="logo-file-input" class="btn btn-ghost btn-sm" style="cursor:pointer; display:inline-flex; align-items:center; gap:6px; margin-right:6px;">📁 Cargar imagen</label>
+              <button id="logo-remove-btn" class="btn btn-ghost btn-sm" style="color:#f87171;">🗑 Quitar</button>
+              <input id="logo-file-input" type="file" accept="image/*" style="display:none;">
+              <div style="font-size:0.72rem; color:var(--text-light); margin-top:8px;">Se mostrará en el sidebar. PNG, SVG o JPG. Reemplaza el ícono 📊.</div>
+            </div>
+          </div>
+        </div>
+
         <div class="card">
           <div class="card-title">📧 Correo de Soporte</div>
           <div class="form-group" style="max-width:400px; margin-bottom:16px;">
@@ -2679,13 +2731,17 @@ try {
 
         <!-- Toolbar: búsqueda + botones -->
         <div class="kb-toolbar">
-          <div class="kb-search-wrap">
-            <span class="kb-search-icon">🔍</span>
-            <input id="kb-search-input" type="text" placeholder="Buscar por título o contenido..." autocomplete="off" spellcheck="false">
-            <button id="kb-exact-btn" class="kb-toggle-btn" title="Buscar frase exacta (sin separar palabras)">Frase exacta</button>
+          <div class="kb-search-outer">
+            <div class="kb-search-wrap">
+              <span class="kb-search-icon">🔍</span>
+              <input id="kb-search-input" type="text" placeholder="Buscar por título o contenido..." autocomplete="off" spellcheck="false">
+              <button id="kb-exact-btn" class="kb-toggle-btn" title="Buscar frase exacta (sin separar palabras)">Frase exacta</button>
+            </div>
+            <div class="kb-search-history" id="kb-search-history"></div>
           </div>
           <button id="kb-sort-az" class="btn btn-ghost btn-sm kb-toggle-btn active" title="Orden A → Z">A→Z</button>
           <button id="kb-sort-za" class="btn btn-ghost btn-sm kb-toggle-btn" title="Orden Z → A">Z→A</button>
+          <button id="kb-btn-split" class="btn btn-ghost btn-sm kb-toggle-btn" title="Dividir vista: abrir dos documentos al mismo tiempo">⬜ Split</button>
           <div style="position:relative;" id="kb-upload-wrap">
             <button id="kb-upload-btn" class="btn btn-ghost btn-sm" style="display:flex; align-items:center; gap:5px;">
               ⬆ Cargar <span style="font-size:0.65rem; opacity:0.6;">▼</span>
@@ -2752,6 +2808,8 @@ try {
           <button class="kb-tab" data-kb-cat="solucion">🛠 Soluciones <span class="kb-cnt" id="kb-cnt-solucion">0</span></button>
           <button class="kb-tab" data-kb-cat="script">⚡ Scripts <span class="kb-cnt" id="kb-cnt-script">0</span></button>
         </div>
+        <!-- Nube de etiquetas filtrable -->
+        <div id="kb-tag-cloud"></div>
 
         <!-- Vista dividida: lista + visor -->
         <div class="kb-split" id="kb-split" style="position:relative;">
@@ -2767,25 +2825,53 @@ try {
 
           <!-- Visor de documentos -->
           <div class="kb-viewer">
-            <div class="kb-viewer-empty" id="kb-viewer-empty">
-              <div class="kb-ve-icon">📚</div>
-              <div class="kb-ve-title">Base de Conocimiento</div>
-              <div class="kb-ve-sub">Selecciona un documento o crea uno nuevo</div>
-            </div>
-            <div id="kb-doc-view" style="display:none; flex-direction:column; height:100%;">
-              <div class="kb-doc-header">
-                <div class="kb-doc-title-wrap">
-                  <div class="kb-doc-h" id="kb-view-title"></div>
-                  <div class="kb-doc-submeta" id="kb-view-meta"></div>
+            <div id="kb-panels-wrap">
+              <!-- Panel 1 (principal) -->
+              <div id="kb-panel-1" class="kb-panel">
+                <div class="kb-viewer-empty" id="kb-viewer-empty">
+                  <div class="kb-ve-icon">📚</div>
+                  <div class="kb-ve-title">SOPORTE</div>
+                  <div class="kb-ve-sub">Selecciona un documento o crea uno nuevo</div>
                 </div>
-                <div class="kb-doc-actions">
-                  <button id="kb-btn-copy" class="btn btn-ghost btn-sm" title="Copiar contenido al portapapeles">📋 Copiar</button>
-                  <button id="kb-btn-download" class="btn btn-ghost btn-sm" title="Descargar como archivo">⬇ Descargar</button>
-                  <button id="kb-btn-edit" class="btn btn-ghost btn-sm">✏️ Editar</button>
-                  <button id="kb-btn-del" class="btn btn-sm" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); color:#f87171;" title="Eliminar documento">🗑️</button>
+                <div id="kb-doc-view" style="display:none; flex-direction:column; height:100%;">
+                  <div class="kb-doc-header">
+                    <div class="kb-doc-title-wrap">
+                      <div class="kb-doc-h" id="kb-view-title"></div>
+                      <div class="kb-doc-submeta" id="kb-view-meta"></div>
+                    </div>
+                    <div class="kb-doc-actions">
+                      <button id="kb-btn-copy" class="btn btn-ghost btn-sm" title="Copiar contenido al portapapeles">📋 Copiar</button>
+                      <button id="kb-btn-download" class="btn btn-ghost btn-sm" title="Descargar como archivo">⬇ Descargar</button>
+                      <button id="kb-btn-edit" class="btn btn-ghost btn-sm">✏️ Editar</button>
+                      <button id="kb-btn-del" class="btn btn-sm" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); color:#f87171;" title="Eliminar documento">🗑️</button>
+                    </div>
+                  </div>
+                  <div class="kb-content-wrap" id="kb-content-wrap"></div>
                 </div>
               </div>
-              <div class="kb-content-wrap" id="kb-content-wrap"></div>
+              <!-- Panel 2 (split view, oculto por defecto) -->
+              <div id="kb-panel-2" class="kb-panel" style="display:none;">
+                <div class="kb-viewer-empty" id="kb-viewer-empty-2">
+                  <div class="kb-ve-icon" style="font-size:2.5rem;">📄</div>
+                  <div class="kb-ve-title" style="font-size:0.88rem;">Panel derecho</div>
+                  <div class="kb-ve-sub">Selecciona un documento para abrirlo aquí</div>
+                </div>
+                <div id="kb-doc-view-2" style="display:none; flex-direction:column; height:100%;">
+                  <div class="kb-doc-header" style="background:rgba(99,102,241,0.03);">
+                    <div class="kb-doc-title-wrap">
+                      <div class="kb-doc-h" id="kb-view-title-2"></div>
+                      <div class="kb-doc-submeta" id="kb-view-meta-2"></div>
+                    </div>
+                    <div class="kb-doc-actions">
+                      <button id="kb-btn-copy-2" class="btn btn-ghost btn-sm" title="Copiar contenido">📋</button>
+                      <button id="kb-btn-download-2" class="btn btn-ghost btn-sm" title="Descargar">⬇</button>
+                      <button id="kb-btn-edit-2" class="btn btn-ghost btn-sm" title="Editar">✏️</button>
+                      <button id="kb-btn-close-2" class="btn btn-ghost btn-sm" title="Cerrar panel derecho" style="color:var(--text-muted);">✕</button>
+                    </div>
+                  </div>
+                  <div class="kb-content-wrap" id="kb-content-wrap-2"></div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -3538,7 +3624,7 @@ verificarSesion();
     configuracion: { title: "Configuración", sub: "Ajustes del sistema de tickets y campos" },
     bitacora: { title: "Bitácora de Acciones", sub: "Registro de actividades del CRM" },
     eventos: { title: "Eventos", sub: "Gestión de eventos, invitados y asistencia" },
-    knowledge: { title: "Base de Conocimiento", sub: "Búsqueda de soluciones, datos de empresas y scripts de soporte" }
+    knowledge: { title: "SOPORTE", sub: "Búsqueda de soluciones, datos de empresas y scripts de soporte" }
   };
 
   function navegarA(sectionId, filtroEstado = "") {
@@ -7463,6 +7549,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
   let kbDocs: KBDoc[] = [];
   let kbSelId: string | null = null;
+  let kbSelId2: string | null = null;
   let kbCat = "all";
   let kbExact = false;
   let kbSort: "asc" | "desc" = "asc";
@@ -7470,6 +7557,11 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   let kbEditId: string | null = null;
   let kbUnsubscribe: (() => void) | null = null;
   let kbInited = false;
+  let kbSplitMode = false;
+  let kbActivePanel = 1;
+  let kbHistorial: string[] = (() => {
+    try { return JSON.parse(localStorage.getItem("crm_kb_historial") || "[]"); } catch { return []; }
+  })();
   let kbAcceso: string[] = (() => {
     try { return JSON.parse(localStorage.getItem("crm_kb_acceso") || '["ERICK"]'); } catch { return ["ERICK"]; }
   })();
@@ -7513,6 +7605,81 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     if (n.includes("empresa") || n.includes("client")) return "empresa";
     if (n.includes("script") || n.includes(".ps1") || n.includes(".bat") || n.includes("sql") || n.includes("quer")) return "script";
     return "solucion";
+  }
+
+  function kbTagIcon(tag: string): string {
+    const t = (tag || "").toLowerCase();
+    if (t.includes("error") || t.includes("falla") || t.includes("problema")) return "🔴";
+    if (t.includes("sql") || t.includes("base de dato") || t.includes(" bd")) return "🗄️";
+    if (t.includes("windows") || t.includes("win-") || t.startsWith("win")) return "🪟";
+    if (t.includes("red") || t.includes("network") || t.includes("internet") || t.includes("wifi")) return "🌐";
+    if (t.includes("contab")) return "📊";
+    if (t.includes("nomin") || t.includes("nómin")) return "💰";
+    if (t.includes("banco")) return "🏦";
+    if (t.includes("factura") || t.includes("cfdi") || t.includes("xml")) return "🧾";
+    if (t.includes("script") || t.includes("ps1") || t.includes("bat") || t.includes("auto")) return "⚡";
+    if (t.includes("backup") || t.includes("respaldo")) return "💾";
+    if (t.includes("instal")) return "📦";
+    if (t.includes("licencia") || t.includes("clave")) return "🔑";
+    if (t.includes("correo") || t.includes("email") || t.includes("mail")) return "📧";
+    if (t.includes("actuali") || t.includes("update") || t.includes("version")) return "🔄";
+    if (t.includes("impuest") || t.includes("sat") || t.includes("fiscal")) return "🏛️";
+    if (t.includes("servidor") || t.includes("server")) return "🖥️";
+    if (t.includes("usuario") || t.includes("acceso") || t.includes("pass")) return "👤";
+    return "🏷️";
+  }
+
+  function kbSaveSearch(q: string) {
+    q = q.trim();
+    if (!q || q.length < 2) return;
+    kbHistorial = [q, ...kbHistorial.filter(h => h !== q)].slice(0, 10);
+    localStorage.setItem("crm_kb_historial", JSON.stringify(kbHistorial));
+  }
+
+  function kbRenderHistorial() {
+    const el = document.getElementById("kb-search-history");
+    if (!el) return;
+    if (!kbHistorial.length) { el.classList.remove("open"); return; }
+    el.innerHTML = kbHistorial.map((h, i) =>
+      `<div class="kb-hist-item" data-q="${kbEsc(h)}">
+        <span style="color:var(--text-muted); font-size:0.85rem;">🕐</span>
+        <span style="flex:1;">${kbEsc(h)}</span>
+        <span class="kb-hist-del" data-idx="${i}" title="Eliminar">✕</span>
+      </div>`
+    ).join("") + `<div class="kb-hist-footer"><span class="kb-hist-clear-all">🗑 Limpiar historial</span></div>`;
+    el.classList.add("open");
+  }
+
+  function kbUpdateTagCloud() {
+    const el = document.getElementById("kb-tag-cloud");
+    if (!el) return;
+    const docs = kbCat === "all" ? kbDocs : kbDocs.filter(d => d.category === kbCat);
+    const allTags = [...new Set(docs.flatMap(d => d.tags || []).filter(Boolean))]
+      .sort((a, b) => kbNorm(a).localeCompare(kbNorm(b)));
+    if (!allTags.length) { el.style.display = "none"; return; }
+    el.style.display = "flex";
+    el.innerHTML = `<span class="kb-tag-cloud-label">🏷 Tags:</span>` + allTags.map(t =>
+      `<span class="kb-tag-chip ${kbTagFilter && kbNorm(t) === kbNorm(kbTagFilter) ? "kb-tag-active" : ""}" data-tag="${kbEsc(t)}" style="cursor:pointer;">${kbTagIcon(t)} ${kbEsc(t)}</span>`
+    ).join("");
+  }
+
+  function logoCargar() {
+    const saved = localStorage.getItem("crm_logo");
+    const brandLogoEl = document.getElementById("sidebar-brand-logo-el") as HTMLElement | null;
+    const logoImg = document.getElementById("sidebar-logo-img") as HTMLImageElement | null;
+    const previewImg = document.getElementById("cfg-logo-preview-img") as HTMLImageElement | null;
+    const previewEmoji = document.getElementById("cfg-logo-preview-emoji") as HTMLElement | null;
+    if (saved) {
+      if (brandLogoEl) brandLogoEl.style.display = "none";
+      if (logoImg) { logoImg.src = saved; logoImg.style.display = "block"; }
+      if (previewImg) { previewImg.src = saved; previewImg.style.display = "block"; }
+      if (previewEmoji) previewEmoji.style.display = "none";
+    } else {
+      if (brandLogoEl) brandLogoEl.style.display = "";
+      if (logoImg) { logoImg.src = ""; logoImg.style.display = "none"; }
+      if (previewImg) { previewImg.src = ""; previewImg.style.display = "none"; }
+      if (previewEmoji) previewEmoji.style.display = "";
+    }
   }
 
   function kbFiltrar(): KBDoc[] {
@@ -7585,9 +7752,9 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     list.innerHTML = docs.map(d => {
       const ft = kbFmtType(d.file_type), fc = kbFmtCat(d.category);
       const titleHtml = q ? kbHighlight(d.title, q) : kbEsc(d.title);
-      const tags = (d.tags || []).slice(0, 3);
+      const tags = (d.tags || []).slice(0, 4);
       const tagsHtml = tags.map(t =>
-        `<span class="kb-tag-chip ${kbTagFilter && kbNorm(t) === kbNorm(kbTagFilter) ? "kb-tag-active" : ""}" data-tag="${kbEsc(t)}">#${kbEsc(t)}</span>`
+        `<span class="kb-tag-chip ${kbTagFilter && kbNorm(t) === kbNorm(kbTagFilter) ? "kb-tag-active" : ""}" data-tag="${kbEsc(t)}">${kbTagIcon(t)} ${kbEsc(t)}</span>`
       ).join("");
       return `<div class="kb-doc-item ${kbSelId === d._id ? "kb-sel" : ""}" data-kid="${d._id}">
         <div class="kb-item-title">${titleHtml}</div>
@@ -7599,6 +7766,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         ${tagsHtml ? `<div class="kb-tags-row" style="margin-top:5px;">${tagsHtml}</div>` : ""}
       </div>`;
     }).join("");
+    kbUpdateTagCloud();
   }
 
   function kbRelacionados(doc: KBDoc): KBDoc[] {
@@ -7612,41 +7780,38 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       .map(x => x.doc);
   }
 
-  function kbAbrirDoc(id: string) {
-    kbSelId = id;
-    // Actualizar highlight sin re-renderizar toda la lista
-    document.querySelectorAll<HTMLElement>(".kb-doc-item").forEach(el => {
-      el.classList.toggle("kb-sel", el.dataset.kid === id);
-    });
+  function kbRenderDocInPanel(id: string, panelNum: number) {
+    const p2 = panelNum === 2;
+    const emptyId   = p2 ? "kb-viewer-empty-2"  : "kb-viewer-empty";
+    const viewId    = p2 ? "kb-doc-view-2"       : "kb-doc-view";
+    const titleId   = p2 ? "kb-view-title-2"     : "kb-view-title";
+    const metaId    = p2 ? "kb-view-meta-2"      : "kb-view-meta";
+    const contentId = p2 ? "kb-content-wrap-2"   : "kb-content-wrap";
+
     const doc = kbDocs.find(d => d._id === id);
     if (!doc) return;
-    const emptyEl = document.getElementById("kb-viewer-empty");
-    const viewEl  = document.getElementById("kb-doc-view");
+    const emptyEl = document.getElementById(emptyId);
+    const viewEl  = document.getElementById(viewId);
     if (emptyEl) emptyEl.style.display = "none";
     if (viewEl)  viewEl.style.display = "flex";
 
-    (document.getElementById("kb-view-title") as HTMLElement).textContent = doc.title;
+    (document.getElementById(titleId) as HTMLElement).textContent = doc.title;
     const fc = kbFmtCat(doc.category), ft = kbFmtType(doc.file_type);
     const tagsHtml = (doc.tags || []).map(t =>
-      `<span class="kb-tag-chip" data-tag="${kbEsc(t)}">#${kbEsc(t)}</span>`
+      `<span class="kb-tag-chip" data-tag="${kbEsc(t)}">${kbTagIcon(t)} ${kbEsc(t)}</span>`
     ).join("");
-    (document.getElementById("kb-view-meta") as HTMLElement).innerHTML =
+    (document.getElementById(metaId) as HTMLElement).innerHTML =
       `<span class="kb-badge ${ft.cls}">${ft.ext}</span>
        <span class="kb-badge ${fc.cls}">${fc.label}</span>
        ${doc.updated_at ? `<span>· ${kbFmtDate(doc.updated_at)}</span>` : ""}
        ${tagsHtml ? `<span style="display:flex;gap:4px;flex-wrap:wrap;">${tagsHtml}</span>` : ""}`;
 
-    // Tags en meta son clicables para filtrar
-    document.getElementById("kb-view-meta")?.querySelectorAll<HTMLElement>(".kb-tag-chip").forEach(chip => {
-      chip.addEventListener("click", () => {
-        kbTagFilter = chip.dataset.tag!;
-        kbRenderList();
-      });
+    document.getElementById(metaId)?.querySelectorAll<HTMLElement>(".kb-tag-chip").forEach(chip => {
+      chip.addEventListener("click", () => { kbTagFilter = chip.dataset.tag!; kbRenderList(); });
     });
 
-    const wrap = document.getElementById("kb-content-wrap");
+    const wrap = document.getElementById(contentId);
     if (wrap) {
-      const isScript = doc.file_type === "ps1" || doc.file_type === "bat" || doc.file_type === "sql";
       const qVisor = ((document.getElementById("kb-search-input") as HTMLInputElement)?.value || "").trim();
       const ps1Note = doc.file_type === "ps1"
         ? `<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;margin-bottom:8px;background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.2);border-radius:var(--radius-sm);font-size:0.75rem;color:#fbbf24;">
@@ -7666,18 +7831,32 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           <div class="kb-rel-list">${rel.map(r => {
             const rf = kbFmtType(r.file_type), rc = kbFmtCat(r.category);
             const sharedTags = (r.tags || []).filter(t => (doc.tags || []).map(x => kbNorm(x)).includes(kbNorm(t)));
-            return `<div class="kb-rel-item" data-kid="${r._id}">
+            return `<div class="kb-rel-item" data-kid="${r._id}" data-panel="${panelNum}">
               <span class="kb-badge ${rf.cls}">${rf.ext}</span>
               <span class="kb-rel-item-title">${kbEsc(r.title)}</span>
-              <span class="kb-rel-shared">${sharedTags.slice(0,2).map(t => "#"+kbEsc(t)).join(" ")}</span>
+              <span class="kb-rel-shared">${sharedTags.slice(0,2).map(t => kbTagIcon(t)+" "+kbEsc(t)).join(" · ")}</span>
             </div>`;
           }).join("")}</div>
         </div>` : "";
 
       wrap.innerHTML = contentHtml + relHtml;
       wrap.querySelectorAll<HTMLElement>(".kb-rel-item").forEach(el => {
-        el.addEventListener("click", () => kbAbrirDoc(el.dataset.kid!));
+        el.addEventListener("click", () => kbAbrirDoc(el.dataset.kid!, parseInt(el.dataset.panel || "1")));
       });
+    }
+  }
+
+  function kbAbrirDoc(id: string, targetPanel?: number) {
+    const panel = targetPanel ?? (kbSplitMode ? kbActivePanel : 1);
+    if (panel === 2) {
+      kbSelId2 = id;
+      kbRenderDocInPanel(id, 2);
+    } else {
+      kbSelId = id;
+      document.querySelectorAll<HTMLElement>(".kb-doc-item").forEach(el => {
+        el.classList.toggle("kb-sel", el.dataset.kid === id);
+      });
+      kbRenderDocInPanel(id, 1);
     }
   }
 
@@ -7850,7 +8029,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     if (barEl)      barEl.style.width = "0%";
 
     const total = lista.length;
-    let done = 0, actualizados = 0, nuevos = 0, errores = 0;
+    let done = 0, actualizados = 0, nuevos = 0, sinCambios = 0, errores = 0;
 
     const updateProgress = () => {
       const pct = Math.round((done / total) * 100);
@@ -7858,7 +8037,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       if (counterEl) counterEl.textContent = `${done} / ${total}`;
       if (statusEl)  statusEl.textContent = done < total
         ? `Indexando... (${pct}%)`
-        : `✅ ${actualizados} actualizados · ${nuevos} nuevos${errores ? ` · ${errores} errores` : ""}`;
+        : `✅ ${actualizados} actualizados · ${nuevos} nuevos${sinCambios ? ` · ${sinCambios} sin cambios` : ""}${errores ? ` · ${errores} errores` : ""}`;
     };
 
     const BATCH = 8;
@@ -7870,8 +8049,12 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           const title   = f.name.replace(/\.(md|ps1|bat|sql|txt)$/i, "");
           const existing = kbDocs.find(d => kbNorm(d.title) === kbNorm(title));
           if (existing) {
-            await actualizarDocKB(existing._id, { content: text });
-            actualizados++;
+            if (existing.content === text) {
+              sinCambios++;
+            } else {
+              await actualizarDocKB(existing._id, { content: text });
+              actualizados++;
+            }
           } else {
             await crearDocKB({
               title,
@@ -7888,12 +8071,54 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       }));
     }
     setTimeout(() => { if (progressEl) progressEl.style.display = "none"; }, 4000);
-    toast(`🔄 Indexado: ${actualizados} actualizados · ${nuevos} nuevos`);
+    toast(`🔄 Indexado: ${actualizados} actualizados · ${nuevos} nuevos${sinCambios ? ` · ${sinCambios} sin cambios` : ""}`);
   }
 
   function kbSetupEvents() {
     // Búsqueda
-    document.getElementById("kb-search-input")?.addEventListener("input", kbRenderList);
+    const kbSearchInput = document.getElementById("kb-search-input") as HTMLInputElement | null;
+    const kbHistEl = document.getElementById("kb-search-history");
+    kbSearchInput?.addEventListener("input", kbRenderList);
+    kbSearchInput?.addEventListener("focus", () => {
+      if (!kbSearchInput.value.trim() && kbHistorial.length) kbRenderHistorial();
+    });
+    kbSearchInput?.addEventListener("blur", () => {
+      setTimeout(() => kbHistEl?.classList.remove("open"), 220);
+    });
+    kbSearchInput?.addEventListener("keydown", (e) => {
+      const key = (e as KeyboardEvent).key;
+      if (key === "Enter") {
+        const q = kbSearchInput.value.trim();
+        if (q.length >= 2) kbSaveSearch(q);
+        kbHistEl?.classList.remove("open");
+      }
+      if (key === "Escape") kbHistEl?.classList.remove("open");
+    });
+    kbHistEl?.addEventListener("click", (e) => {
+      const t = e.target as HTMLElement;
+      const item    = t.closest<HTMLElement>(".kb-hist-item");
+      const del     = t.closest<HTMLElement>(".kb-hist-del");
+      const clearAll = t.closest<HTMLElement>(".kb-hist-clear-all");
+      if (del) {
+        const idx = parseInt(del.dataset.idx || "0");
+        kbHistorial.splice(idx, 1);
+        localStorage.setItem("crm_kb_historial", JSON.stringify(kbHistorial));
+        kbRenderHistorial();
+        return;
+      }
+      if (clearAll) {
+        kbHistorial = [];
+        localStorage.setItem("crm_kb_historial", JSON.stringify(kbHistorial));
+        kbHistEl.classList.remove("open");
+        return;
+      }
+      if (item && !del) {
+        const q = item.dataset.q || "";
+        if (kbSearchInput) kbSearchInput.value = q;
+        kbRenderList();
+        kbHistEl.classList.remove("open");
+      }
+    });
 
     // Toggle frase exacta
     document.getElementById("kb-exact-btn")?.addEventListener("click", () => {
@@ -8013,6 +8238,60 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
     // Eliminar
     document.getElementById("kb-btn-del")?.addEventListener("click", () => { if (kbSelId) kbEliminar(kbSelId); });
+
+    // Split view toggle
+    document.getElementById("kb-btn-split")?.addEventListener("click", () => {
+      kbSplitMode = !kbSplitMode;
+      document.getElementById("kb-btn-split")?.classList.toggle("active", kbSplitMode);
+      const panelsWrap = document.getElementById("kb-panels-wrap");
+      const panel2 = document.getElementById("kb-panel-2");
+      if (kbSplitMode) {
+        panelsWrap?.classList.add("kb-split-mode");
+        if (panel2) panel2.style.display = "flex";
+        kbActivePanel = 1;
+      } else {
+        panelsWrap?.classList.remove("kb-split-mode");
+        if (panel2) panel2.style.display = "none";
+        kbSelId2 = null;
+        kbActivePanel = 1;
+      }
+    });
+    // Definir panel activo al hacer clic
+    document.getElementById("kb-panel-1")?.addEventListener("click", () => { kbActivePanel = 1; });
+    document.getElementById("kb-panel-2")?.addEventListener("click", () => { kbActivePanel = 2; });
+
+    // Panel 2: acciones
+    document.getElementById("kb-btn-copy-2")?.addEventListener("click", () => {
+      const doc = kbDocs.find(d => d._id === kbSelId2);
+      if (doc) navigator.clipboard.writeText(doc.content).then(() => toast("📋 Contenido copiado"));
+    });
+    document.getElementById("kb-btn-download-2")?.addEventListener("click", () => {
+      const doc = kbDocs.find(d => d._id === kbSelId2);
+      if (!doc) return;
+      const ext = doc.file_type === "md" ? "md" : doc.file_type === "ps1" ? "ps1" : doc.file_type === "sql" ? "sql" : "bat";
+      const blob = new Blob([doc.content], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = `${doc.title}.${ext}`; a.click();
+      URL.revokeObjectURL(url);
+    });
+    document.getElementById("kb-btn-edit-2")?.addEventListener("click", () => { if (kbSelId2) kbAbrirModal(kbSelId2); });
+    document.getElementById("kb-btn-close-2")?.addEventListener("click", () => {
+      kbSelId2 = null;
+      kbActivePanel = 1;
+      const emptyEl2 = document.getElementById("kb-viewer-empty-2");
+      const viewEl2  = document.getElementById("kb-doc-view-2");
+      if (emptyEl2) emptyEl2.style.display = "flex";
+      if (viewEl2)  viewEl2.style.display  = "none";
+    });
+
+    // Nube de etiquetas: filtrar al hacer clic
+    document.getElementById("kb-tag-cloud")?.addEventListener("click", (e) => {
+      const chip = (e.target as HTMLElement).closest<HTMLElement>(".kb-tag-chip");
+      if (chip) {
+        kbTagFilter = kbTagFilter === chip.dataset.tag ? null : chip.dataset.tag!;
+        kbRenderList();
+      }
+    });
 
     // Menú desplegable de carga
     const uploadBtn  = document.getElementById("kb-upload-btn");
@@ -8437,6 +8716,28 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
   // Inicializar KB si ya hay sesión activa con acceso
   initKB();
+
+  // ── LOGO EMPRESA ─────────────────────────────────────────────────────
+  logoCargar();
+
+  document.getElementById("logo-file-input")?.addEventListener("change", (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const base64 = ev.target?.result as string;
+      localStorage.setItem("crm_logo", base64);
+      logoCargar();
+      toast("✅ Logo guardado");
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById("logo-remove-btn")?.addEventListener("click", () => {
+    localStorage.removeItem("crm_logo");
+    logoCargar();
+    toast("Logo eliminado");
+  });
 
   // ── PUNTOS DE RESTAURACIÓN (GitHub API) ──────────────────────────────
   const GH_OWNER = "ErickDattasoft";
