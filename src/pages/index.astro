@@ -2968,8 +2968,9 @@ try {
                 </div>
               </div>
               <div class="form-group" style="margin:0;">
-                <label>Etiquetas <span style="font-size:0.7rem; color:var(--text-light); font-weight:400;">(separadas por coma — para relacionar documentos)</span></label>
+                <label>Etiquetas <span style="font-size:0.7rem; color:var(--text-light); font-weight:400;">(separadas por coma)</span></label>
                 <input id="kb-form-tags" type="text" placeholder="Ej: error-254, poliza, contabilidad, windows-10, sql-2019">
+                <div id="kb-form-tags-preview" style="display:none; flex-wrap:wrap; gap:5px; margin-top:6px;"></div>
               </div>
               <div class="form-group" style="margin:0; flex:1;">
                 <label>Contenido</label>
@@ -7986,6 +7987,15 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     }
   }
 
+  function kbRenderTagsPreview(raw: string) {
+    const preview = document.getElementById("kb-form-tags-preview");
+    if (!preview) return;
+    const tags = raw.split(",").map(t => t.trim()).filter(Boolean);
+    if (!tags.length) { preview.style.display = "none"; preview.innerHTML = ""; return; }
+    preview.style.display = "flex";
+    preview.innerHTML = tags.map(t => `<span class="kb-tag-chip">${kbTagIcon(t)} ${kbEsc(t)}</span>`).join("");
+  }
+
   function kbAbrirModal(editId?: string) {
     kbEditId = editId || null;
     const doc = editId ? kbDocs.find(d => d._id === editId) : null;
@@ -7995,6 +8005,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     (document.getElementById("kb-form-type") as HTMLSelectElement).value      = doc?.file_type || "md";
     (document.getElementById("kb-form-tags") as HTMLInputElement).value       = (doc?.tags || []).join(", ");
     (document.getElementById("kb-form-content") as HTMLTextAreaElement).value = doc?.content || "";
+    kbRenderTagsPreview((doc?.tags || []).join(", "));
     const modal = document.getElementById("kb-modal");
     if (modal) modal.style.display = "flex";
     setTimeout(() => (document.getElementById("kb-form-title") as HTMLInputElement)?.focus(), 80);
@@ -8525,6 +8536,11 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
     // Modal: guardar
     document.getElementById("kb-form-save")?.addEventListener("click", kbGuardar);
+
+    // Preview en tiempo real de etiquetas al escribir
+    document.getElementById("kb-form-tags")?.addEventListener("input", (e) => {
+      kbRenderTagsPreview((e.target as HTMLInputElement).value);
+    });
 
     // Escape cierra modal KB
     document.addEventListener("keydown", (e) => {
