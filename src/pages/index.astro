@@ -6349,9 +6349,13 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
           const sampleCli = clientesArr[0] || {};
           const sampleCt = contactosArr[0] || {};
-          const empresaKey = findKeyByNames(sampleCli, ['empresa','empresas','razon social','razon_social','company','nombre','nombre empresa','razon','razon_social']);
-          const contactoKey = findKeyByNames(sampleCt, ['contacto','contactos','contacto principal','nombre','name','representante']);
-          const correoKey = findKeyByNames(sampleCt, ['correo','correo electronico','correo_electronico','email','e-mail','mail','email principal','emailprincipal']);
+          const empresaKey   = findKeyByNames(sampleCli, ['empresa','empresas','razon social','razon_social','company','nombre empresa']);
+          const contactoKey  = findKeyByNames(sampleCli, ['contacto principal','contacto','contactos','nombre','name','representante']);
+          const contacto2Key = findKeyByNames(sampleCli, ['contacto alternativo','contacto2','contacto alt','contacto_2']);
+          const correoKey    = findKeyByNames(sampleCli, ['correo electronico contacto principal','correo contacto principal','correo principal','correo','correo electronico','email','mail']);
+          const correo2Key   = findKeyByNames(sampleCli, ['correo electronico contacto alternativo','correo alternativo','correo2','correo_2']);
+          const telKey       = findKeyByNames(sampleCli, ['telefono contacto principal','telefono principal','telefono1','telefono_1','telefono','phone']);
+          const tel2Key      = findKeyByNames(sampleCli, ['telefono contacto alternativo','telefono alternativo','telefono2','telefono_2']);
 
           // Normalizar y validar correos antes de guardar en localStorage
           const normalizeEmailRaw = (s) => {
@@ -6513,16 +6517,15 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
             const cliKeys = Object.keys(sampleCli||{});
             const ctKeys = Object.keys(sampleCt||{});
-            const allKeys = (cliKeys.concat(ctKeys)).filter((v,i,a)=>a.indexOf(v)===i);
+            const allKeys = cliKeys; // una sola hoja — todas las columnas vienen de clientesArr
             mapContainer.style.flexWrap = 'wrap';
-            mapContainer.appendChild(makeSelect('xls-map-empresa',       '★ Empresa',                cliKeys,  empresaKey || cliKeys[0]));
-            mapContainer.appendChild(makeSelect('xls-map-contacto',      '★ Contacto principal',     allKeys,  contactoKey || ctKeys[0] || cliKeys[0]));
-            mapContainer.appendChild(makeSelect('xls-map-contacto2',     'Contacto alternativo',     allKeys,  allKeys.find(k=>/contacto.*(2|alt)/i.test(k)) || ''));
-            mapContainer.appendChild(makeSelect('xls-map-correo',        'Correo contacto',          allKeys,  correoKey || allKeys.find(k=>/correo|email|mail/i.test(k)) || ''));
-            mapContainer.appendChild(makeSelect('xls-map-correo2',       'Correo alternativo',       allKeys,  allKeys.find(k=>/correo.*(2|alt)/i.test(k)) || ''));
-            mapContainer.appendChild(makeSelect('xls-map-empresa-correo','Correo empresa',           allKeys,  cliKeys.find(k=>/correo|email|mail/i.test(k)) || ''));
-            mapContainer.appendChild(makeSelect('xls-map-telefono',      'Teléfono principal',       allKeys,  allKeys.find(k=>/tel.*1|tel[ef].*principal/i.test(k)) || allKeys.find(k=>/tel|telefono|phone/i.test(k)) || ''));
-            mapContainer.appendChild(makeSelect('xls-map-telefono2',     'Teléfono alternativo',     allKeys,  allKeys.find(k=>/tel.*(2|alt)/i.test(k)) || ''));
+            mapContainer.appendChild(makeSelect('xls-map-empresa',   '★ Empresa',               allKeys, empresaKey   || allKeys[0]));
+            mapContainer.appendChild(makeSelect('xls-map-contacto',  '★ Contacto principal',    allKeys, contactoKey  || ''));
+            mapContainer.appendChild(makeSelect('xls-map-contacto2', 'Contacto alternativo',    allKeys, contacto2Key || ''));
+            mapContainer.appendChild(makeSelect('xls-map-correo',    'Correo principal',        allKeys, correoKey    || ''));
+            mapContainer.appendChild(makeSelect('xls-map-correo2',   'Correo alternativo',      allKeys, correo2Key   || ''));
+            mapContainer.appendChild(makeSelect('xls-map-telefono',  'Teléfono principal',      allKeys, telKey       || ''));
+            mapContainer.appendChild(makeSelect('xls-map-telefono2', 'Teléfono alternativo',    allKeys, tel2Key      || ''));
 
             // función para renderizar preview según mapeo actual
             const renderPreview = () => {
@@ -6592,9 +6595,9 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
             document.getElementById('btnXlsConfirmUpload').onclick = async () => {
               if (!firebaseEnabled) return alert('Firebase no está configurado. Revisa las variables de entorno.');
               const mEmp = document.getElementById('xls-map-empresa')?.value;
-              const mCt = document.getElementById('xls-map-contacto')?.value;
-              if (!mEmp || !mCt) {
-                alert('Por favor selecciona las columnas para Empresa y Contacto antes de subir.');
+              const mCt  = document.getElementById('xls-map-contacto')?.value;
+              if (!mEmp) {
+                alert('Por favor selecciona la columna de Empresa antes de subir.');
                 modal.style.display = 'flex';
                 return;
               }
@@ -6602,59 +6605,51 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
               modal.style.display = 'none';
               mostrarEstado('🔄 Subiendo datos a Firebase...');
               try {
+                const mCt2   = document.getElementById('xls-map-contacto2')?.value;
                 const mMail  = document.getElementById('xls-map-correo')?.value;
                 const mMail2 = document.getElementById('xls-map-correo2')?.value;
                 const mTel   = document.getElementById('xls-map-telefono')?.value;
                 const mTel2  = document.getElementById('xls-map-telefono2')?.value;
-                const mEmpMail = document.getElementById('xls-map-empresa-correo')?.value;
-                const mCt2   = document.getElementById('xls-map-contacto2')?.value;
 
-                const grouped = normalizeImportedClientes(clientesArr || []);
-                const mappedClientes = (grouped||[]).map(r => {
-                  const emp    = r.EMPRESA || r.EMPRESAS || '';
-                  const tel    = mTel  ? (r[mTel]  || '') : (r.TELEFONO_1||r.TELEFONO||r.telefono||'');
-                  const tel2   = mTel2 ? (r[mTel2] || '') : (r.TELEFONO_2||'');
-                  const email  = mEmpMail ? (r[mEmpMail] || '') : (r.CORREO||r['CORREO ELECTRONICO']||r.EMAIL||'');
-                  const ct2    = mCt2 ? (r[mCt2] || '') : '';
-                  const mail2  = mMail2 ? (r[mMail2] || '') : '';
-                  return { EMPRESA: emp, CONTACTO: r.CONTACTO||r['CONTACTO PRINCIPAL']||'', CONTACTO_2: ct2,
-                           CORREO: email, CORREO_2: mail2, RFC: r.RFC||'',
-                           TELEFONO_1: tel, TELEFONO_2: tel2,
-                           FAVORITO: false, CAMPOS_EXTRAS: {}, SISTEMAS: {}, VENCIMIENTOS: {} };
-                });
+                // Mapear empresas desde el Excel
+                const mappedClientes = (clientesArr||[]).map(r => {
+                  const emp   = (mEmp  ? r[mEmp]  : '') || r.EMPRESA || r.Empresa || '';
+                  const ct    = (mCt   ? r[mCt]   : '') || r['Contacto principal'] || r.CONTACTO || '';
+                  const ct2   = (mCt2  ? r[mCt2]  : '') || '';
+                  const mail  = (mMail ? r[mMail]  : '') || '';
+                  const mail2 = (mMail2? r[mMail2] : '') || '';
+                  const tel   = (mTel  ? r[mTel]   : '') || '';
+                  const tel2  = (mTel2 ? r[mTel2]  : '') || '';
+                  if (!String(emp).trim()) return null;
+                  return {
+                    EMPRESA: String(emp).toUpperCase().trim(),
+                    CONTACTO: String(ct).trim(), CONTACTO_2: String(ct2).trim(),
+                    CORREO:   String(mail).trim().toLowerCase(),
+                    CORREO_2: String(mail2).trim().toLowerCase(),
+                    RFC: '', TELEFONO_1: String(tel).trim(), TELEFONO_2: String(tel2).trim(),
+                    FAVORITO: false, CAMPOS_EXTRAS: {}, SISTEMAS: {}, VENCIMIENTOS: {}
+                  };
+                }).filter(Boolean);
 
-                const mappedContactos = (contactosArr||[]).map(r => {
-                  const name  = mCt  ? (r[mCt]  || '') : (r['CONTACTO']||r['CONTACTO PRINCIPAL']||r['nombre']||r['name']||'');
-                  const email = mMail ? (r[mMail] || '') : (r['CORREO']||r['CORREO ELECTRONICO']||r['EMAIL']||'');
-                  return { nombre: name, correo: email,
-                           telefono1: mTel  ? (r[mTel]  || '') : (r.TELEFONO_1||r.TELEFONO||''),
-                           telefono2: mTel2 ? (r[mTel2] || '') : (r.TELEFONO_2||''),
-                           empresa: r.EMPRESA||r['EMPRESA']||'' };
-                });
-
-                // Aplicar correcciones manuales de emails inválidos si las hay
-                if (invalidEmailsList.length > 0) {
-                  invalidEmailsList.forEach((x, i) => {
-                    const editInput = document.getElementById(`xls-invalid-edit-${i}`);
-                    if (editInput && editInput.value) {
-                      const correctedEmail = editInput.value.trim();
-                      if (x.source === 'contacto') {
-                        const contacto = mappedContactos.find(c => !c.CORREO && (c['CONTACTO PRINCIPAL'] === x.source || !c.correo));
-                        if (contacto && isValidEmail(correctedEmail)) contacto['CORREO'] = correctedEmail;
-                      } else if (x.source === 'empresa') {
-                        const empresa = mappedClientes.find(e => !e.CORREO || e.CORREO === '');
-                        if (empresa && isValidEmail(correctedEmail)) empresa['CORREO'] = correctedEmail;
-                      }
-                    }
-                  });
-                }
+                // Contactos generados 1:1 desde empresas (solo contacto principal)
+                // El contacto alternativo queda en la empresa, NO crea entrada separada
+                const mappedContactos = mappedClientes.map(e => ({
+                  nombre:    e.CONTACTO,
+                  correo:    e.CORREO,
+                  telefono1: e.TELEFONO_1,
+                  telefono2: '',
+                  empresa:   e.EMPRESA
+                })).filter(c => c.nombre);
 
                 const okCli = await guardarClientes(mappedClientes);
-                const okCt = await guardarContactos(mappedContactos);
-                if (okCli && okCt) {
-                  toast('☁️ Datos subidos a Firebase correctamente');
+                const okCt  = await guardarContactos(mappedContactos);
+                if (okCli === true && okCt === true) {
+                  clientes = mappedClientes;
+                  contactos = mappedContactos;
+                  renderEmpresas(); renderContactos(); renderDashboard();
+                  toast(`✅ ${mappedClientes.length} empresas y ${mappedContactos.length} contactos importados`);
                 } else {
-                  toast('⚠️ Algunos datos no se pudieron subir a Firebase, revisa la consola');
+                  toast(`⚠️ Error al guardar: ${okCli?.error || okCt?.error || 'revisa la consola'}`);
                 }
               } catch (err) {
                 console.error('Error subiendo a Firebase:', err);
