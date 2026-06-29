@@ -3157,7 +3157,8 @@ try {
         </div>
       </div>
       <div class="form-actions" style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end;">
-        <button class="btn btn-success" id="btnXlsConfirmUpload">☁️ Confirmar y subir a Firebase</button>
+        <button class="btn btn-secondary btn-sm" id="btnXlsDescargarRespaldo" title="Descarga un JSON con todos tus datos actuales antes de reemplazar">⬇️ Descargar respaldo primero</button>
+        <button class="btn btn-success" id="btnXlsConfirmUpload">☁️ Reemplazar datos en Firebase</button>
         <button class="btn btn-ghost btn-sm" id="btnCerrarXlsSummary2">Cancelar</button>
       </div>
     </div>
@@ -6512,11 +6513,16 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
             const cliKeys = Object.keys(sampleCli||{});
             const ctKeys = Object.keys(sampleCt||{});
-            mapContainer.appendChild(makeSelect('xls-map-empresa','Empresa (columna)', cliKeys, empresaKey || cliKeys[0]));
-            mapContainer.appendChild(makeSelect('xls-map-contacto','Contacto (columna)', ctKeys.length?ctKeys:cliKeys, contactoKey || ctKeys[0] || cliKeys[0]));
-            mapContainer.appendChild(makeSelect('xls-map-correo','Correo (columna)', ctKeys.length?ctKeys:cliKeys, correoKey || ctKeys.find(k=>/correo|email|mail/i.test(k)) || ''));
-            mapContainer.appendChild(makeSelect('xls-map-telefono','Teléfono (columna)', (ctKeys.length?ctKeys:cliKeys), ctKeys.find(k=>/tel|telefono|phone/i.test(k)) || cliKeys.find(k=>/tel|telefono|phone/i.test(k)) || ''));
-            mapContainer.appendChild(makeSelect('xls-map-empresa-correo','Email Empresa (columna)', (cliKeys.concat(ctKeys)).filter((v,i,a)=>a.indexOf(v)===i), cliKeys.find(k=>/correo|email|mail/i.test(k)) || ctKeys.find(k=>/correo|email|mail/i.test(k)) || ''));
+            const allKeys = (cliKeys.concat(ctKeys)).filter((v,i,a)=>a.indexOf(v)===i);
+            mapContainer.style.flexWrap = 'wrap';
+            mapContainer.appendChild(makeSelect('xls-map-empresa',       '★ Empresa',                cliKeys,  empresaKey || cliKeys[0]));
+            mapContainer.appendChild(makeSelect('xls-map-contacto',      '★ Contacto principal',     allKeys,  contactoKey || ctKeys[0] || cliKeys[0]));
+            mapContainer.appendChild(makeSelect('xls-map-contacto2',     'Contacto alternativo',     allKeys,  allKeys.find(k=>/contacto.*(2|alt)/i.test(k)) || ''));
+            mapContainer.appendChild(makeSelect('xls-map-correo',        'Correo contacto',          allKeys,  correoKey || allKeys.find(k=>/correo|email|mail/i.test(k)) || ''));
+            mapContainer.appendChild(makeSelect('xls-map-correo2',       'Correo alternativo',       allKeys,  allKeys.find(k=>/correo.*(2|alt)/i.test(k)) || ''));
+            mapContainer.appendChild(makeSelect('xls-map-empresa-correo','Correo empresa',           allKeys,  cliKeys.find(k=>/correo|email|mail/i.test(k)) || ''));
+            mapContainer.appendChild(makeSelect('xls-map-telefono',      'Teléfono principal',       allKeys,  allKeys.find(k=>/tel.*1|tel[ef].*principal/i.test(k)) || allKeys.find(k=>/tel|telefono|phone/i.test(k)) || ''));
+            mapContainer.appendChild(makeSelect('xls-map-telefono2',     'Teléfono alternativo',     allKeys,  allKeys.find(k=>/tel.*(2|alt)/i.test(k)) || ''));
 
             // función para renderizar preview según mapeo actual
             const renderPreview = () => {
@@ -6575,6 +6581,14 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
             document.getElementById('btnCerrarXlsSummary').onclick = () => { modal.style.display = 'none'; };
 
+            document.getElementById('btnXlsDescargarRespaldo').onclick = () => {
+              const backup = { clientes, contactos, ts: new Date().toISOString() };
+              const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+              const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+              a.download = `respaldo-crm-${new Date().toISOString().slice(0,10)}.json`; a.click();
+              toast('⬇️ Respaldo descargado');
+            };
+
             document.getElementById('btnXlsConfirmUpload').onclick = async () => {
               if (!firebaseEnabled) return alert('Firebase no está configurado. Revisa las variables de entorno.');
               const mEmp = document.getElementById('xls-map-empresa')?.value;
@@ -6584,25 +6598,38 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
                 modal.style.display = 'flex';
                 return;
               }
+              if (!confirm(`⚠️ Esto REEMPLAZARÁ todas las empresas y contactos actuales con los datos del Excel.\n\n¿Ya descargaste el respaldo? Continuar de todos modos?`)) return;
               modal.style.display = 'none';
               mostrarEstado('🔄 Subiendo datos a Firebase...');
               try {
-                const mMail = document.getElementById('xls-map-correo')?.value;
-                const mTel = document.getElementById('xls-map-telefono')?.value;
+                const mMail  = document.getElementById('xls-map-correo')?.value;
+                const mMail2 = document.getElementById('xls-map-correo2')?.value;
+                const mTel   = document.getElementById('xls-map-telefono')?.value;
+                const mTel2  = document.getElementById('xls-map-telefono2')?.value;
                 const mEmpMail = document.getElementById('xls-map-empresa-correo')?.value;
+                const mCt2   = document.getElementById('xls-map-contacto2')?.value;
 
                 const grouped = normalizeImportedClientes(clientesArr || []);
                 const mappedClientes = (grouped||[]).map(r => {
-                  const emp = r.EMPRESA || r.EMPRESAS || '';
-                  const tel = mTel ? (r[mTel] || r.TELEFONO || r.TELEFONO_1 || r.telefono || '') : (r.TELEFONO_1||r.TELEFONO||r.telefono||'');
-                  const email = mEmpMail ? (r[mEmpMail] || r.CORREO || r['CORREO ELECTRONICO'] || r['CORREO ELECTRÓNICO'] || r.EMAIL || '') : (r.CORREO||r['CORREO ELECTRONICO']||r.EMAIL||'');
-                  return Object.assign({}, r, { EMPRESA: emp, TELEFONO_1: tel, CORREO: email });
+                  const emp    = r.EMPRESA || r.EMPRESAS || '';
+                  const tel    = mTel  ? (r[mTel]  || '') : (r.TELEFONO_1||r.TELEFONO||r.telefono||'');
+                  const tel2   = mTel2 ? (r[mTel2] || '') : (r.TELEFONO_2||'');
+                  const email  = mEmpMail ? (r[mEmpMail] || '') : (r.CORREO||r['CORREO ELECTRONICO']||r.EMAIL||'');
+                  const ct2    = mCt2 ? (r[mCt2] || '') : '';
+                  const mail2  = mMail2 ? (r[mMail2] || '') : '';
+                  return { EMPRESA: emp, CONTACTO: r.CONTACTO||r['CONTACTO PRINCIPAL']||'', CONTACTO_2: ct2,
+                           CORREO: email, CORREO_2: mail2, RFC: r.RFC||'',
+                           TELEFONO_1: tel, TELEFONO_2: tel2,
+                           FAVORITO: false, CAMPOS_EXTRAS: {}, SISTEMAS: {}, VENCIMIENTOS: {} };
                 });
 
                 const mappedContactos = (contactosArr||[]).map(r => {
-                  const name = mCt ? (r[mCt] || r['CONTACTO'] || r['CONTACTO PRINCIPAL'] || r['CONTACTOS'] || r['nombre'] || r['name'] || '') : (r['CONTACTO']||r['CONTACTO PRINCIPAL']||r['nombre']||r['name']||'');
-                  const email = mMail ? (r[mMail] || r['CORREO'] || r['CORREO ELECTRONICO'] || r['CORREO ELECTRÓNICO'] || r['EMAIL'] || '') : (r['CORREO']||r['CORREO ELECTRONICO']||r['EMAIL']||'');
-                  return Object.assign({}, r, { 'CONTACTO PRINCIPAL': name, 'CORREO': email });
+                  const name  = mCt  ? (r[mCt]  || '') : (r['CONTACTO']||r['CONTACTO PRINCIPAL']||r['nombre']||r['name']||'');
+                  const email = mMail ? (r[mMail] || '') : (r['CORREO']||r['CORREO ELECTRONICO']||r['EMAIL']||'');
+                  return { nombre: name, correo: email,
+                           telefono1: mTel  ? (r[mTel]  || '') : (r.TELEFONO_1||r.TELEFONO||''),
+                           telefono2: mTel2 ? (r[mTel2] || '') : (r.TELEFONO_2||''),
+                           empresa: r.EMPRESA||r['EMPRESA']||'' };
                 });
 
                 // Aplicar correcciones manuales de emails inválidos si las hay
