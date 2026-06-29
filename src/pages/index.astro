@@ -6615,7 +6615,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
                 const mTel   = document.getElementById('xls-map-telefono')?.value;
                 const mTel2  = document.getElementById('xls-map-telefono2')?.value;
 
-                // Mapear empresas desde el Excel
+                // Mapear empresas desde el Excel — preservar versiones/vencimientos existentes
                 const mappedClientes = (clientesArr||[]).map(r => {
                   const emp   = (mEmp  ? r[mEmp]  : '') || r.EMPRESA || r.Empresa || '';
                   const ct    = (mCt   ? r[mCt]   : '') || r['Contacto principal'] || r.CONTACTO || '';
@@ -6624,14 +6624,20 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
                   const mail2 = (mMail2? r[mMail2] : '') || '';
                   const tel   = (mTel  ? r[mTel]   : '') || '';
                   const tel2  = (mTel2 ? r[mTel2]  : '') || '';
-                  if (!String(emp).trim()) return null;
+                  const empNorm = String(emp).toUpperCase().trim();
+                  if (!empNorm) return null;
+                  // Buscar empresa existente por nombre para preservar versiones capturadas
+                  const previa = clientes.find(c => (c.EMPRESA||'').toUpperCase().trim() === empNorm);
                   return {
-                    EMPRESA: String(emp).toUpperCase().trim(),
+                    EMPRESA: empNorm,
                     CONTACTO: String(ct).trim(), CONTACTO_2: String(ct2).trim(),
                     CORREO:   String(mail).trim().toLowerCase(),
                     CORREO_2: String(mail2).trim().toLowerCase(),
-                    RFC: '', TELEFONO_1: String(tel).trim(), TELEFONO_2: String(tel2).trim(),
-                    FAVORITO: false, CAMPOS_EXTRAS: {}, SISTEMAS: {}, VENCIMIENTOS: {}
+                    RFC: previa?.RFC || '', TELEFONO_1: String(tel).trim(), TELEFONO_2: String(tel2).trim(),
+                    FAVORITO: previa?.FAVORITO || false,
+                    CAMPOS_EXTRAS: previa?.CAMPOS_EXTRAS || {},
+                    SISTEMAS:      previa?.SISTEMAS      || {},
+                    VENCIMIENTOS:  previa?.VENCIMIENTOS  || {}
                   };
                 }).filter(Boolean);
 
