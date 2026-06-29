@@ -5073,16 +5073,20 @@ verificarSesion();
     if (idx === "") clientes.push(nuevo);
     else clientes[parseInt(idx)] = nuevo;
 
-    // Sync: si la empresa tiene contacto+correo, crear/actualizar el contacto correspondiente
-    if (nuevo.CONTACTO && nuevo.CORREO) {
-      const existe = contactos.find(c => c.correo && c.correo.toLowerCase() === nuevo.CORREO.toLowerCase());
-      if (!existe) {
-        contactos.push({ nombre: nuevo.CONTACTO, correo: nuevo.CORREO, telefono1: nuevo.TELEFONO_1 || "", telefono2: nuevo.TELEFONO_2 || "", empresa: nuevo.EMPRESA });
-        if (crmLocalOnly) guardarLocal("crm_contactos", contactos); else guardarContactos(contactos);
-      } else if (!existe.empresa) {
-        existe.empresa = nuevo.EMPRESA;
-        if (crmLocalOnly) guardarLocal("crm_contactos", contactos); else guardarContactos(contactos);
+    // Sync empresa → contacto: siempre 1:1, enlazado por nombre de empresa
+    if (nuevo.CONTACTO) {
+      const porEmpresa = contactos.find(c => c.empresa === nuevo.EMPRESA);
+      const porCorreo  = nuevo.CORREO ? contactos.find(c => c.correo && c.correo.toLowerCase() === nuevo.CORREO.toLowerCase()) : null;
+      const existente  = porEmpresa || porCorreo;
+      if (existente) {
+        existente.nombre    = nuevo.CONTACTO;
+        existente.correo    = nuevo.CORREO    || existente.correo;
+        existente.telefono1 = nuevo.TELEFONO_1|| existente.telefono1;
+        existente.empresa   = nuevo.EMPRESA;
+      } else {
+        contactos.push({ nombre: nuevo.CONTACTO, correo: nuevo.CORREO || "", telefono1: nuevo.TELEFONO_1 || "", telefono2: "", empresa: nuevo.EMPRESA });
       }
+      if (crmLocalOnly) guardarLocal("crm_contactos", contactos); else guardarContactos(contactos);
     }
 
     guardarLocal("crm_clientes", clientes); // respaldo local siempre primero
