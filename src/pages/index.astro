@@ -2106,6 +2106,8 @@ try {
                   <input id="form-contacto" placeholder="Nombre del contacto">
                 </div>
                 <div class="form-group"><label>Correo Electrónico</label><input id="form-correo" type="email"></div>
+                <div class="form-group form-emp-extras"><label>Contacto Alternativo</label><input id="form-contacto2" placeholder="Nombre del contacto alternativo"></div>
+                <div class="form-group form-emp-extras"><label>Correo Electrónico 2</label><input id="form-correo2" type="email"></div>
                 <div class="form-group"><label>RFC</label><input id="form-empresa-rfc" placeholder="Ej: XAXX010101000"></div>
                 <div class="form-group form-emp-extras"><label>Teléfono 1</label><input id="form-telefono1"></div>
                 <div class="form-group form-emp-extras"><label>Teléfono 2</label><input id="form-telefono2"></div>
@@ -4866,6 +4868,8 @@ verificarSesion();
     document.getElementById("form-empresa").value = "";
     document.getElementById("form-contacto").value = "";
     document.getElementById("form-correo").value = "";
+    document.getElementById("form-contacto2").value = "";
+    document.getElementById("form-correo2").value = "";
     document.getElementById("form-empresa-rfc").value = "";
     document.getElementById("form-telefono1").value = "";
     document.getElementById("form-telefono2").value = "";
@@ -4952,6 +4956,8 @@ verificarSesion();
     document.getElementById("form-empresa").value = c.EMPRESA;
     document.getElementById("form-contacto").value = c.CONTACTO || "";
     document.getElementById("form-correo").value = c.CORREO || "";
+    document.getElementById("form-contacto2").value = c.CONTACTO_2 || "";
+    document.getElementById("form-correo2").value = c.CORREO_2 || "";
     document.getElementById("form-empresa-rfc").value = c.RFC || "";
     document.getElementById("form-telefono1").value = c.TELEFONO_1 || "";
     document.getElementById("form-telefono2").value = c.TELEFONO_2 || "";
@@ -4997,6 +5003,8 @@ verificarSesion();
       EMPRESA: nombre,
       CONTACTO: contactoVal,
       CORREO: document.getElementById("form-correo").value.trim(),
+      CONTACTO_2: document.getElementById("form-contacto2").value.trim(),
+      CORREO_2: document.getElementById("form-correo2").value.trim(),
       RFC: document.getElementById("form-empresa-rfc").value.trim(),
       TELEFONO_1: document.getElementById("form-telefono1").value.trim(),
       TELEFONO_2: document.getElementById("form-telefono2").value.trim(),
