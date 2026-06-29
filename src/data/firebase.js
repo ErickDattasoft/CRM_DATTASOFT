@@ -2,18 +2,16 @@ import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, onSnapshot, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "firebase/auth";
 
-// Configuración de Firebase usando las variables de entorno de Astro
+// Configuración de Firebase — los valores web son públicos por diseño (seguridad via Firestore Rules)
 const firebaseConfig = {
-  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
-  authDomain: import.meta.env.PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.PUBLIC_FIREBASE_PROJECT_ID,
+  apiKey:     import.meta.env.PUBLIC_FIREBASE_API_KEY     || "AIzaSyDT6EkBk0pMA9t_APJlLPku_EWco_OMM3Q",
+  authDomain: import.meta.env.PUBLIC_FIREBASE_AUTH_DOMAIN || "agenda-crm-netlify.firebaseapp.com",
+  projectId:  import.meta.env.PUBLIC_FIREBASE_PROJECT_ID  || "agenda-crm-netlify",
 };
 
 export const firebaseEnabled = Boolean(
   firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.projectId
 );
-
-console.log('[Firebase] apiKey:', !!firebaseConfig.apiKey, '| authDomain:', !!firebaseConfig.authDomain, '| projectId:', !!firebaseConfig.projectId, '| enabled:', firebaseEnabled);
 
 // Firestore rechaza valores `undefined` con "invalid-argument".
 // JSON round-trip los elimina de objetos y los convierte a null en arrays.
