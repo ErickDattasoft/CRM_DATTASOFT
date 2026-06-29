@@ -2154,7 +2154,12 @@ try {
                   <tr>
                     <th style="width:40px; min-width:40px; text-align:center;"><input type="checkbox" id="chkSeleccionarTodo" style="cursor:pointer;"></th>
                     <th class="th-sortable" id="th-sort-emp" style="min-width:130px; width:180px;">Empresa <span class="sort-arrow active" id="sort-arrow-emp">↑</span><div class="col-resize-handle"></div></th>
-                    <th style="min-width:130px; width:160px;">Contacto<div class="col-resize-handle"></div></th>
+                    <th style="min-width:120px; width:140px;">Contacto principal<div class="col-resize-handle"></div></th>
+                    <th style="min-width:110px; width:130px;">Contacto 2<div class="col-resize-handle"></div></th>
+                    <th style="min-width:150px; width:170px;">Correo electrónico Contacto Principal<div class="col-resize-handle"></div></th>
+                    <th style="min-width:150px; width:170px;">Correo electrónico Contacto 2<div class="col-resize-handle"></div></th>
+                    <th style="min-width:110px; width:130px;">Teléfono Contacto Principal<div class="col-resize-handle"></div></th>
+                    <th style="min-width:110px; width:130px;">Teléfono Contacto alternativo<div class="col-resize-handle"></div></th>
                     {listaSistemasOpciones.map(sistema => (
                       <th style="text-align:center; font-size:0.62rem; min-width:80px; width:90px; white-space:normal; line-height:1.2;">{sistema}<div class="col-resize-handle"></div></th>
                     ))}
@@ -4746,13 +4751,14 @@ verificarSesion();
             <strong title="${c.EMPRESA}" style="color:#f1f5f9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; font-size:0.88rem;">${c.EMPRESA}</strong>
             ${badgeLicencia}
           </div>
-        </td>
-        <td style="${tdBase} overflow:hidden;">
-          <span style="display:block; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#f1f5f9; font-size:0.88rem;">${c.CONTACTO || '—'}</span>
-          ${c.TELEFONO_1 ? `<span style="display:block; font-size:0.72rem; color:#94a3b8; white-space:nowrap; margin-top:2px;">📞 ${c.TELEFONO_1}</span>` : ''}
-          ${c.CORREO ? `<span style="display:block; font-size:0.72rem; color:#7dd3fc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px;">✉️ ${c.CORREO}</span>` : ''}
           ${extras ? `<div style="margin-top:3px;">${extras}</div>` : ''}
         </td>
+        <td style="${tdBase} white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:700; color:#f1f5f9; font-size:0.88rem;" title="${c.CONTACTO || ''}">${c.CONTACTO || '—'}</td>
+        <td style="${tdBase} white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#cbd5e1; font-size:0.85rem;" title="${c.CONTACTO_2 || ''}">${c.CONTACTO_2 || '—'}</td>
+        <td style="${tdBase} white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#7dd3fc; font-size:0.82rem;" title="${c.CORREO || ''}">${c.CORREO || '—'}</td>
+        <td style="${tdBase} white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#7dd3fc; font-size:0.82rem;" title="${c.CORREO_2 || ''}">${c.CORREO_2 || '—'}</td>
+        <td style="${tdBase} white-space:nowrap; color:#94a3b8; font-size:0.82rem;">${c.TELEFONO_1 || '—'}</td>
+        <td style="${tdBase} white-space:nowrap; color:#94a3b8; font-size:0.82rem;">${c.TELEFONO_2 || '—'}</td>
       `;
 
       listaSistemas.forEach(s => {
