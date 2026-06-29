@@ -6614,29 +6614,33 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
                 const mTel   = document.getElementById('xls-map-telefono')?.value;
                 const mTel2  = document.getElementById('xls-map-telefono2')?.value;
 
+                // Convierte cualquier valor de celda Excel a string seguro para Firestore
+                const xs = v => {
+                  if (v === null || v === undefined) return '';
+                  if (v instanceof Date) return v.toISOString().slice(0,10);
+                  if (typeof v === 'object') return '';
+                  return String(v).trim();
+                };
+                const col = (r, key) => key ? xs(r[key]) : '';
+
                 // Mapear empresas desde el Excel — preservar versiones/vencimientos existentes
                 const mappedClientes = (clientesArr||[]).map(r => {
-                  const emp   = (mEmp  ? r[mEmp]  : '') || r.EMPRESA || r.Empresa || '';
-                  const ct    = (mCt   ? r[mCt]   : '') || r['Contacto principal'] || r.CONTACTO || '';
-                  const ct2   = (mCt2  ? r[mCt2]  : '') || '';
-                  const mail  = (mMail ? r[mMail]  : '') || '';
-                  const mail2 = (mMail2? r[mMail2] : '') || '';
-                  const tel   = (mTel  ? r[mTel]   : '') || '';
-                  const tel2  = (mTel2 ? r[mTel2]  : '') || '';
-                  const empNorm = String(emp).toUpperCase().trim();
+                  const empNorm = (col(r, mEmp) || xs(r.EMPRESA) || xs(r.Empresa)).toUpperCase();
                   if (!empNorm) return null;
-                  // Buscar empresa existente por nombre para preservar versiones capturadas
                   const previa = clientes.find(c => (c.EMPRESA||'').toUpperCase().trim() === empNorm);
                   return {
-                    EMPRESA: empNorm,
-                    CONTACTO: String(ct).trim(), CONTACTO_2: String(ct2).trim(),
-                    CORREO:   String(mail).trim().toLowerCase(),
-                    CORREO_2: String(mail2).trim().toLowerCase(),
-                    RFC: previa?.RFC || '', TELEFONO_1: String(tel).trim(), TELEFONO_2: String(tel2).trim(),
-                    FAVORITO: previa?.FAVORITO || false,
-                    CAMPOS_EXTRAS: previa?.CAMPOS_EXTRAS || {},
-                    SISTEMAS:      previa?.SISTEMAS      || {},
-                    VENCIMIENTOS:  previa?.VENCIMIENTOS  || {}
+                    EMPRESA:     empNorm,
+                    CONTACTO:    col(r, mCt)    || xs(r['Contacto principal']) || xs(r.CONTACTO),
+                    CONTACTO_2:  col(r, mCt2),
+                    CORREO:      (col(r, mMail)  || '').toLowerCase(),
+                    CORREO_2:    (col(r, mMail2) || '').toLowerCase(),
+                    RFC:         xs(previa?.RFC),
+                    TELEFONO_1:  col(r, mTel),
+                    TELEFONO_2:  col(r, mTel2),
+                    FAVORITO:    previa?.FAVORITO  === true,
+                    CAMPOS_EXTRAS: previa?.CAMPOS_EXTRAS  || {},
+                    SISTEMAS:      previa?.SISTEMAS       || {},
+                    VENCIMIENTOS:  previa?.VENCIMIENTOS   || {}
                   };
                 }).filter(Boolean);
 
