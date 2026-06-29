@@ -6692,6 +6692,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
                 if (okCt === true) {
                   contactos = mappedContactos;
                   renderContactos();
+                  renderDashboard();
                 }
 
                 toast(`✅ ${mappedClientes.length} empresas y ${mappedContactos.length} contactos importados`);
