@@ -6625,45 +6625,56 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
                 // Mapear empresas desde el Excel — preservar versiones/vencimientos existentes
                 const mappedClientes = (clientesArr||[]).map(r => {
-                  const empNorm = (col(r, mEmp) || xs(r.EMPRESA) || xs(r.Empresa)).toUpperCase();
-                  if (!empNorm) return null;
+                  // Buscar nombre de empresa en todas las columnas posibles
+                  const empRaw = col(r, mEmp) || xs(r.EMPRESA) || xs(r.Empresa) || xs(r.empresa) || '';
+                  const empNorm = empRaw.toUpperCase().trim();
+                  if (!empNorm || empNorm === 'UNDEFINED') return null;
                   const previa = clientes.find(c => (c.EMPRESA||'').toUpperCase().trim() === empNorm);
                   return {
                     EMPRESA:     empNorm,
-                    CONTACTO:    col(r, mCt)    || xs(r['Contacto principal']) || xs(r.CONTACTO),
-                    CONTACTO_2:  col(r, mCt2),
+                    CONTACTO:    col(r, mCt)   || xs(r['Contacto principal']) || xs(r.CONTACTO) || '',
+                    CONTACTO_2:  col(r, mCt2)  || '',
                     CORREO:      (col(r, mMail)  || '').toLowerCase(),
                     CORREO_2:    (col(r, mMail2) || '').toLowerCase(),
-                    RFC:         xs(previa?.RFC),
-                    TELEFONO_1:  col(r, mTel),
-                    TELEFONO_2:  col(r, mTel2),
-                    FAVORITO:    previa?.FAVORITO  === true,
-                    CAMPOS_EXTRAS: previa?.CAMPOS_EXTRAS  || {},
-                    SISTEMAS:      previa?.SISTEMAS       || {},
-                    VENCIMIENTOS:  previa?.VENCIMIENTOS   || {}
+                    RFC:         xs(previa?.RFC) || '',
+                    TELEFONO_1:  col(r, mTel)  || '',
+                    TELEFONO_2:  col(r, mTel2) || '',
+                    FAVORITO:    previa?.FAVORITO === true,
+                    CAMPOS_EXTRAS: previa?.CAMPOS_EXTRAS || {},
+                    SISTEMAS:      previa?.SISTEMAS      || {},
+                    VENCIMIENTOS:  previa?.VENCIMIENTOS  || {}
                   };
                 }).filter(Boolean);
 
-                // Contactos generados 1:1 desde empresas (solo contacto principal)
-                // El contacto alternativo queda en la empresa, NO crea entrada separada
-                const mappedContactos = mappedClientes.map(e => ({
-                  nombre:    e.CONTACTO,
-                  correo:    e.CORREO,
-                  telefono1: e.TELEFONO_1,
-                  telefono2: '',
-                  empresa:   e.EMPRESA
-                })).filter(c => c.nombre);
-
-                const okCli = await guardarClientes(mappedClientes);
-                const okCt  = await guardarContactos(mappedContactos);
-                if (okCli === true && okCt === true) {
-                  clientes = mappedClientes;
-                  contactos = mappedContactos;
-                  renderEmpresas(); renderContactos(); renderDashboard();
-                  toast(`✅ ${mappedClientes.length} empresas y ${mappedContactos.length} contactos importados`);
-                } else {
-                  toast(`⚠️ Error al guardar: ${okCli?.error || okCt?.error || 'revisa la consola'}`);
+                if (mappedClientes.length === 0) {
+                  toast('⚠️ No se detectaron empresas. Verifica que la columna "Empresa" esté seleccionada correctamente.');
+                  ocultarEstado();
+                  return;
                 }
+
+                // Contactos 1:1 desde empresa (solo contacto principal)
+                const mappedContactos = mappedClientes
+                  .filter(e => e.CONTACTO)
+                  .map(e => ({ nombre: e.CONTACTO, correo: e.CORREO, telefono1: e.TELEFONO_1, telefono2: '', empresa: e.EMPRESA }));
+
+                // Guardar empresas primero — actualizar local inmediatamente al éxito
+                const okCli = await guardarClientes(mappedClientes);
+                if (okCli === true) {
+                  clientes = mappedClientes;
+                  renderEmpresas(); renderDashboard();
+                } else {
+                  toast(`⚠️ Error al guardar empresas: ${okCli?.error || 'revisa la consola'}`);
+                  ocultarEstado(); return;
+                }
+
+                // Guardar contactos
+                const okCt = await guardarContactos(mappedContactos);
+                if (okCt === true) {
+                  contactos = mappedContactos;
+                  renderContactos();
+                }
+
+                toast(`✅ ${mappedClientes.length} empresas y ${mappedContactos.length} contactos importados`);
               } catch (err) {
                 console.error('Error subiendo a Firebase:', err);
                 toast('❌ Error subiendo a Firebase. Revisa la consola.');
