@@ -2160,6 +2160,7 @@ try {
                     <th style="min-width:150px; width:170px;">Correo electrónico contacto alternativo<div class="col-resize-handle"></div></th>
                     <th style="min-width:110px; width:130px;">Teléfono Contacto Principal<div class="col-resize-handle"></div></th>
                     <th style="min-width:110px; width:130px;">Teléfono Contacto alternativo<div class="col-resize-handle"></div></th>
+                    <th style="min-width:110px; width:130px;">RFC<div class="col-resize-handle"></div></th>
                     <th style="text-align:center; min-width:100px; width:110px;">Acciones</th>
                   </tr>
                 </thead>
@@ -4787,6 +4788,7 @@ verificarSesion();
         <td style="${tdBase} white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#7dd3fc; font-size:0.82rem;" title="${c.CORREO_2 || ''}">${c.CORREO_2 || '—'}</td>
         <td style="${tdBase} white-space:nowrap; color:#94a3b8; font-size:0.82rem;">${c.TELEFONO_1 || '—'}</td>
         <td style="${tdBase} white-space:nowrap; color:#94a3b8; font-size:0.82rem;">${c.TELEFONO_2 || '—'}</td>
+        <td style="${tdBase} white-space:nowrap; color:#a5b4fc; font-size:0.82rem; font-family:monospace;">${c.RFC || '—'}</td>
         <td style="text-align:center; vertical-align:middle; padding:8px 6px;">
           <div style="display:inline-flex; flex-wrap:wrap; gap:4px; justify-content:center;">
             <button class="btn btn-secondary btn-xs btn-edit-emp" data-idx="${idx}" title="Editar">✏️</button>
