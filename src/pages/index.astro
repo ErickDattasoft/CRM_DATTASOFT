@@ -6597,7 +6597,6 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
             };
 
             document.getElementById('btnXlsConfirmUpload').onclick = async () => {
-              if (!firebaseEnabled) return alert('Firebase no está configurado. Revisa las variables de entorno.');
               const mEmp = document.getElementById('xls-map-empresa')?.value;
               const mCt  = document.getElementById('xls-map-contacto')?.value;
               if (!mEmp) {
