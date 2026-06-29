@@ -13,6 +13,8 @@ export const firebaseEnabled = Boolean(
   firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.projectId
 );
 
+console.log('[Firebase] apiKey:', !!firebaseConfig.apiKey, '| authDomain:', !!firebaseConfig.authDomain, '| projectId:', !!firebaseConfig.projectId, '| enabled:', firebaseEnabled);
+
 // Firestore rechaza valores `undefined` con "invalid-argument".
 // JSON round-trip los elimina de objetos y los convierte a null en arrays.
 const limpiar = (data) => JSON.parse(JSON.stringify(data ?? null));
