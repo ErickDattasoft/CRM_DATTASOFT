@@ -2107,7 +2107,7 @@ try {
                 </div>
                 <div class="form-group"><label>Correo Electrónico</label><input id="form-correo" type="email"></div>
                 <div class="form-group form-emp-extras"><label>Contacto alternativo</label><input id="form-contacto2" placeholder="Nombre del contacto alternativo"></div>
-                <div class="form-group form-emp-extras"><label>Correo electrónico alternativo</label><input id="form-correo2" type="email"></div>
+                <div class="form-group form-emp-extras"><label>Correo electrónico contacto alternativo</label><input id="form-correo2" type="email"></div>
                 <div class="form-group"><label>RFC</label><input id="form-empresa-rfc" placeholder="Ej: XAXX010101000"></div>
                 <div class="form-group form-emp-extras"><label>Teléfono 1</label><input id="form-telefono1"></div>
                 <div class="form-group form-emp-extras"><label>Teléfono 2</label><input id="form-telefono2"></div>
@@ -2157,7 +2157,7 @@ try {
                     <th style="min-width:120px; width:140px;">Contacto principal<div class="col-resize-handle"></div></th>
                     <th style="min-width:110px; width:130px;">Contacto alternativo<div class="col-resize-handle"></div></th>
                     <th style="min-width:150px; width:170px;">Correo electrónico Contacto Principal<div class="col-resize-handle"></div></th>
-                    <th style="min-width:150px; width:170px;">Correo electrónico alternativo<div class="col-resize-handle"></div></th>
+                    <th style="min-width:150px; width:170px;">Correo electrónico contacto alternativo<div class="col-resize-handle"></div></th>
                     <th style="min-width:110px; width:130px;">Teléfono Contacto Principal<div class="col-resize-handle"></div></th>
                     <th style="min-width:110px; width:130px;">Teléfono Contacto alternativo<div class="col-resize-handle"></div></th>
                     <th style="text-align:center; min-width:100px; width:110px;">Acciones</th>
@@ -6652,13 +6652,33 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
                   return;
                 }
 
+                // Sanitización profunda: garantiza que no haya undefined, funciones, ni tipos inválidos para Firestore
+                const fsClean = (v) => {
+                  if (v === undefined || v === null) return null;
+                  if (typeof v === 'function' || typeof v === 'symbol') return null;
+                  if (typeof v === 'number') return isFinite(v) ? v : null;
+                  if (typeof v === 'boolean' || typeof v === 'string') return v;
+                  if (v instanceof Date) return v.toISOString();
+                  if (Array.isArray(v)) return v.map(fsClean).filter(x => x !== undefined);
+                  if (typeof v === 'object') {
+                    const out = {};
+                    for (const [k, val] of Object.entries(v)) {
+                      if (typeof k === 'string' && k.length > 0) out[k] = fsClean(val);
+                    }
+                    return out;
+                  }
+                  return String(v);
+                };
+                const cleanedClientes = mappedClientes.map(fsClean);
+                console.log('[Import] Primera empresa:', JSON.stringify(cleanedClientes[0]));
+
                 // Contactos 1:1 desde empresa (solo contacto principal)
                 const mappedContactos = mappedClientes
                   .filter(e => e.CONTACTO)
                   .map(e => ({ nombre: e.CONTACTO, correo: e.CORREO, telefono1: e.TELEFONO_1, telefono2: '', empresa: e.EMPRESA }));
 
                 // Guardar empresas primero — actualizar local inmediatamente al éxito
-                const okCli = await guardarClientes(mappedClientes);
+                const okCli = await guardarClientes(cleanedClientes);
                 if (okCli === true) {
                   clientes = mappedClientes;
                   renderEmpresas(); renderDashboard();
