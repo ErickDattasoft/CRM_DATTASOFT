@@ -7763,11 +7763,17 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const docs = kbCat === "all" ? kbDocs : kbDocs.filter(d => d.category === kbCat);
     const allTags = [...new Set(docs.flatMap(d => d.tags || []).filter(Boolean))]
       .sort((a, b) => kbNorm(a).localeCompare(kbNorm(b)));
-    if (!allTags.length) { el.style.display = "none"; return; }
     el.style.display = "flex";
+    if (!allTags.length) {
+      el.innerHTML = `<span class="kb-tag-cloud-label">🏷 Tags:</span><span style="font-size:0.72rem;color:var(--text-muted);font-style:italic;">Sin etiquetas — agrégalas al crear o editar un documento.</span>`;
+      return;
+    }
+    const clearBtn = kbTagFilter
+      ? `<span class="kb-tag-chip" data-tag="" style="cursor:pointer;opacity:0.6;">✕ Quitar filtro</span>`
+      : "";
     el.innerHTML = `<span class="kb-tag-cloud-label">🏷 Tags:</span>` + allTags.map(t =>
       `<span class="kb-tag-chip ${kbTagFilter && kbNorm(t) === kbNorm(kbTagFilter) ? "kb-tag-active" : ""}" data-tag="${kbEsc(t)}" style="cursor:pointer;">${kbTagIcon(t)} ${kbEsc(t)}</span>`
-    ).join("");
+    ).join("") + clearBtn;
   }
 
   function logoCargar() {
