@@ -4740,9 +4740,8 @@ verificarSesion();
 
       const tdBase = "vertical-align:top; padding:12px 14px;";
       const pillBase = "display:inline-block; padding:3px 9px; border-radius:5px; font-size:0.73rem; font-weight:700; white-space:nowrap;";
-      let html = `
       // Calcular estado global de versiones para el indicador del botón
-      let verEstado = "sin-datos"; // sin-datos | ok | alerta | error
+      let verEstado = "sin-datos";
       if (listaSistemas.length > 0) {
         const hoyV = new Date(); hoyV.setHours(0,0,0,0);
         for (const s of listaSistemas) {
@@ -4771,7 +4770,7 @@ verificarSesion();
       }[verEstado];
       const verIcon = { "sin-datos": "💻", "ok": "✅", "alerta": "⚠️", "error": "🔴" }[verEstado];
 
-      html += `
+      let html = `
         <td style="${tdBase} text-align:center; padding-top:15px;"><input type="checkbox" class="chk-emp" data-idx="${idx}" ${checked} style="cursor:pointer;"></td>
         <td style="${tdBase} max-width:0; overflow:hidden;">
           <div style="display:flex; align-items:center; gap:6px; overflow:hidden;">
