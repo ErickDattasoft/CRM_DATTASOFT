@@ -13,6 +13,10 @@ export const firebaseEnabled = Boolean(
   firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.projectId
 );
 
+// Firestore rechaza valores `undefined` con "invalid-argument".
+// JSON round-trip los elimina de objetos y los convierte a null en arrays.
+const limpiar = (data) => JSON.parse(JSON.stringify(data ?? null));
+
 const app  = firebaseEnabled ? initializeApp(firebaseConfig) : null;
 const db   = firebaseEnabled ? getFirestore(app) : null;
 const auth = firebaseEnabled ? getAuth(app) : null;
@@ -80,7 +84,7 @@ export async function cargarDatosCRM() {
 export async function guardarClientes(clientes) {
   try {
     const docRef = doc(db, "agenda", "datos");
-    await setDoc(docRef, { clientes }, { merge: true });
+    await setDoc(docRef, { clientes: limpiar(clientes) }, { merge: true });
     return true;
   } catch (error) {
     console.error("Error al guardar clientes en Firestore:", error);
@@ -122,7 +126,7 @@ export async function guardarPlantilla(plantillaMensaje) {
 export async function guardarTickets(tickets) {
   try {
     const docRef = doc(db, "agenda", "datos");
-    await setDoc(docRef, { tickets }, { merge: true });
+    await setDoc(docRef, { tickets: limpiar(tickets) }, { merge: true });
     return true;
   } catch (error) {
     console.error("Error al guardar tickets en Firestore:", error);
@@ -136,7 +140,7 @@ export async function guardarTickets(tickets) {
 export async function guardarContactos(contactos) {
   try {
     const docRef = doc(db, "agenda", "datos");
-    await setDoc(docRef, { contactos }, { merge: true });
+    await setDoc(docRef, { contactos: limpiar(contactos) }, { merge: true });
     return true;
   } catch (error) {
     console.error("Error al guardar contactos en Firestore:", error);
