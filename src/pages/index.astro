@@ -6362,6 +6362,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           const correo2Key   = findKeyByNames(sampleCli, ['correo electronico contacto alternativo','correo alternativo','correo2','correo_2']);
           const telKey       = findKeyByNames(sampleCli, ['telefono contacto principal','telefono principal','telefono1','telefono_1','telefono','phone']);
           const tel2Key      = findKeyByNames(sampleCli, ['telefono contacto alternativo','telefono alternativo','telefono2','telefono_2']);
+          const rfcKey       = findKeyByNames(sampleCli, ['rfc','r.f.c','registro federal','tax id']);
 
           // Normalizar y validar correos antes de guardar en localStorage
           const normalizeEmailRaw = (s) => {
@@ -6532,6 +6533,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
             mapContainer.appendChild(makeSelect('xls-map-correo2',   'Correo alternativo',      allKeys, correo2Key   || ''));
             mapContainer.appendChild(makeSelect('xls-map-telefono',  'Teléfono principal',      allKeys, telKey       || ''));
             mapContainer.appendChild(makeSelect('xls-map-telefono2', 'Teléfono alternativo',    allKeys, tel2Key      || ''));
+            mapContainer.appendChild(makeSelect('xls-map-rfc',       'RFC',                     allKeys, rfcKey       || ''));
 
             // función para renderizar preview según mapeo actual
             const renderPreview = () => {
@@ -6615,6 +6617,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
                 const mMail2 = document.getElementById('xls-map-correo2')?.value;
                 const mTel   = document.getElementById('xls-map-telefono')?.value;
                 const mTel2  = document.getElementById('xls-map-telefono2')?.value;
+                const mRfc   = document.getElementById('xls-map-rfc')?.value;
 
                 // Convierte cualquier valor de celda Excel a string seguro para Firestore
                 const xs = v => {
@@ -6638,7 +6641,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
                     CONTACTO_2:  col(r, mCt2)  || '',
                     CORREO:      (col(r, mMail)  || '').toLowerCase(),
                     CORREO_2:    (col(r, mMail2) || '').toLowerCase(),
-                    RFC:         xs(previa?.RFC) || '',
+                    RFC:         col(r, mRfc) || xs(previa?.RFC) || '',
                     TELEFONO_1:  col(r, mTel)  || '',
                     TELEFONO_2:  col(r, mTel2) || '',
                     FAVORITO:    previa?.FAVORITO === true,
