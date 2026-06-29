@@ -84,7 +84,7 @@ export async function guardarClientes(clientes) {
     return true;
   } catch (error) {
     console.error("Error al guardar clientes en Firestore:", error);
-    return false;
+    return { error: error?.code || error?.message || String(error) };
   }
 }
 

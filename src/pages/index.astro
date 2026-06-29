@@ -5044,8 +5044,8 @@ verificarSesion();
     }
     mostrarEstado("💾 Guardando...");
     const ok = await guardarClientes(clientes);
-    if (ok) { toast("💾 Empresa guardada"); ocultarEstado(); }
-    else { mostrarEstado("⚠️ Guardado localmente (sin conexión)", 3000); }
+    if (ok === true) { toast("💾 Empresa guardada"); ocultarEstado(); }
+    else { mostrarEstado(`⚠️ Guardado localmente (sin conexión) — ${ok?.error || "error desconocido"}`, 6000); }
     cerrarFormEmpresa();
     renderEmpresas();
     renderDashboard();
