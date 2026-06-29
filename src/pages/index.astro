@@ -6025,7 +6025,7 @@ verificarSesion();
       if (!listEl) return;
       listEl.innerHTML = "";
       const items = configTickets[`${field}s`] || configTickets[`${field}es`] || [];
-      const key = field === "estado" ? "estados" : `${field}s`;
+      const key = field === "estado" ? "estados" : field === "prioridad" ? "prioridades" : `${field}s`;
 
       (configTickets[key] || []).forEach((item, idx) => {
         const div = document.createElement("div");
@@ -6096,7 +6096,7 @@ verificarSesion();
     document.querySelectorAll("[data-cfg-add]").forEach(btn => {
       btn.onclick = () => {
         const field = btn.dataset.cfgAdd;
-        const key = field === "estado" ? "estados" : `${field}s`;
+        const key = field === "estado" ? "estados" : field === "prioridad" ? "prioridades" : `${field}s`;
         const val = prompt(`Nuevo ${field}:`);
         if (val && val.trim()) {
           if (!configTickets[key]) configTickets[key] = [];
