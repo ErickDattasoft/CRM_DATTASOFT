@@ -529,7 +529,10 @@
           })
         });
 
-        if (!resp.ok) throw new Error(`Error ${resp.status}`);
+        if (!resp.ok) {
+          const errBody = await resp.json().catch(() => ({}));
+          throw new Error(`Error ${resp.status}: ${JSON.stringify(errBody)}`);
+        }
 
         document.getElementById("form-view").style.display = "none";
         document.getElementById("folio-generado").textContent = `Folio ${folio}`;
@@ -596,8 +599,8 @@
         }).catch(() => {});
 
       } catch (err) {
-        console.error(err);
-        showError("Ocurrió un error al enviar tu solicitud. Por favor intenta de nuevo o contáctanos directamente.");
+        console.error("[portal-ticket]", err);
+        showError(`Error al enviar: ${err instanceof Error ? err.message : String(err)}`);
       } finally {
         setLoading(false);
       }
