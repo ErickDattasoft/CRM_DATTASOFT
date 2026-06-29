@@ -384,39 +384,39 @@ try {
 
     /* ===== LIGHT MODE ===== */
     body.light-mode {
-      --bg-app: #f0f4f8;
-      --bg-sidebar: #ffffff;
-      --bg-main: #f7f9fc;
-      --bg-card: rgba(255,255,255,0.98);
-      --bg-card-hover: rgba(240,245,255,0.98);
-      --bg-input: #edf2f7;
-      --bg-input-focus: #e2e8f0;
-      --bg-table-header: #e8eef7;
-      --bg-table-row-hover: rgba(99,102,241,0.04);
+      --bg-app: #e2e6ec;
+      --bg-sidebar: #eaecf2;
+      --bg-main: #e8ecf1;
+      --bg-card: #f2f4f8;
+      --bg-card-hover: #eceff5;
+      --bg-input: #dde1e8;
+      --bg-input-focus: #d4d9e2;
+      --bg-table-header: #dde1ea;
+      --bg-table-row-hover: rgba(99,102,241,0.05);
       --text-main: #1e293b;
       --text-muted: #64748b;
-      --text-light: #94a3b8;
+      --text-light: #8a97aa;
       --text-bright: #0f172a;
-      --border-color: rgba(0,0,0,0.08);
-      --border-subtle: rgba(0,0,0,0.04);
-      --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+      --border-color: rgba(0,0,0,0.1);
+      --border-subtle: rgba(0,0,0,0.06);
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.07);
       --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
-      --shadow-lg: 0 8px 25px rgba(0,0,0,0.12);
+      --shadow-lg: 0 8px 25px rgba(0,0,0,0.13);
     }
     body.light-mode .nav-item { color: #374151; }
-    body.light-mode .nav-item:hover, body.light-mode .nav-item.active { background: rgba(99,102,241,0.08); color: #4f46e5; }
+    body.light-mode .nav-item:hover, body.light-mode .nav-item.active { background: rgba(99,102,241,0.1); color: #4f46e5; }
     body.light-mode .nav-item.active::before { background: #6366f1; }
     body.light-mode .sidebar-section-label { color: #94a3b8; }
     body.light-mode .sidebar-brand-sub { color: #64748b; }
-    body.light-mode .topbar { background: rgba(255,255,255,0.95); border-bottom-color: rgba(0,0,0,0.08); }
+    body.light-mode .topbar { background: rgba(234,236,242,0.97); border-bottom-color: rgba(0,0,0,0.1); }
     body.light-mode .topbar-title { color: #0f172a; }
     body.light-mode .topbar-subtitle { color: #64748b; }
     body.light-mode th { color: #475569; }
     body.light-mode input, body.light-mode select, body.light-mode textarea { color: #1e293b; }
     body.light-mode .rte-editor { color: #1e293b; }
     body.light-mode .card-title { color: #1e293b; }
-    body.light-mode .badge { border: 1px solid rgba(0,0,0,0.08); }
-    body.light-mode .btn-sidebar-toggle { background: #fff; border-color: rgba(0,0,0,0.1); color: #374151; }
+    body.light-mode .badge { border: 1px solid rgba(0,0,0,0.1); }
+    body.light-mode .btn-sidebar-toggle { background: #eaecf2; border-color: rgba(0,0,0,0.1); color: #374151; }
 
     /* ===== ATTACHMENT ZONE ===== */
     .attachment-zone {
@@ -1496,6 +1496,26 @@ try {
       .topbar-subtitle { font-size: 0.65rem; }
     }
   /* ── Login overlay ── */
+  /* Modal confirmación genérico */
+  #confirm-modal-overlay {
+    position: fixed; inset: 0; z-index: 10000;
+    background: rgba(0,0,0,0.6); display: none;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  #confirm-modal-overlay.open { display: flex; }
+  #confirm-modal-box {
+    background: var(--bg-card, #1a1e29);
+    border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+    border-radius: 16px; padding: 28px 24px;
+    max-width: 320px; width: 100%; text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  #confirm-modal-icon { font-size: 2rem; margin-bottom: 10px; }
+  #confirm-modal-msg { font-size: 0.95rem; font-weight: 600; color: var(--text-main, #e2e8f0); margin-bottom: 20px; line-height: 1.4; }
+  #confirm-modal-actions { display: flex; gap: 10px; }
+  #confirm-modal-actions button { flex: 1; padding: 11px; border-radius: 10px; font-size: 0.9rem; font-weight: 700; cursor: pointer; border: none; }
+  #confirm-modal-cancel { background: rgba(255,255,255,0.07); color: var(--text-main, #e2e8f0); }
+  #confirm-modal-ok { background: #ef4444; color: #fff; }
   #login-overlay {
     position: fixed; inset: 0; background: #0b0e16;
     z-index: 9999; display: flex; align-items: center; justify-content: center;
@@ -1788,9 +1808,22 @@ try {
   .kb-panel { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
   #kb-panel-2 { border-left: 1px solid var(--border-color); }
   /* ===== Logo empresa ===== */
-  #sidebar-logo-img { width: 36px; height: 36px; object-fit: contain; border-radius: var(--radius-md); flex-shrink: 0; display: none; }
+  #sidebar-logo-img { width: 36px; height: 36px; object-fit: contain; border-radius: var(--radius-md); flex-shrink: 0; display: none; cursor: pointer; }
+  #logo-lightbox { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.75); display: none; align-items: center; justify-content: center; cursor: zoom-out; }
+  #logo-lightbox img { width: min(400px, 85vw); height: min(400px, 85vw); object-fit: contain; border-radius: var(--radius-lg); box-shadow: 0 20px 60px rgba(0,0,0,0.5); background: rgba(255,255,255,0.05); padding: 16px; }
   #cfg-logo-preview { width: 72px; height: 72px; border: 1px dashed var(--border-color); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 2rem; background: var(--bg-input); overflow: hidden; flex-shrink: 0; }
   #cfg-logo-preview img { width: 100%; height: 100%; object-fit: contain; display: none; }
+  /* ===== Exportar a Windows ===== */
+  .kb-export-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border-color); transition: background 0.12s; }
+  .kb-export-item:last-child { border-bottom: none; }
+  .kb-export-item:hover { background: rgba(99,102,241,0.04); }
+  .kb-export-item input[type="checkbox"] { width: auto; margin-top: 3px; flex-shrink: 0; accent-color: var(--brand-primary); cursor: pointer; padding: 0; border: none; background: none; box-shadow: none; }
+  .kb-export-item-info { flex: 1; min-width: 0; }
+  .kb-export-item-name { font-size: 0.83rem; font-weight: 600; color: var(--text-main); margin-bottom: 3px; word-break: break-all; }
+  .kb-export-item-path { font-size: 0.7rem; color: var(--text-muted); font-family: 'Courier New', monospace; word-break: break-all; line-height: 1.4; margin-bottom: 3px; }
+  .kb-export-item-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .kb-exp-single { flex-shrink: 0; font-size: 0.78rem; padding: 4px 8px; margin-top: 1px; }
+  .kb-export-empty { padding: 28px 20px; text-align: center; color: var(--text-light); font-size: 0.82rem; line-height: 1.6; }
   </style>
 </head>
 <body>
@@ -1800,7 +1833,8 @@ try {
 <!-- ============================== -->
 <div id="login-overlay">
   <div id="login-box">
-    <div class="login-icon">📊</div>
+    <div class="login-icon" id="login-icon-emoji">📊</div>
+    <img id="login-logo-img" alt="Logo empresa" style="display:none; width:80px; height:80px; object-fit:contain; border-radius:12px; margin:0 auto 10px; cursor:pointer;">
     <div class="login-title">DATTASOFT CRM</div>
     <!-- Paso 1: selección de usuario -->
     <div id="login-step-user">
@@ -1830,7 +1864,7 @@ try {
       <div class="sidebar-brand-logo" id="sidebar-brand-logo-el">📊</div>
       <img id="sidebar-logo-img" alt="Logo empresa">
       <div>
-        <div class="sidebar-brand-text" style="font-size:0.85rem; line-height:1.2;">DATTASOFT<br><span style="font-size:0.68rem; font-weight:600; opacity:0.85;">BY INFOXPERT</span></div>
+        <div class="sidebar-brand-text" style="font-size:0.85rem; line-height:1.3;">DATTASOFT BY INFOXPERT</div>
         <div class="sidebar-brand-sub">CRM Técnico</div>
       </div>
     </div>
@@ -1904,6 +1938,7 @@ try {
     <div class="topbar">
       <div style="display:flex; align-items:center; gap:12px;">
         <button id="btnMobileMenu" class="btn-mobile-menu" aria-label="Menú">☰</button>
+        <img id="topbar-logo-img" alt="Logo empresa" style="display:none; width:32px; height:32px; object-fit:contain; border-radius:6px; cursor:pointer; flex-shrink:0;">
         <div>
           <div class="topbar-title" id="topbar-title">Dashboard</div>
           <div class="topbar-subtitle" id="topbar-subtitle">Resumen general del CRM</div>
@@ -2412,9 +2447,9 @@ try {
         <div class="card">
           <div class="card-title">📧 Correo de Soporte</div>
           <div class="form-group" style="max-width:400px; margin-bottom:16px;">
-            <label>Correo remitente para tickets</label>
+            <label>Correo que recibe notificaciones de tickets</label>
             <input id="cfg-correo-soporte" type="email" value="erick.casas@dattasoft.mx">
-            <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">Este correo se usará para enviar confirmaciones y seguimiento de tickets. Puede cambiarse en cualquier momento.</span>
+            <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">Cuando un cliente crea un ticket desde el portal público, la notificación llega a este correo. También se usa como remitente en confirmaciones al cliente.</span>
           </div>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; padding:12px 14px; background:rgba(99,102,241,0.06); border-radius:8px; border:1px solid rgba(99,102,241,0.15);">
             <span style="font-size:0.8rem; font-weight:600; color:var(--brand-primary-hover); white-space:nowrap;">🧪 Prueba de correo</span>
@@ -2424,31 +2459,16 @@ try {
           </div>
           <div style="border-top:1px dashed rgba(255,255,255,0.06); padding-top:14px;">
             <div style="font-size:0.82rem; font-weight:700; color:var(--brand-primary-hover); margin-bottom:12px;">🚀 Servicio de envío de correo</div>
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:12px; margin-bottom:12px;">
-              <label class="cfg-mail-provider" style="display:flex; align-items:center; gap:8px; padding:10px 14px; border:1px solid var(--border-color); border-radius:var(--radius-md); cursor:pointer; transition:var(--transition-base);">
-                <input type="radio" name="cfg-mail-provider" value="resend" id="cfg-provider-resend" style="width:auto; accent-color:var(--brand-primary);">
-                <span style="font-weight:600; color:var(--text-main); font-size:0.85rem;">Resend</span>
-                <span style="font-size:0.68rem; color:var(--text-light);">Recomendado</span>
-              </label>
-              <label class="cfg-mail-provider" style="display:flex; align-items:center; gap:8px; padding:10px 14px; border:1px solid var(--border-color); border-radius:var(--radius-md); cursor:pointer; transition:var(--transition-base);">
-                <input type="radio" name="cfg-mail-provider" value="sendgrid" id="cfg-provider-sendgrid" style="width:auto; accent-color:var(--brand-primary);">
-                <span style="font-weight:600; color:var(--text-main); font-size:0.85rem;">SendGrid</span>
-              </label>
-              <label class="cfg-mail-provider" style="display:flex; align-items:center; gap:8px; padding:10px 14px; border:1px solid var(--border-color); border-radius:var(--radius-md); cursor:pointer; transition:var(--transition-base);">
-                <input type="radio" name="cfg-mail-provider" value="mailgun" id="cfg-provider-mailgun" style="width:auto; accent-color:var(--brand-primary);">
-                <span style="font-weight:600; color:var(--text-main); font-size:0.85rem;">Mailgun</span>
-              </label>
-              <label class="cfg-mail-provider" style="display:flex; align-items:center; gap:8px; padding:10px 14px; border:1px solid var(--border-color); border-radius:var(--radius-md); cursor:pointer; transition:var(--transition-base);">
-                <input type="radio" name="cfg-mail-provider" value="ses" id="cfg-provider-ses" style="width:auto; accent-color:var(--brand-primary);">
-                <span style="font-weight:600; color:var(--text-main); font-size:0.85rem;">Amazon SES</span>
-              </label>
+            <label class="cfg-mail-provider selected" style="display:flex; align-items:center; gap:8px; padding:10px 14px; border:1px solid var(--brand-primary); border-radius:var(--radius-md); cursor:default; max-width:280px; margin-bottom:14px;">
+              <input type="radio" name="cfg-mail-provider" value="brevo" id="cfg-provider-brevo" checked style="width:auto; accent-color:var(--brand-primary);">
+              <span style="font-weight:600; color:var(--text-main); font-size:0.85rem;">Brevo</span>
+              <span style="font-size:0.68rem; color:var(--text-light);">Activo</span>
+            </label>
+            <div style="font-size:0.78rem; color:var(--text-muted); line-height:1.6; max-width:480px; margin-bottom:10px;">
+              ⚙️ La API Key de Brevo se configura en Cloudflare como variable de entorno <code style="background:rgba(255,255,255,0.06); padding:1px 6px; border-radius:3px; font-size:0.75rem;">BREVO_API_KEY</code>. No es necesario ingresarla aquí.
             </div>
-            <div class="form-group" style="max-width:480px;">
-              <label>API Key del proveedor seleccionado</label>
-              <input id="cfg-mail-apikey" type="password" placeholder="Pega aquí tu API Key...">
-              <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">⚠️ La API Key se guarda localmente en el navegador. Nunca se envía a servidores externos.</span>
-              <span id="mail-provider-help" style="font-size:0.78rem; color:var(--text-light); margin-top:8px; display:block; line-height:1.4;"></span>
-            </div>
+            <input id="cfg-mail-apikey" type="hidden" value="">
+            <span id="mail-provider-help" style="font-size:0.78rem; color:var(--text-light); display:block; line-height:1.4;"></span>
           </div>
         </div>
 
@@ -2771,6 +2791,7 @@ try {
             </div>
           </div>
           <button id="kb-btn-export" class="btn btn-ghost btn-sm" title="Exportar todos los documentos como backup JSON">💾 Backup</button>
+          <button id="kb-btn-export-win" class="btn btn-ghost btn-sm" title="Exportar archivos modificados a Windows — muestra rutas y descarga solo los que cambiaron" style="display:none;">📤 Exportar</button>
           <button id="kb-btn-nuevo" class="btn btn-primary btn-sm">+ Nuevo documento</button>
         </div>
 
@@ -2844,6 +2865,7 @@ try {
                       <button id="kb-btn-download" class="btn btn-ghost btn-sm" title="Descargar como archivo">⬇ Descargar</button>
                       <button id="kb-btn-edit" class="btn btn-ghost btn-sm">✏️ Editar</button>
                       <button id="kb-btn-del" class="btn btn-sm" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); color:#f87171;" title="Eliminar documento">🗑️</button>
+                      <button id="kb-btn-close-1" class="btn btn-ghost btn-sm" style="color:var(--text-muted);" title="Cerrar documento">✕</button>
                     </div>
                   </div>
                   <div class="kb-content-wrap" id="kb-content-wrap"></div>
@@ -2960,6 +2982,53 @@ try {
             </div>
           </div>
         </div><!-- /kb-modal -->
+
+        <!-- Modal: Exportar a Windows -->
+        <div id="kb-export-modal" class="kb-modal-overlay" style="display:none;">
+          <div class="kb-modal-box" style="max-width:720px;">
+            <div class="kb-modal-header">
+              <div class="kb-modal-title">📤 Exportar cambios a Windows</div>
+              <button class="modal-close" id="kb-export-close">×</button>
+            </div>
+            <div class="kb-modal-body">
+              <!-- Filtro -->
+              <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                <span style="font-size:0.8rem; font-weight:600; color:var(--text-muted); white-space:nowrap;">Mostrar:</span>
+                <select id="kb-export-filter" style="font-size:0.8rem; padding:5px 10px; border-radius:var(--radius-sm); background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-main); cursor:pointer;">
+                  <option value="today">Modificados hoy</option>
+                  <option value="week">Modificados esta semana</option>
+                  <option value="changed">Con cambios desde última exportación</option>
+                  <option value="all">Todos los documentos</option>
+                </select>
+                <span id="kb-export-last-label" style="font-size:0.72rem; color:var(--text-light); flex:1;"></span>
+              </div>
+              <!-- Lista de archivos -->
+              <div id="kb-export-list" style="border:1px solid var(--border-color); border-radius:var(--radius-md); overflow:hidden; max-height:300px; overflow-y:auto; background:var(--bg-main);"></div>
+              <!-- Ruta base en Windows -->
+              <div class="form-group" style="margin:0;">
+                <label>Carpeta destino en Windows</label>
+                <div style="display:flex; gap:8px; align-items:center;">
+                  <input id="kb-export-basepath" type="text" placeholder="Selecciona la carpeta con el botón →" style="flex:1;" readonly>
+                  <button id="kb-export-pick-folder" class="btn btn-primary btn-sm" style="white-space:nowrap; flex-shrink:0;">📂 Seleccionar carpeta</button>
+                </div>
+                <span id="kb-export-path-hint" style="font-size:0.7rem; color:var(--text-light); margin-top:4px; display:block;">💡 Selecciona la carpeta raíz donde están tus scripts. Los archivos se guardarán en sus rutas originales automáticamente.</span>
+              </div>
+            </div>
+            <div class="kb-modal-footer" style="justify-content:space-between; align-items:center;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <label style="display:flex; align-items:center; gap:5px; font-size:0.8rem; color:var(--text-muted); cursor:pointer;">
+                  <input type="checkbox" id="kb-export-sel-all" checked style="width:auto; accent-color:var(--brand-primary);">
+                  <span>Todos</span>
+                </label>
+                <span id="kb-export-count" style="font-size:0.8rem; color:var(--text-muted);"></span>
+              </div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button id="kb-export-copy-paths" class="btn btn-ghost btn-sm" title="Copiar rutas de los archivos seleccionados al portapapeles">📋 Copiar rutas</button>
+                <button id="kb-export-download" class="btn btn-primary btn-sm">💾 Guardar seleccionados</button>
+              </div>
+            </div>
+          </div>
+        </div><!-- /kb-export-modal -->
 
       </div><!-- /section-knowledge -->
 
@@ -3276,7 +3345,35 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, suscribirKB, crearDocKB, actualizarDocKB, eliminarDocKB, guardarKBAcceso, guardarLogo } from "../data/firebase.js";
+import { firebaseEnabled, authListo, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo } from "../data/firebase.js";
+
+// ── Modal confirmación (reemplaza confirm() — funciona en móvil) ──
+function confirmar(msg: string, icon = "⚠️"): Promise<boolean> {
+  return new Promise(resolve => {
+    const overlay = document.getElementById("confirm-modal-overlay");
+    const msgEl   = document.getElementById("confirm-modal-msg");
+    const iconEl  = document.getElementById("confirm-modal-icon");
+    const okBtn   = document.getElementById("confirm-modal-ok");
+    const cancelBtn = document.getElementById("confirm-modal-cancel");
+    if (!overlay || !msgEl || !okBtn || !cancelBtn) { resolve(confirm(msg)); return; }
+    if (iconEl) iconEl.textContent = icon;
+    msgEl.textContent = msg;
+    overlay.classList.add("open");
+    const close = (result: boolean) => {
+      overlay.classList.remove("open");
+      okBtn.removeEventListener("click", onOk);
+      cancelBtn.removeEventListener("click", onCancel);
+      overlay.removeEventListener("click", onOutside);
+      resolve(result);
+    };
+    const onOk      = () => close(true);
+    const onCancel  = () => close(false);
+    const onOutside = (e: Event) => { if (e.target === overlay) close(false); };
+    okBtn.addEventListener("click", onOk);
+    cancelBtn.addEventListener("click", onCancel);
+    overlay.addEventListener("click", onOutside);
+  });
+}
 
 // ── Multi-user Auth ───────────────────────────────────────────
 async function sha256(str: string): Promise<string> {
@@ -3383,8 +3480,8 @@ document.getElementById("login-back-btn")?.addEventListener("click", () => {
   const errEl = document.getElementById("login-error");
   if (errEl) errEl.textContent = "";
 });
-document.getElementById("btnLogout")?.addEventListener("click", () => {
-  if (!confirm("¿Cerrar sesión?")) return;
+document.getElementById("btnLogout")?.addEventListener("click", async () => {
+  if (!await confirmar("¿Cerrar sesión?", "🔓")) return;
   sessionStorage.removeItem(SESSION_KEY);
   location.reload();
 });
@@ -3826,7 +3923,7 @@ verificarSesion();
   }
 
   // Aplica datos recibidos de Firebase a las variables en memoria
-  function aplicarDatosFirebase(datos) {
+  function aplicarDatosFirebase(datos, preservarConfig = false) {
     if (!datos) return;
     // Regla: solo sobreescribir un campo si Firebase TIENE ese campo (no undefined).
     // Si el campo no existe en el doc de Firestore, conservar lo que hay en memoria.
@@ -3836,7 +3933,9 @@ verificarSesion();
     if (datos.plantillaMensaje !== undefined) plantillaMensaje = datos.plantillaMensaje;
     if (datos.tickets !== undefined && (datos.tickets.length > 0 || tickets.length === 0)) tickets = datos.tickets || [];
     if (datos.contactos !== undefined && (datos.contactos.length > 0 || contactos.length === 0)) contactos = datos.contactos || [];
-    if (datos.configTickets) configTickets = { ...configTickets, ...datos.configTickets };
+    // Si el usuario está en la sección de configuración y aún no ha guardado, preservar
+    // los cambios en memoria para no pisar ediciones en progreso (prioridades, estados, etc.)
+    if (datos.configTickets && !preservarConfig) configTickets = { ...configTickets, ...datos.configTickets };
     if (datos.usuarios && datos.usuarios.length > 0) saveUsuariosLocal(datos.usuarios);
     // Merge eventos: Firebase es fuente de verdad sólo cuando tiene datos.
     // Si Firebase tiene menos eventos que la memoria local (race condition entre
@@ -3885,7 +3984,6 @@ verificarSesion();
     if (secActiva === "bitacora") renderBitacora();
     if (secActiva === "eventos") renderSeccionEventos();
     if (secActiva === "versiones") initMarketForms();
-    if (secActiva === "configuracion") renderConfig();
   }
 
   function inicializarApp() {
@@ -4044,9 +4142,11 @@ verificarSesion();
           // ── ACTUALIZACIÓN REMOTA (otro dispositivo guardó algo) ───────
           if (hasPendingWrites) return; // Escritura propia aún pendiente, ignorar
 
-          aplicarDatosFirebase(datos);
+          const enConfiguracion = document.querySelector(".nav-item.active")?.dataset.section === "configuracion";
+          aplicarDatosFirebase(datos, enConfiguracion);
 
           if (hayFormularioActivo()) return; // Form abierto: datos listos en memoria, UI se actualiza al cerrar
+          if (enConfiguracion) return; // Edición de config en progreso: no sobreescribir UI
 
           renderCompleto();
         }
@@ -5890,8 +5990,6 @@ verificarSesion();
   }
 
   function updateMailProviderHelp() {
-    const provider = document.querySelector('input[name="cfg-mail-provider"]:checked')?.value || "resend";
-    const apiKey = document.getElementById("cfg-mail-apikey")?.value.trim() || "";
     const fromInput = document.getElementById("cfg-correo-soporte")?.value.trim() || "";
     const from = fromInput || configTickets.correoSoporte || "";
     const helpEl = document.getElementById("mail-provider-help");
@@ -5902,12 +6000,7 @@ verificarSesion();
       helpEl.classList.add("warn");
       return;
     }
-    if (!apiKey) {
-      helpEl.textContent = `⚠️ ${provider.toUpperCase()} seleccionado. Falta API Key para enviar correos automáticamente.`;
-      helpEl.classList.add("warn");
-      return;
-    }
-    helpEl.textContent = `✅ ${provider.toUpperCase()} listo. Correos se enviarán desde ${from}.`;
+    helpEl.textContent = `✅ Brevo listo. Correos se enviarán desde ${from}.`;
     helpEl.classList.add("ok");
   }
 
@@ -7529,7 +7622,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   // Cerrar modales con Escape
   document.addEventListener("keydown", e => {
     if (e.key !== "Escape") return;
-    ["modal-acerca-de", "modal-papelera", "modal-exportar-excel"].forEach(id => {
+    ["modal-acerca-de", "modal-papelera", "modal-exportar-excel", "kb-export-modal"].forEach(id => {
       const m = document.getElementById(id);
       if (m && m.style.display !== "none") m.style.display = "none";
     });
@@ -7551,11 +7644,13 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     content: string;
     file_type: "md" | "ps1" | "bat" | "sql";
     tags: string[];
+    sourcePath?: string;
     created_at?: any;
     updated_at?: any;
   }
 
   let kbDocs: KBDoc[] = [];
+  let kbExportDirHandle: any = null; // FileSystemDirectoryHandle para escritura directa
   let kbSelId: string | null = null;
   let kbSelId2: string | null = null;
   let kbCat = "all";
@@ -7677,20 +7772,33 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
   function logoCargar() {
     const saved = localStorage.getItem("crm_logo");
-    const brandLogoEl = document.getElementById("sidebar-brand-logo-el") as HTMLElement | null;
-    const logoImg = document.getElementById("sidebar-logo-img") as HTMLImageElement | null;
-    const previewImg = document.getElementById("cfg-logo-preview-img") as HTMLImageElement | null;
+    const brandLogoEl  = document.getElementById("sidebar-brand-logo-el") as HTMLElement | null;
+    const logoImg      = document.getElementById("sidebar-logo-img")       as HTMLImageElement | null;
+    const topbarImg    = document.getElementById("topbar-logo-img")        as HTMLImageElement | null;
+    const loginImg     = document.getElementById("login-logo-img")         as HTMLImageElement | null;
+    const loginEmoji   = document.getElementById("login-icon-emoji")       as HTMLElement | null;
+    const previewImg   = document.getElementById("cfg-logo-preview-img")   as HTMLImageElement | null;
     const previewEmoji = document.getElementById("cfg-logo-preview-emoji") as HTMLElement | null;
+    const lbImg        = document.getElementById("logo-lightbox-img")      as HTMLImageElement | null;
     if (saved) {
       if (brandLogoEl) brandLogoEl.style.display = "none";
-      if (logoImg) { logoImg.src = saved; logoImg.style.display = "block"; }
+      if (logoImg)    { logoImg.src = saved;    logoImg.style.display = "block"; }
+      if (topbarImg)  { topbarImg.src = saved;  topbarImg.style.display = "block"; }
+      if (loginImg)   { loginImg.src = saved;   loginImg.style.display = "block"; }
+      if (loginEmoji) loginEmoji.style.display = "none";
       if (previewImg) { previewImg.src = saved; previewImg.style.display = "block"; }
       if (previewEmoji) previewEmoji.style.display = "none";
+      if (lbImg) lbImg.src = saved;
+      document.querySelectorAll<HTMLLinkElement>("link[rel='icon']").forEach(el => { el.href = saved; });
     } else {
       if (brandLogoEl) brandLogoEl.style.display = "";
-      if (logoImg) { logoImg.src = ""; logoImg.style.display = "none"; }
+      if (logoImg)    { logoImg.src = "";    logoImg.style.display = "none"; }
+      if (topbarImg)  { topbarImg.src = "";  topbarImg.style.display = "none"; }
+      if (loginImg)   { loginImg.src = "";   loginImg.style.display = "none"; }
+      if (loginEmoji) loginEmoji.style.display = "";
       if (previewImg) { previewImg.src = ""; previewImg.style.display = "none"; }
       if (previewEmoji) previewEmoji.style.display = "";
+      if (lbImg) lbImg.src = "";
     }
   }
 
@@ -8061,19 +8169,25 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           const title   = f.name.replace(/\.(md|ps1|bat|sql|txt)$/i, "");
           const existing = kbDocs.find(d => kbNorm(d.title) === kbNorm(title));
           if (existing) {
+            const sp = (f as any).webkitRelativePath as string || "";
             if (existing.content === text) {
+              if (sp && !existing.sourcePath) await actualizarSourcePathKB(existing._id, sp);
               sinCambios++;
             } else {
-              await actualizarDocKB(existing._id, { content: text });
+              const upd: any = { content: text };
+              if (sp) upd.sourcePath = sp;
+              await actualizarDocKB(existing._id, upd);
               actualizados++;
             }
           } else {
+            const sp = (f as any).webkitRelativePath as string || "";
             await crearDocKB({
               title,
               category: kbGuessCat(f.name),
               file_type: kbGuessType(f.name),
               content: text,
-              tags: []
+              tags: [],
+              ...(sp ? { sourcePath: sp } : {})
             });
             nuevos++;
           }
@@ -8084,6 +8198,119 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     }
     setTimeout(() => { if (progressEl) progressEl.style.display = "none"; }, 4000);
     toast(`🔄 Indexado: ${actualizados} actualizados · ${nuevos} nuevos${sinCambios ? ` · ${sinCambios} sin cambios` : ""}`);
+  }
+
+  function kbGetDocExtension(doc: KBDoc): string {
+    const m: Record<string, string> = { md: "md", ps1: "ps1", bat: "bat", sql: "sql" };
+    return m[doc.file_type] || "txt";
+  }
+
+  function kbBuildFullPath(doc: KBDoc, basePath: string): string {
+    const ext = kbGetDocExtension(doc);
+    const filename = `${doc.title}.${ext}`;
+    const rel = doc.sourcePath ? doc.sourcePath.replace(/\//g, "\\") : filename;
+    if (!basePath) return rel;
+    return basePath.replace(/[/\\]*$/, "") + "\\" + rel;
+  }
+
+  function kbGetTs(d: KBDoc): number {
+    // content_updated_at solo se actualiza con cambios de contenido, no de ruta
+    const u = (d as any).content_updated_at ?? null;
+    if (!u) return 0;
+    if (typeof u.toDate === "function") {
+      try { return u.toDate().getTime(); } catch { /* fallback */ }
+    }
+    if (typeof u.seconds === "number") return u.seconds * 1000;
+    if (u instanceof Date) return u.getTime();
+    return 0;
+  }
+
+  function kbGetExportDocs(filter: string): KBDoc[] {
+    const now = Date.now();
+    const lastStr = localStorage.getItem("crm_kb_last_export");
+    const lastMs = lastStr ? new Date(lastStr).getTime() : 0;
+    return kbDocs.filter(d => {
+      const ts = kbGetTs(d);
+      switch (filter) {
+        case "today": { const sod = new Date(); sod.setHours(0,0,0,0); return ts > 0 && ts >= sod.getTime(); }
+        case "week":  return ts > 0 && ts >= now - 7 * 86_400_000;
+        case "changed": return ts > lastMs;
+        default: return true; // all
+      }
+    });
+  }
+
+  function kbRenderExportList() {
+    const list = document.getElementById("kb-export-list");
+    if (!list) return;
+    const basePath = (document.getElementById("kb-export-basepath") as HTMLInputElement)?.value ?? "";
+    const filter = (document.getElementById("kb-export-filter") as HTMLSelectElement)?.value || "changed";
+    const docs = kbGetExportDocs(filter);
+    const countEl = document.getElementById("kb-export-count");
+    if (countEl) countEl.textContent = docs.length ? `${docs.length} archivo(s)` : "";
+
+    if (!docs.length) {
+      list.innerHTML = `<div class="kb-export-empty">✅ Sin cambios detectados — todos los documentos están al día<br><span style="font-size:0.7rem; color:var(--text-muted);">Cambia el filtro a "Todos los documentos" para descargar la colección completa.</span></div>`;
+      return;
+    }
+
+    const selAll = (document.getElementById("kb-export-sel-all") as HTMLInputElement)?.checked ?? true;
+    list.innerHTML = docs.map(d => {
+      const ext = kbGetDocExtension(d);
+      const filename = `${d.title}.${ext}`;
+      const fullPath = kbBuildFullPath(d, basePath);
+      const date = kbFmtDate((d as any).content_updated_at ?? d.updated_at);
+      const fc = kbFmtCat(d.category);
+      return `<div class="kb-export-item" data-id="${d._id}">
+        <input type="checkbox" class="kb-export-check" ${selAll ? "checked" : ""}>
+        <div class="kb-export-item-info">
+          <div class="kb-export-item-name">${kbEsc(filename)}</div>
+          ${fullPath !== filename ? `<div class="kb-export-item-path">📁 ${kbEsc(fullPath)}</div>` : ""}
+          <div class="kb-export-item-meta">
+            <span class="kb-badge ${fc.cls}" style="font-size:0.62rem;">${fc.label}</span>
+            <span style="font-size:0.68rem; color:var(--text-light);">${date}</span>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm kb-exp-single" data-id="${d._id}" title="Descargar este archivo">⬇</button>
+      </div>`;
+    }).join("");
+  }
+
+  async function kbDescargarDocs(ids: string[]) {
+    const docs = ids.map(id => kbDocs.find(d => d._id === id)).filter(Boolean) as KBDoc[];
+    if (!docs.length) { toast("⚠️ No hay archivos seleccionados", "warning"); return; }
+
+    // Escritura directa al filesystem si hay handle activo
+    if (kbExportDirHandle) {
+      let ok = 0, err = 0;
+      for (const d of docs) {
+        try {
+          const ext = kbGetDocExtension(d);
+          const sp = d.sourcePath?.replace(/\\/g, "/") ?? "";
+          const parts = sp ? sp.split("/") : [];
+          let dirH = kbExportDirHandle;
+          // Navegar/crear subcarpetas según sourcePath
+          for (let i = 0; i < parts.length - 1; i++) {
+            if (parts[i]) dirH = await dirH.getDirectoryHandle(parts[i], { create: true });
+          }
+          const fname = parts.length > 0 ? parts[parts.length - 1] : `${d.title}.${ext}`;
+          const fh = await dirH.getFileHandle(fname || `${d.title}.${ext}`, { create: true });
+          const wr = await fh.createWritable();
+          await wr.write(d.content);
+          await wr.close();
+          ok++;
+        } catch { err++; }
+      }
+      localStorage.setItem("crm_kb_last_export", new Date().toISOString());
+      const lastLabel = document.getElementById("kb-export-last-label");
+      if (lastLabel) lastLabel.textContent = `Última exportación: ${new Date().toLocaleString("es-MX")}`;
+      if (err === 0) toast(`✅ ${ok} archivo(s) guardado(s) directamente en Windows`);
+      else toast(`⚠️ ${ok} guardados · ${err} con error — verifica permisos`, "warning");
+      return;
+    }
+
+    // Sin handle: pedir que seleccione carpeta
+    toast("📂 Primero selecciona la carpeta destino con el botón 'Seleccionar carpeta'", "warning");
   }
 
   function kbSetupEvents() {
@@ -8208,6 +8435,83 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       toast(`✅ Backup exportado: ${kbDocs.length} documentos`);
     });
 
+    // Exportar a Windows
+    document.getElementById("kb-btn-export-win")?.addEventListener("click", () => {
+      if (!kbDocs.length) { toast("⚠️ No hay documentos en SOPORTE", "warning"); return; }
+      const lastExport = localStorage.getItem("crm_kb_last_export");
+      const lastLabel = document.getElementById("kb-export-last-label");
+      if (lastLabel) lastLabel.textContent = lastExport ? `Última exportación: ${new Date(lastExport).toLocaleString("es-MX")}` : "Nunca exportado";
+      const baseInput = document.getElementById("kb-export-basepath") as HTMLInputElement | null;
+      if (baseInput) baseInput.value = "";
+      // Registrar onchange aquí garantiza que siempre esté activo
+      const filterEl = document.getElementById("kb-export-filter");
+      if (filterEl) (filterEl as HTMLSelectElement).onchange = kbRenderExportList;
+      kbRenderExportList();
+      const modal = document.getElementById("kb-export-modal");
+      if (modal) modal.style.display = "flex";
+    });
+    const kbCerrarExportModal = () => {
+      const modal = document.getElementById("kb-export-modal");
+      if (modal) modal.style.display = "none";
+      kbExportDirHandle = null;
+      const btn = document.getElementById("kb-export-download");
+      if (btn) btn.textContent = "💾 Guardar seleccionados";
+      const hint = document.getElementById("kb-export-path-hint");
+      if (hint) hint.innerHTML = "💡 Selecciona la carpeta raíz donde están tus scripts. Los archivos se guardarán en sus rutas originales automáticamente.";
+      const input = document.getElementById("kb-export-basepath") as HTMLInputElement | null;
+      if (input) input.value = "";
+    };
+    document.getElementById("kb-export-close")?.addEventListener("click", kbCerrarExportModal);
+    document.getElementById("kb-export-modal")?.addEventListener("click", (e) => {
+      if (e.target === document.getElementById("kb-export-modal")) kbCerrarExportModal();
+    });
+    document.getElementById("kb-export-filter")?.addEventListener("change", kbRenderExportList);
+    document.getElementById("kb-export-pick-folder")?.addEventListener("click", async () => {
+      const input = document.getElementById("kb-export-basepath") as HTMLInputElement | null;
+      const hint  = document.getElementById("kb-export-path-hint");
+      const btnDownload = document.getElementById("kb-export-download");
+      try {
+        const handle = await (window as any).showDirectoryPicker({ mode: "readwrite" });
+        kbExportDirHandle = handle;
+        const folderName: string = handle.name;
+        if (input) { input.value = folderName + "\\"; localStorage.setItem("crm_kb_export_base", input.value); kbRenderExportList(); }
+        if (hint) hint.innerHTML = `✅ Carpeta "<strong>${folderName}</strong>" lista — los archivos se guardarán <strong>directamente</strong> en ella con su ruta original.`;
+        if (btnDownload) btnDownload.textContent = `💾 Guardar en "${folderName}"`;
+      } catch (e: any) {
+        if (e?.name !== "AbortError") toast("❌ Tu navegador no soporta escritura directa. Usa Chrome o Edge.", "warning");
+      }
+    });
+    document.getElementById("kb-export-sel-all")?.addEventListener("change", (e) => {
+      const checked = (e.target as HTMLInputElement).checked;
+      document.querySelectorAll<HTMLInputElement>(".kb-export-check").forEach(cb => { cb.checked = checked; });
+    });
+    document.getElementById("kb-export-list")?.addEventListener("click", async (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLElement>(".kb-exp-single");
+      if (btn) { await kbDescargarDocs([btn.dataset.id!]); return; }
+    });
+    document.getElementById("kb-export-download")?.addEventListener("click", async () => {
+      const checked = [...document.querySelectorAll<HTMLInputElement>(".kb-export-check")]
+        .filter(cb => cb.checked)
+        .map(cb => cb.closest<HTMLElement>(".kb-export-item")?.dataset.id!)
+        .filter(Boolean);
+      await kbDescargarDocs(checked);
+    });
+    document.getElementById("kb-export-copy-paths")?.addEventListener("click", () => {
+      const basePath = (document.getElementById("kb-export-basepath") as HTMLInputElement)?.value ?? "";
+      const checked = [...document.querySelectorAll<HTMLInputElement>(".kb-export-check")]
+        .filter(cb => cb.checked)
+        .map(cb => {
+          const id = cb.closest<HTMLElement>(".kb-export-item")?.dataset.id!;
+          const doc = kbDocs.find(d => d._id === id);
+          return doc ? kbBuildFullPath(doc, basePath) : null;
+        })
+        .filter(Boolean) as string[];
+      if (!checked.length) { toast("⚠️ No hay archivos seleccionados", "warning"); return; }
+      navigator.clipboard.writeText(checked.join("\r\n"))
+        .then(() => toast(`📋 ${checked.length} ruta(s) copiada(s) al portapapeles`))
+        .catch(() => toast("❌ Error al copiar rutas", "error"));
+    });
+
     // Modal: cerrar
     document.getElementById("kb-modal-close")?.addEventListener("click", kbCerrarModal);
     document.getElementById("kb-form-cancel")?.addEventListener("click", kbCerrarModal);
@@ -8250,6 +8554,16 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
     // Eliminar
     document.getElementById("kb-btn-del")?.addEventListener("click", () => { if (kbSelId) kbEliminar(kbSelId); });
+
+    // Cerrar panel 1
+    document.getElementById("kb-btn-close-1")?.addEventListener("click", () => {
+      kbSelId = null;
+      document.querySelectorAll<HTMLElement>(".kb-doc-item").forEach(el => el.classList.remove("kb-sel"));
+      const docView = document.getElementById("kb-doc-view");
+      const empty = document.getElementById("kb-viewer-empty");
+      if (docView) docView.style.display = "none";
+      if (empty) empty.style.display = "flex";
+    });
 
     // Split view toggle
     document.getElementById("kb-btn-split")?.addEventListener("click", () => {
@@ -8737,7 +9051,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       const img = new Image();
       const url = URL.createObjectURL(file);
       img.onload = () => {
-        const MAX = 128;
+        const MAX = 600;
         let w = img.naturalWidth, h = img.naturalHeight;
         if (w > MAX || h > MAX) {
           if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -8781,6 +9095,19 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       await guardarLogo("");
     }
     toast("Logo eliminado");
+  });
+
+  // Lightbox logo — clic en logo (sidebar o topbar) abre vista grande
+  const abrirLogoLightbox = () => {
+    const lb = document.getElementById("logo-lightbox");
+    if (lb) lb.style.display = "flex";
+  };
+  document.getElementById("sidebar-logo-img")?.addEventListener("click", abrirLogoLightbox);
+  document.getElementById("topbar-logo-img")?.addEventListener("click", abrirLogoLightbox);
+  document.getElementById("login-logo-img")?.addEventListener("click", abrirLogoLightbox);
+  document.getElementById("logo-lightbox")?.addEventListener("click", () => {
+    const lb = document.getElementById("logo-lightbox");
+    if (lb) lb.style.display = "none";
   });
 
   // ── PUNTOS DE RESTAURACIÓN (GitHub API) ──────────────────────────────
@@ -8917,6 +9244,22 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       <span id="gh-punto-status2" style="font-size:0.78rem; display:none;"></span>
     </div>
   </div>
+</div>
+<!-- Modal confirmación genérico -->
+<div id="confirm-modal-overlay">
+  <div id="confirm-modal-box">
+    <div id="confirm-modal-icon">⚠️</div>
+    <div id="confirm-modal-msg">¿Confirmar acción?</div>
+    <div id="confirm-modal-actions">
+      <button id="confirm-modal-cancel">Cancelar</button>
+      <button id="confirm-modal-ok">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox logo empresa -->
+<div id="logo-lightbox" role="dialog" aria-modal="true">
+  <img id="logo-lightbox-img" alt="Logo empresa">
 </div>
 </body>
 </html>

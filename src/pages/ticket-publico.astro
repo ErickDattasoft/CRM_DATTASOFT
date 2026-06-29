@@ -32,7 +32,8 @@
       margin-bottom: 32px;
       margin-top: 16px;
     }
-    .header-logo { font-size: 2.8rem; margin-bottom: 8px; }
+    .header-logo { font-size: 2.8rem; margin-bottom: 8px; line-height: 1; }
+    #portal-logo-img { width: 72px; height: 72px; object-fit: contain; border-radius: 12px; margin: 0 auto 10px; display: none; }
     .header h1 { font-size: 1.5rem; font-weight: 800; color: #fff; margin-bottom: 4px; }
     .header p { font-size: 0.85rem; color: #8b95a8; }
 
@@ -212,7 +213,8 @@
 </head>
 <body>
   <div class="header">
-    <div class="header-logo">📊</div>
+    <div class="header-logo" id="portal-logo-emoji">📊</div>
+    <img id="portal-logo-img" alt="Logo empresa">
     <h1>DATTASOFT BY INFOXPERT</h1>
     <p>Soporte Técnico — Levanta tu ticket de asistencia</p>
   </div>
@@ -317,6 +319,49 @@
   <script>
   (() => {
     const FIREBASE_PROJECT = "agenda-crm-netlify";
+    const FIREBASE_API_KEY = import.meta.env.PUBLIC_FIREBASE_API_KEY;
+
+    // ── Auth anónima + Logo ───────────────────────────────────────
+    let anonToken: string | null = null;
+
+    async function getAnonToken(): Promise<string | null> {
+      if (anonToken) return anonToken;
+      try {
+        const resp = await fetch(
+          `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FIREBASE_API_KEY}`,
+          { method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ returnSecureToken: true }) }
+        );
+        const data = await resp.json();
+        anonToken = data.idToken ?? null;
+        return anonToken;
+      } catch { return null; }
+    }
+
+    let correoSoporteAdmin = "";
+
+    async function cargarLogoPortal() {
+      try {
+        const token = await getAnonToken();
+        if (!token) return;
+        const resp = await fetch(
+          `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/agenda/datos`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (!resp.ok) return;
+        const data = await resp.json();
+        correoSoporteAdmin = data?.fields?.configTickets?.mapValue?.fields?.correoSoporte?.stringValue || "";
+        const logo = data?.fields?.logoEmpresa?.stringValue;
+        if (!logo) return;
+        const emoji = document.getElementById("portal-logo-emoji") as HTMLElement | null;
+        const img   = document.getElementById("portal-logo-img")   as HTMLImageElement | null;
+        if (emoji) emoji.style.display = "none";
+        if (img)   { img.src = logo; img.style.display = "block"; }
+        document.querySelectorAll<HTMLLinkElement>("link[rel='icon']").forEach(el => { el.href = logo; });
+      } catch { /* sin logo, se queda el emoji */ }
+    }
+
+    cargarLogoPortal();
 
     const btn = document.getElementById("btnEnviarTicket");
     const spinner = document.getElementById("spinner");
@@ -459,10 +504,11 @@
         : { arrayValue: {} };
 
       try {
+        const token = await getAnonToken();
         const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/tickets_publicos`;
         const resp = await fetch(url, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
           body: JSON.stringify({
             fields: {
               folioPub: { stringValue: folio },
@@ -488,6 +534,67 @@
         document.getElementById("form-view").style.display = "none";
         document.getElementById("folio-generado").textContent = `Folio ${folio}`;
         document.getElementById("success-view").style.display = "block";
+
+        // ── Correo al admin ──────────────────────────────────────
+        const adminDest = correoSoporteAdmin || "erick.casas@dattasoft.mx";
+        const sistemaRow = sistema ? `<tr><td style="padding:6px 0;font-weight:600;color:#64748b;width:120px;">Sistema</td><td style="padding:6px 0;">${sistema}</td></tr>` : "";
+        const telefonoRow = telefono ? `<tr><td style="padding:6px 0;font-weight:600;color:#64748b;">Teléfono</td><td style="padding:6px 0;">${telefono}</td></tr>` : "";
+        fetch("/send-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: adminDest,
+            subject: `🎫 Nuevo ticket ${folio} — ${empresa}`,
+            html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#1e293b;">
+              <div style="background:#6366f1;padding:16px 20px;border-radius:8px 8px 0 0;">
+                <h2 style="color:#fff;margin:0;font-size:1rem;">🎫 Nuevo ticket desde el portal público</h2>
+              </div>
+              <div style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;padding:20px;border-radius:0 0 8px 8px;">
+                <table style="width:100%;border-collapse:collapse;">
+                  <tr><td style="padding:6px 0;font-weight:600;color:#64748b;width:120px;">Folio</td><td style="padding:6px 0;font-weight:800;color:#6366f1;">${folio}</td></tr>
+                  <tr><td style="padding:6px 0;font-weight:600;color:#64748b;">Empresa</td><td style="padding:6px 0;">${empresa}</td></tr>
+                  <tr><td style="padding:6px 0;font-weight:600;color:#64748b;">Contacto</td><td style="padding:6px 0;">${nombre}</td></tr>
+                  <tr><td style="padding:6px 0;font-weight:600;color:#64748b;">Correo</td><td style="padding:6px 0;">${correo}</td></tr>
+                  ${telefonoRow}${sistemaRow}
+                  <tr><td style="padding:6px 0;font-weight:600;color:#64748b;">Prioridad</td><td style="padding:6px 0;">${prioridad}</td></tr>
+                  <tr><td style="padding:6px 0;font-weight:600;color:#64748b;">Asunto</td><td style="padding:6px 0;">${asunto}</td></tr>
+                </table>
+                <div style="margin-top:14px;padding:12px;background:#fff;border:1px solid #e2e8f0;border-radius:6px;">
+                  <div style="font-size:0.75rem;font-weight:700;color:#64748b;margin-bottom:6px;">DESCRIPCIÓN</div>
+                  <div style="white-space:pre-wrap;color:#1e293b;font-size:0.9rem;">${descripcion}</div>
+                </div>
+              </div>
+            </div>`
+          })
+        }).catch(() => {});
+
+        // ── Confirmación al cliente ──────────────────────────────
+        fetch("/send-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: correo,
+            subject: `✅ Solicitud recibida — Folio ${folio}`,
+            html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#1e293b;">
+              <div style="background:#6366f1;padding:16px 20px;border-radius:8px 8px 0 0;">
+                <h2 style="color:#fff;margin:0;font-size:1rem;">✅ Hemos recibido tu solicitud</h2>
+              </div>
+              <div style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;padding:24px;border-radius:0 0 8px 8px;">
+                <p style="margin:0 0 16px;">Hola <strong>${nombre}</strong>, gracias por contactarnos. Tu solicitud fue registrada con éxito.</p>
+                <div style="background:#fff;border:2px solid #6366f1;border-radius:8px;padding:16px;text-align:center;margin:0 0 16px;">
+                  <div style="font-size:0.72rem;color:#64748b;letter-spacing:1px;margin-bottom:4px;">FOLIO DE SEGUIMIENTO</div>
+                  <div style="font-size:1.5rem;font-weight:800;color:#6366f1;letter-spacing:2px;">${folio}</div>
+                </div>
+                <p style="color:#475569;margin:0 0 8px;">Nuestro equipo revisará tu caso y se pondrá en contacto contigo a la brevedad al correo <strong>${correo}</strong>.</p>
+                <div style="border-top:1px solid #e2e8f0;margin-top:16px;padding-top:12px;font-size:0.82rem;color:#64748b;">
+                  <strong>Asunto:</strong> ${asunto}
+                </div>
+              </div>
+              <div style="text-align:center;margin-top:10px;font-size:0.7rem;color:#94a3b8;">DATTASOFT BY INFOXPERT · Soporte Técnico</div>
+            </div>`
+          })
+        }).catch(() => {});
+
       } catch (err) {
         console.error(err);
         showError("Ocurrió un error al enviar tu solicitud. Por favor intenta de nuevo o contáctanos directamente.");

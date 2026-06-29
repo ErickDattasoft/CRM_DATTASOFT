@@ -17,6 +17,7 @@ const app  = firebaseEnabled ? initializeApp(firebaseConfig) : null;
 const db   = firebaseEnabled ? getFirestore(app) : null;
 const auth = firebaseEnabled ? getAuth(app) : null;
 
+
 // Iniciar sesión anónima automáticamente al cargar el módulo.
 // Resuelve una promesa cuando el auth está listo para que Firestore
 // no reciba llamadas antes de tener credenciales.
@@ -269,7 +270,7 @@ export async function cargarKB() {
 export async function crearDocKB(data) {
   try {
     const ref = await addDoc(collection(db, "knowledge_base"), {
-      ...data, created_at: serverTimestamp(), updated_at: serverTimestamp()
+      ...data, created_at: serverTimestamp(), updated_at: serverTimestamp(), content_updated_at: serverTimestamp()
     });
     return ref.id;
   } catch (e) { console.error("[KB] Error al crear:", e); return null; }
@@ -277,9 +278,17 @@ export async function crearDocKB(data) {
 
 export async function actualizarDocKB(id, data) {
   try {
-    await updateDoc(doc(db, "knowledge_base", id), { ...data, updated_at: serverTimestamp() });
+    await updateDoc(doc(db, "knowledge_base", id), { ...data, updated_at: serverTimestamp(), content_updated_at: serverTimestamp() });
     return true;
   } catch (e) { console.error("[KB] Error al actualizar:", e); return false; }
+}
+
+// Actualiza solo el sourcePath sin modificar updated_at ni content_updated_at
+export async function actualizarSourcePathKB(id, sourcePath) {
+  try {
+    await updateDoc(doc(db, "knowledge_base", id), { sourcePath });
+    return true;
+  } catch (e) { console.error("[KB] Error al actualizar sourcePath:", e); return false; }
 }
 
 export async function eliminarDocKB(id) {
