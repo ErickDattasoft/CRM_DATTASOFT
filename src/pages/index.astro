@@ -2160,9 +2160,6 @@ try {
                     <th style="min-width:150px; width:170px;">Correo electrónico alternativo<div class="col-resize-handle"></div></th>
                     <th style="min-width:110px; width:130px;">Teléfono Contacto Principal<div class="col-resize-handle"></div></th>
                     <th style="min-width:110px; width:130px;">Teléfono Contacto alternativo<div class="col-resize-handle"></div></th>
-                    {listaSistemasOpciones.map(sistema => (
-                      <th style="text-align:center; font-size:0.62rem; min-width:80px; width:90px; white-space:normal; line-height:1.2;">{sistema}<div class="col-resize-handle"></div></th>
-                    ))}
                     <th style="text-align:center; min-width:100px; width:110px;">Acciones</th>
                   </tr>
                 </thead>
@@ -4759,59 +4756,7 @@ verificarSesion();
         <td style="${tdBase} white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#7dd3fc; font-size:0.82rem;" title="${c.CORREO_2 || ''}">${c.CORREO_2 || '—'}</td>
         <td style="${tdBase} white-space:nowrap; color:#94a3b8; font-size:0.82rem;">${c.TELEFONO_1 || '—'}</td>
         <td style="${tdBase} white-space:nowrap; color:#94a3b8; font-size:0.82rem;">${c.TELEFONO_2 || '—'}</td>
-      `;
-
-      listaSistemas.forEach(s => {
-        const sKey = s.toUpperCase().trim();
-        const vC = String(c.SISTEMAS?.[sKey] || "").trim();
-        const vO = String(versionesMercado[sKey] || "").trim();
-        const vOTieneNumero = /\d/.test(vO);
-
-        let badgeStyle, txt, debugTitle;
-
-        if (!vC || vC.toUpperCase() === "NO APLICA") {
-          // Empresa SIN versión registrada
-          if (vO && vOTieneNumero) {
-            txt = "Sin versión"; debugTitle = `Empresa: sin datos | Oficial: ${vO}`;
-            badgeStyle = `${pillBase} background:#0369a1; color:#ffffff;`;
-          } else {
-            txt = "—"; debugTitle = "Sin datos";
-            badgeStyle = "color:#475569; font-size:0.85rem;";
-          }
-        } else {
-          // Empresa CON versión registrada
-          txt = vC;
-          if (!vO || !vOTieneNumero) {
-            debugTitle = `Empresa: ${vC} | Sin versión oficial`;
-            badgeStyle = `${pillBase} background:#0369a1; color:#ffffff;`;
-          } else {
-            const cmp = compararVersiones(vC, vO);
-            debugTitle = `Empresa: ${vC} | Oficial: ${vO} | cmp: ${cmp}`;
-            badgeStyle = cmp < 0
-              ? `${pillBase} background:#dc2626; color:#ffffff;`
-              : `${pillBase} background:#16a34a; color:#ffffff;`;
-          }
-        }
-
-        // Fecha de vencimiento de licencia para este sistema
-        const vencFecha = c.VENCIMIENTOS?.[sKey] || "";
-        let vencHtml = "";
-        if (vencFecha) {
-          const hoyV = new Date(); hoyV.setHours(0,0,0,0);
-          const diasV = Math.ceil((new Date(vencFecha + "T00:00:00") - hoyV) / 86400000);
-          const [vy, vm, vd] = vencFecha.split("-");
-          const fechaCorta = `${vd}/${vm}/${vy.slice(2)}`;
-          const colorV = diasV < 0 ? "#f87171" : diasV <= 30 ? "#fbbf24" : "#6ee7b7";
-          const iconV = diasV < 0 ? "🔴" : diasV <= 30 ? "⚠️" : "📅";
-          vencHtml = `<span style="display:block; font-size:0.6rem; color:${colorV}; margin-top:3px; white-space:nowrap;" title="Vencimiento: ${fechaCorta}${diasV < 0 ? ' (VENCIDA)' : ` (${diasV}d)`}">${iconV} ${fechaCorta}</span>`;
-        }
-
-        html += `<td style="${tdBase} text-align:center;">\
-<span style="${badgeStyle}" title="${debugTitle}">${txt}</span>${vencHtml}</td>`;
-      });
-
-      html += `
-        <td style="text-align:center; vertical-align:middle;">
+        <td style="text-align:center; vertical-align:middle; padding:8px 6px;">
           <div style="display:inline-flex; gap:4px;">
             <button class="btn btn-secondary btn-xs btn-edit-emp" data-idx="${idx}" title="Editar">✏️</button>
             <button class="btn btn-whatsapp btn-xs btn-wsp-emp" data-idx="${idx}" title="WhatsApp">💬</button>
@@ -4822,6 +4767,54 @@ verificarSesion();
       `;
       tr.innerHTML = html;
       tbody.appendChild(tr);
+
+      // Segunda fila: versiones de sistemas
+      if (listaSistemas.length > 0) {
+        const tr2 = document.createElement("tr");
+        tr2.className = "empresa-row-sistemas";
+        tr2.dataset.idx = idx;
+        let sistemasHtml = `<td style="padding:0 0 6px 0;"></td><td colspan="8" style="padding:4px 14px 10px 14px; border-top:none;">`;
+        sistemasHtml += `<div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">`;
+        listaSistemas.forEach(s => {
+          const sKey = s.toUpperCase().trim();
+          const vC = String(c.SISTEMAS?.[sKey] || "").trim();
+          const vO = String(versionesMercado[sKey] || "").trim();
+          const vOTieneNumero = /\d/.test(vO);
+          const vencFecha = c.VENCIMIENTOS?.[sKey] || "";
+
+          let bg, color, txt;
+          if (!vC || vC.toUpperCase() === "NO APLICA") {
+            txt = "Sin versión";
+            bg = vO && vOTieneNumero ? "#0369a1" : "#1e293b";
+            color = vO && vOTieneNumero ? "#fff" : "#475569";
+          } else {
+            txt = vC;
+            if (!vO || !vOTieneNumero) { bg = "#0369a1"; color = "#fff"; }
+            else {
+              const cmp = compararVersiones(vC, vO);
+              bg = cmp < 0 ? "#dc2626" : "#16a34a"; color = "#fff";
+            }
+          }
+
+          let vencTag = "";
+          if (vencFecha) {
+            const hoyV = new Date(); hoyV.setHours(0,0,0,0);
+            const diasV = Math.ceil((new Date(vencFecha + "T00:00:00") - hoyV) / 86400000);
+            const [vy, vm, vd] = vencFecha.split("-");
+            const fechaCorta = `${vd}/${vm}/${vy.slice(2)}`;
+            const colorV = diasV < 0 ? "#f87171" : diasV <= 30 ? "#fbbf24" : "#6ee7b7";
+            const iconV = diasV < 0 ? "🔴" : diasV <= 30 ? "⚠️" : "📅";
+            vencTag = ` <span style="font-size:0.6rem; color:${colorV};">${iconV}${fechaCorta}</span>`;
+          }
+
+          sistemasHtml += `<span style="display:inline-flex; align-items:center; gap:3px; background:${bg}; color:${color}; padding:2px 7px; border-radius:4px; font-size:0.7rem; font-weight:700; white-space:nowrap;" title="${s}: ${txt}">
+            <span style="color:rgba(255,255,255,0.6); font-weight:400;">${s}:</span> ${txt}${vencTag}
+          </span>`;
+        });
+        sistemasHtml += `</div></td>`;
+        tr2.innerHTML = sistemasHtml;
+        tbody.appendChild(tr2);
+      }
     });
 
     // Events
