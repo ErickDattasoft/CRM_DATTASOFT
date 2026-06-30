@@ -281,6 +281,13 @@
       </div>
 
       <div class="form-group">
+        <label>Tipo de solicitud <span style="color:#8b95a8; text-transform:none; font-weight:400; letter-spacing:0;">(opcional — si no sabes cuál, déjalo así y nosotros lo clasificamos)</span></label>
+        <select id="pub-tipo">
+          <option value="">— Seleccionar tipo (opcional) —</option>
+        </select>
+      </div>
+
+      <div class="form-group">
         <label>Prioridad</label>
         <select id="pub-prioridad">
           <option value="Media">Media — Puedo trabajar con inconvenientes</option>
@@ -351,6 +358,16 @@
         if (!resp.ok) return;
         const data = await resp.json();
         correoSoporteAdmin = data?.fields?.configTickets?.mapValue?.fields?.correoSoporte?.stringValue || "";
+        const tiposValues = data?.fields?.configTickets?.mapValue?.fields?.tipos?.arrayValue?.values || [];
+        const tipos = tiposValues.map((v: any) => v.stringValue).filter(Boolean);
+        const selTipo = document.getElementById("pub-tipo") as HTMLSelectElement | null;
+        if (selTipo && tipos.length > 0) {
+          tipos.forEach((t: string) => {
+            const opt = document.createElement("option");
+            opt.value = t; opt.textContent = t;
+            selTipo.appendChild(opt);
+          });
+        }
         const logo = data?.fields?.logoEmpresa?.stringValue;
         if (!logo) return;
         const emoji = document.getElementById("portal-logo-emoji") as HTMLElement | null;
@@ -470,6 +487,7 @@
       const telefono = document.getElementById("pub-telefono")?.value.trim();
       const asunto = document.getElementById("pub-asunto")?.value.trim();
       const sistema = document.getElementById("pub-sistema")?.value;
+      const tipo = document.getElementById("pub-tipo")?.value || "";
       const prioridad = document.getElementById("pub-prioridad")?.value || "Media";
       const descripcion = document.getElementById("pub-descripcion")?.value.trim();
 
@@ -521,6 +539,7 @@
               empresa: { stringValue: empresa },
               telefono: { stringValue: telefono || "" },
               sistema: { stringValue: sistema || "" },
+              tipo: { stringValue: tipo || "" },
               descripcion: { stringValue: descripcion },
               fechaCreacion: { stringValue: new Date().toISOString() },
               revisado: { booleanValue: false },

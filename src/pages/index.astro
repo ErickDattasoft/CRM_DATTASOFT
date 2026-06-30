@@ -2607,6 +2607,10 @@ try {
               <select id="form-tk-tipo"></select>
             </div>
             <div class="form-group">
+              <label>💻 Sistema</label>
+              <select id="form-tk-sistema"></select>
+            </div>
+            <div class="form-group">
               <label>Estado <span class="required">*</span></label>
               <select id="form-tk-estado"></select>
             </div>
@@ -3680,6 +3684,10 @@ try {
         <div>
           <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:3px;">🧑‍💼 Agente</div>
           <div id="det-tk-agente">—</div>
+        </div>
+        <div>
+          <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:3px;">💻 Sistema</div>
+          <div id="det-tk-sistema">—</div>
         </div>
       </div>
     </div>
@@ -6921,6 +6929,7 @@ verificarSesion();
 
   function initTicketFormDropdowns(ticket) {
     populateSelectOptions("form-tk-tipo", configTickets.tipos, ticket?.tipo || configTickets.tipos[0]);
+    populateSelectOptions("form-tk-sistema", ["No aplica", ...listaSistemas], ticket?.sistema || "No aplica");
     populateSelectOptions("form-tk-estado", configTickets.estados, ticket?.estado || "Abierto");
     populateSelectOptions("form-tk-prioridad", configTickets.prioridades, ticket?.prioridad || "Media");
     populateSelectOptions("form-tk-grupo", configTickets.grupos, ticket?.grupo || configTickets.grupos[0]);
@@ -7085,7 +7094,10 @@ verificarSesion();
           <span style="display:block; font-weight:600;">👤 ${t.contacto || "—"}</span>
           <span style="display:block; font-size:0.72rem; color:var(--text-light);">🏢 ${t.empresa || "—"}</span>
         </td>
-        <td style="text-align:center;"><span class="badge" style="background:rgba(99,102,241,0.12); color:#a5b4fc;">${t.tipo || "General"}</span></td>
+        <td style="text-align:center;">
+          <span class="badge" style="background:rgba(99,102,241,0.12); color:#a5b4fc;">${t.tipo || "General"}</span>
+          ${t.sistema && t.sistema !== "No aplica" ? `<br><span style="font-size:0.68rem; color:var(--text-light);">💻 ${t.sistema}</span>` : ""}
+        </td>
         <td style="text-align:center;"><span class="badge badge-${(t.prioridad || "media").toLowerCase()}">${t.prioridad}</span>${slaBadge}</td>
         <td style="text-align:center;"><span class="badge badge-${(t.estado || "abierto").toLowerCase()}">${t.estado}</span></td>
         <td style="font-size:0.8rem; color:var(--text-muted);">${t.agente || "—"}</td>
@@ -7182,6 +7194,7 @@ verificarSesion();
     const empresa = document.getElementById("form-tk-empresa").value.trim();
     const asunto = document.getElementById("form-tk-asunto").value.trim();
     const tipo = document.getElementById("form-tk-tipo").value;
+    const sistema = document.getElementById("form-tk-sistema").value;
     const estado = document.getElementById("form-tk-estado").value;
     const prioridad = document.getElementById("form-tk-prioridad").value;
     const grupo = document.getElementById("form-tk-grupo").value;
@@ -7203,7 +7216,7 @@ verificarSesion();
     if (idx === "") {
       const num = tickets.length > 0 ? Math.max(...tickets.map(t => t.numero)) + 1 : 1001;
       tickets.push({
-        numero: num, asunto, empresa, contacto, contactoCorreo, tipo, estado, prioridad, grupo, agente,
+        numero: num, asunto, empresa, contacto, contactoCorreo, tipo, sistema, estado, prioridad, grupo, agente,
         descripcion, notasInternas, cc, cco, referido, solicitado, canalizado, realizado,
         adjuntos: [...adjuntosTicketActual],
         fechaCreacion: new Date().toISOString(),
@@ -7240,7 +7253,7 @@ verificarSesion();
     } else {
       const t = tickets[parseInt(idx)];
       const adjuntosExistentes = t.adjuntos || [];
-      Object.assign(t, { asunto, empresa, contacto, contactoCorreo, tipo, estado, prioridad, grupo, agente,
+      Object.assign(t, { asunto, empresa, contacto, contactoCorreo, tipo, sistema, estado, prioridad, grupo, agente,
         descripcion, notasInternas, cc, cco, referido, solicitado, canalizado, realizado,
         adjuntos: [...adjuntosExistentes, ...adjuntosTicketActual],
         fechaActualizacion: new Date().toISOString() });
@@ -7323,6 +7336,7 @@ verificarSesion();
     document.getElementById("det-tk-contacto").textContent = t.contacto || "—";
     document.getElementById("det-tk-grupo").textContent = t.grupo || "—";
     document.getElementById("det-tk-agente").textContent = t.agente || "—";
+    document.getElementById("det-tk-sistema").textContent = (t.sistema && t.sistema !== "No aplica") ? t.sistema : "No aplica";
     document.getElementById("det-tk-descripcion").innerHTML = t.descripcion || "";
     const detNI = document.getElementById("det-tk-notas-internas");
     const detNISec = document.getElementById("det-tk-notas-internas-section");
@@ -8813,6 +8827,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
               👤 ${t.contacto || "—"} · 🏢 ${t.empresa || "—"} · ✉️ ${t.contactoCorreo || "—"}
               ${t.telefono ? ` · 📞 ${t.telefono}` : ""}
               ${t.sistema ? ` · 💻 ${t.sistema}` : ""}
+              ${t.tipo ? ` · 🏷️ ${t.tipo}` : ""}
             </div>
             <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">⚡ Prioridad: <strong>${t.prioridad || "Media"}</strong> · 📅 ${t.fechaCreacion ? new Date(t.fechaCreacion).toLocaleString('es-MX') : "—"}</div>
             <div style="margin-top:8px; font-size:0.82rem; background:var(--bg-card); padding:10px 12px; border-radius:var(--radius-sm); border-left:3px solid var(--brand-warning); color:var(--text-main);">${(t.descripcion || "").replace(/\n/g,"<br>")}</div>
@@ -8833,7 +8848,8 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           empresa: tp.empresa || "",
           contacto: tp.contacto || "",
           contactoCorreo: tp.contactoCorreo || "",
-          tipo: tp.sistema ? `Sistema: ${tp.sistema}` : "General",
+          tipo: tp.tipo || "General",
+          sistema: tp.sistema || "No aplica",
           estado: "Abierto",
           prioridad: tp.prioridad || "Media",
           grupo: "", agente: "",
