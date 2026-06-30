@@ -4116,16 +4116,22 @@ function getUsuarios(): Usuario[] {
 }
 function saveUsuariosLocal(u: Usuario[]) { localStorage.setItem(USUARIOS_KEY, JSON.stringify(u)); }
 
+// Deduplica nombres ignorando mayúsculas/minúsculas, conservando la primera forma vista
+function dedupeNombres(nombres: string[]): string[] {
+  const vistos = new Map<string, string>();
+  nombres.forEach(n => {
+    if (!n) return;
+    const key = n.toLowerCase();
+    if (!vistos.has(key)) vistos.set(key, n);
+  });
+  return [...vistos.values()];
+}
+
 // Lista de agentes para tickets: agentes configurados + usuarios reales del sistema (excluye INVITADO)
 function getListaAgentes(): string[] {
   const base = (typeof configTickets !== "undefined" && configTickets.agentes) || [];
   const usuariosNombres = getUsuarios().filter(u => u.activo && u.nombre !== "INVITADO").map(u => u.nombre);
-  const vistos = new Map<string, string>();
-  [...base, ...usuariosNombres].forEach(n => {
-    const key = n.toLowerCase();
-    if (!vistos.has(key)) vistos.set(key, n);
-  });
-  return [...vistos.values()].sort();
+  return dedupeNombres([...base, ...usuariosNombres]).sort();
 }
 
 async function seedUsuariosDefault(): Promise<Usuario[]> {
@@ -7021,7 +7027,7 @@ verificarSesion();
 
   function populateTipoAgenteFilters() {
     const tipos = [...new Set(tickets.map(t => t.tipo).filter(Boolean))].sort();
-    const agentes = [...new Set([...getListaAgentes(), ...tickets.map(t => t.agente)].filter(Boolean))].sort();
+    const agentes = dedupeNombres([...getListaAgentes(), ...tickets.map(t => t.agente)]).sort();
     const selTipo = document.getElementById("selectFiltroTipo");
     const selAgente = document.getElementById("selectFiltroAgente");
     if (selTipo) {
