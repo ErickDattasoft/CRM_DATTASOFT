@@ -5257,7 +5257,7 @@ verificarSesion();
     if (tipo === "tickets" || tipo === "todo") {
       const rows = tickets.map(t => ({
         Folio: t.numero, Asunto: t.asunto, Empresa: t.empresa, Contacto: t.contacto,
-        Tipo: t.tipo, Estado: t.estado, Prioridad: t.prioridad, Grupo: t.grupo,
+        Tipo: t.tipo, Sistema: t.sistema || "", Estado: t.estado, Prioridad: t.prioridad, Grupo: t.grupo,
         Agente: t.agente, Referido: t.referido, Solicitado: t.solicitado,
         Canalizado: t.canalizado, Realizado: t.realizado,
         Descripción: (t.descripcion || "").replace(/<[^>]+>/g, ""),
