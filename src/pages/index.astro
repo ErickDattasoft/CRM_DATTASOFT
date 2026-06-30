@@ -4304,8 +4304,9 @@ verificarSesion();
   }
 
   function toast(msg, type = "success") {
+    const tiposValidos = ["success", "error", "warning", "info"];
     const el = document.createElement("div");
-    el.className = `toast toast-${type}`;
+    el.className = `toast toast-${tiposValidos.includes(type) ? type : "info"}`;
     el.textContent = msg;
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 2500);
@@ -7252,9 +7253,9 @@ verificarSesion();
         `;
         const sent = await enviarEmailConProveedor({ to: mailTo, subject: mailSubject, html: htmlTicket, replyTo: mailCC || "" });
         if (sent?.ok) { toast(`✉️ Notificación enviada a ${mailTo}`); logBitacora(`✉️ Correo enviado a ${mailTo} — Ticket #${num}`, "📧"); }
-        else toast(`⚠️ No se pudo enviar: ${sent?.error || "error desconocido"}`, 5000);
+        else toast(`⚠️ No se pudo enviar: ${sent?.error || "error desconocido"}`, "error");
       } else if (enviarCorreo && !mailTo) {
-        toast("⚠️ El contacto no tiene correo registrado", 4000);
+        toast("⚠️ El contacto no tiene correo registrado", "warning");
       }
     } else {
       const t = tickets[parseInt(idx)];
