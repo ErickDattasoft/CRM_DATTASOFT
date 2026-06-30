@@ -1,10 +1,14 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Solo permite acceso a sesiones autenticadas con Firebase Auth.
-    // El CRM usa autenticación anónima automática al cargar la app,
-    // por lo que usuarios legítimos siempre tienen token válido.
-    // Accesos externos sin token (bots, scrapers, otras apps) son bloqueados.
+    // Portal público: cualquier visitante puede crear tickets (sin login).
+    // No pueden leer, editar ni borrar — solo enviar.
+    match /tickets_publicos/{docId} {
+      allow create: if true;
+      allow read, update, delete: if request.auth != null;
+    }
+
+    // El resto del CRM requiere autenticación (anónima o real).
     match /{document=**} {
       allow read, write: if request.auth != null;
     }
