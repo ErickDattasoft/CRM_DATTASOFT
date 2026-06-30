@@ -319,7 +319,7 @@
   <script>
   (() => {
     const FIREBASE_PROJECT = "agenda-crm-netlify";
-    const FIREBASE_API_KEY = import.meta.env.PUBLIC_FIREBASE_API_KEY;
+    const FIREBASE_API_KEY = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk0pMA9t_APJlLPku_EWco_OMM3Q";
 
     // ── Auth anónima + Logo ───────────────────────────────────────
     let anonToken: string | null = null;
@@ -538,8 +538,11 @@
         document.getElementById("folio-generado").textContent = `Folio ${folio}`;
         document.getElementById("success-view").style.display = "block";
 
-        // ── Correo al admin ──────────────────────────────────────
-        const adminDest = correoSoporteAdmin || "erick.casas@dattasoft.mx";
+        // ── Correo al admin (acepta varios correos separados por coma) ──
+        const adminDest = (correoSoporteAdmin || "erick.casas@dattasoft.mx")
+          .split(/[,;]/)
+          .map(e => e.trim())
+          .filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
         const sistemaRow = sistema ? `<tr><td style="padding:6px 0;font-weight:600;color:#64748b;width:120px;">Sistema</td><td style="padding:6px 0;">${sistema}</td></tr>` : "";
         const telefonoRow = telefono ? `<tr><td style="padding:6px 0;font-weight:600;color:#64748b;">Teléfono</td><td style="padding:6px 0;">${telefono}</td></tr>` : "";
         fetch("/send-email", {
