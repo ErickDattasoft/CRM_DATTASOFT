@@ -7538,7 +7538,7 @@ verificarSesion();
     });
 
     if (localOnlyCheckbox) {
-      localOnlyCheckbox.addEventListener("change", () => {
+      localOnlyCheckbox.onchange = () => {
         crmLocalOnly = localOnlyCheckbox.checked;
         localStorage.setItem("crm_local_only", String(crmLocalOnly));
         if (crmLocalOnly) {
@@ -7547,22 +7547,24 @@ verificarSesion();
           mostrarEstado("🔄 Intentando reconectar a Firebase...");
           inicializarApp();
         }
-      });
+      };
     }
 
     document.querySelectorAll('input[name="cfg-mail-provider"]').forEach(input => {
-      input.addEventListener('change', () => {
+      input.onchange = () => {
         updateMailProviderHelp();
         updateMailProviderSelectionState();
-      });
+      };
     });
     if (apiKeyInput) {
-      apiKeyInput.addEventListener('input', updateMailProviderHelp);
+      apiKeyInput.oninput = updateMailProviderHelp;
     }
-    document.getElementById("cfg-correo-soporte")?.addEventListener('input', updateMailProviderHelp);
+    const correoSoporteInput = document.getElementById("cfg-correo-soporte") as HTMLInputElement | null;
+    if (correoSoporteInput) correoSoporteInput.oninput = updateMailProviderHelp;
 
     // Botón de prueba de correo
-    document.getElementById("btn-test-email")?.addEventListener("click", async () => {
+    const btnTestEmail = document.getElementById("btn-test-email");
+    if (btnTestEmail) btnTestEmail.onclick = async () => {
       const dest = document.getElementById("cfg-test-email")?.value.trim();
       const resultEl = document.getElementById("cfg-test-email-result");
       if (!dest || !dest.includes("@")) {
@@ -7586,7 +7588,7 @@ verificarSesion();
         resultEl.textContent = `❌ Error: ${res?.error || "fallo desconocido"}`;
         resultEl.style.color = "#f87171";
       }
-    });
+    };
 
     updateMailProviderSelectionState();
     updateMailProviderHelp();
