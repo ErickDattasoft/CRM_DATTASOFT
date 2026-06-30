@@ -345,3 +345,66 @@ export async function eliminarTicketPublico(fbId) {
   }
 }
 
+export async function guardarInteracciones(interacciones) {
+  try {
+    await setDoc(doc(db, "agenda", "datos"), { interacciones: limpiar(interacciones) }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error al guardar interacciones:", error);
+    return false;
+  }
+}
+
+export async function guardarTareas(tareas) {
+  try {
+    await setDoc(doc(db, "agenda", "datos"), { tareas: limpiar(tareas) }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error al guardar tareas:", error);
+    return false;
+  }
+}
+
+export async function guardarFiltrosGuardados(filtrosGuardados) {
+  try {
+    await setDoc(doc(db, "agenda", "datos"), { filtrosGuardados: limpiar(filtrosGuardados) }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error al guardar filtros guardados:", error);
+    return false;
+  }
+}
+
+export async function guardarAlertasVencimiento(alertasVencimiento) {
+  try {
+    await setDoc(doc(db, "agenda", "datos"), { alertasVencimiento }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error al guardar alertas de vencimiento:", error);
+    return false;
+  }
+}
+
+export async function guardarInscripcionEvento(eventoId, registro) {
+  try {
+    const colRef = collection(db, "inscripciones_evento");
+    await addDoc(colRef, { eventoId, ...registro, fechaRegistro: serverTimestamp() });
+    return true;
+  } catch (error) {
+    console.error("Error al guardar inscripción:", error);
+    return false;
+  }
+}
+
+export async function obtenerInscripcionesEvento(eventoId) {
+  try {
+    const snap = await getDocs(collection(db, "inscripciones_evento"));
+    return snap.docs
+      .map(d => ({ _id: d.id, ...d.data() }))
+      .filter(d => d.eventoId === eventoId);
+  } catch (error) {
+    console.error("Error al obtener inscripciones:", error);
+    return [];
+  }
+}
+

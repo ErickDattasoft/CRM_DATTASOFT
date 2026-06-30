@@ -50,6 +50,7 @@ try {
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
   <style is:global>
     /* ===== RESET & VARIABLES ===== */
     :root {
@@ -1824,6 +1825,100 @@ try {
   .kb-export-item-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .kb-exp-single { flex-shrink: 0; font-size: 0.78rem; padding: 4px 8px; margin-top: 1px; }
   .kb-export-empty { padding: 28px 20px; text-align: center; color: var(--text-light); font-size: 0.82rem; line-height: 1.6; }
+
+  /* ===== NUEVAS FEATURES ===== */
+
+  /* --- SLA badges --- */
+  .badge-sla { display:inline-block; font-size:0.68rem; font-weight:700; padding:2px 7px; border-radius:20px; letter-spacing:0.02em; margin-top:3px; }
+  .badge-sla-ok    { background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(52,211,153,0.25); }
+  .badge-sla-warn  { background:rgba(251,191,36,0.15); color:#fbbf24; border:1px solid rgba(251,191,36,0.25); }
+  .badge-sla-over  { background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(248,113,113,0.25); }
+  tr.sla-vencido td { background:rgba(239,68,68,0.05) !important; }
+
+  /* --- Dashboard charts grid --- */
+  .dash-charts-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px; }
+  @media(max-width:800px){ .dash-charts-grid { grid-template-columns:1fr; } }
+  .dash-chart-card { background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:18px; }
+  .dash-chart-title { font-size:0.82rem; font-weight:700; color:var(--text-bright); margin-bottom:14px; display:flex; align-items:center; gap:6px; }
+
+  /* Licencias próximas */
+  .lic-item { display:flex; flex-direction:column; gap:3px; margin-bottom:10px; }
+  .lic-item-header { display:flex; justify-content:space-between; align-items:center; font-size:0.78rem; }
+  .lic-item-empresa { font-weight:600; color:var(--text-main); }
+  .lic-item-dias { font-size:0.7rem; font-weight:700; padding:2px 7px; border-radius:20px; }
+  .lic-dias-critico { background:rgba(239,68,68,0.15); color:#f87171; }
+  .lic-dias-warn    { background:rgba(251,191,36,0.15); color:#fbbf24; }
+  .lic-dias-ok      { background:rgba(99,102,241,0.12); color:#a5b4fc; }
+  .lic-progress { height:5px; background:var(--bg-input); border-radius:4px; overflow:hidden; }
+  .lic-progress-bar { height:100%; border-radius:4px; transition:width 0.4s; }
+  .dash-empty-mini { text-align:center; padding:20px 0; color:var(--text-muted); font-size:0.8rem; }
+
+  /* Tickets viejos */
+  .tk-viejo-row { display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid var(--border-color); font-size:0.78rem; }
+  .tk-viejo-row:last-child { border-bottom:none; }
+
+  /* --- Drawer lateral (Historial y Tareas) --- */
+  .drawer-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:11000; display:none; }
+  .drawer-overlay.open { display:block; }
+  .drawer-panel { position:fixed; top:0; right:0; bottom:0; width:480px; max-width:95vw; background:var(--bg-card); border-left:1px solid var(--border-color); z-index:11001; display:flex; flex-direction:column; transform:translateX(100%); transition:transform 0.3s cubic-bezier(.4,0,.2,1); box-shadow:-8px 0 40px rgba(0,0,0,0.35); }
+  .drawer-panel.open { transform:translateX(0); }
+  .drawer-header { padding:18px 20px; border-bottom:1px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+  .drawer-empresa-nombre { font-size:1rem; font-weight:800; color:var(--text-bright); font-family:var(--font-heading); }
+  .drawer-tabs { display:flex; gap:0; border-bottom:1px solid var(--border-color); flex-shrink:0; }
+  .drawer-tab { flex:1; padding:10px; font-size:0.82rem; font-weight:600; text-align:center; cursor:pointer; color:var(--text-muted); border-bottom:2px solid transparent; transition:var(--transition-base); }
+  .drawer-tab.active { color:var(--brand-primary); border-bottom-color:var(--brand-primary); }
+  .drawer-body { flex:1; overflow-y:auto; padding:16px 20px; }
+  .drawer-footer { padding:14px 20px; border-top:1px solid var(--border-color); flex-shrink:0; }
+
+  /* Timeline de interacciones */
+  .timeline { position:relative; padding-left:22px; }
+  .timeline::before { content:""; position:absolute; left:7px; top:0; bottom:0; width:2px; background:var(--border-color); }
+  .timeline-item { position:relative; margin-bottom:16px; }
+  .timeline-dot { position:absolute; left:-19px; top:4px; width:12px; height:12px; border-radius:50%; border:2px solid var(--bg-card); flex-shrink:0; }
+  .timeline-dot-nota    { background:#6366f1; }
+  .timeline-dot-llamada { background:#10b981; }
+  .timeline-dot-correo  { background:#f59e0b; }
+  .timeline-dot-reunion { background:#8b5cf6; }
+  .timeline-dot-ticket  { background:#ef4444; }
+  .timeline-content { background:var(--bg-input); border-radius:var(--radius-md); padding:10px 12px; }
+  .timeline-meta { font-size:0.7rem; color:var(--text-muted); margin-bottom:4px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .timeline-tipo { font-weight:700; font-size:0.72rem; padding:1px 6px; border-radius:10px; }
+  .timeline-tipo-nota    { background:rgba(99,102,241,0.15); color:#a5b4fc; }
+  .timeline-tipo-llamada { background:rgba(16,185,129,0.15); color:#34d399; }
+  .timeline-tipo-correo  { background:rgba(245,158,11,0.15); color:#fbbf24; }
+  .timeline-tipo-reunion { background:rgba(139,92,246,0.15); color:#c4b5fd; }
+  .timeline-tipo-ticket  { background:rgba(239,68,68,0.15); color:#f87171; }
+  .timeline-text { font-size:0.82rem; color:var(--text-main); line-height:1.5; white-space:pre-wrap; }
+  .timeline-empty { text-align:center; padding:30px 0; color:var(--text-muted); font-size:0.82rem; }
+
+  /* Formulario rápido en drawer */
+  .drawer-form { background:var(--bg-input); border-radius:var(--radius-md); padding:14px; margin-bottom:16px; border:1px solid var(--border-color); }
+  .drawer-form-title { font-size:0.8rem; font-weight:700; color:var(--brand-primary); margin-bottom:10px; }
+
+  /* Tareas */
+  .tarea-item { display:flex; gap:10px; align-items:flex-start; padding:10px 12px; background:var(--bg-input); border-radius:var(--radius-md); margin-bottom:8px; border-left:3px solid var(--border-color); }
+  .tarea-item.vencida   { border-left-color:#f87171; }
+  .tarea-item.hoy       { border-left-color:#fbbf24; }
+  .tarea-item.proxima   { border-left-color:#34d399; }
+  .tarea-item.completada { opacity:0.5; }
+  .tarea-chk { width:18px; height:18px; border-radius:4px; cursor:pointer; accent-color:var(--brand-primary); flex-shrink:0; margin-top:2px; }
+  .tarea-info { flex:1; min-width:0; }
+  .tarea-titulo { font-size:0.83rem; font-weight:600; color:var(--text-bright); }
+  .tarea-empresa { font-size:0.72rem; color:var(--text-muted); }
+  .tarea-fecha { font-size:0.7rem; font-weight:600; padding:2px 7px; border-radius:10px; margin-top:4px; display:inline-block; }
+  .tarea-fecha-vencida  { background:rgba(239,68,68,0.15); color:#f87171; }
+  .tarea-fecha-hoy      { background:rgba(251,191,36,0.15); color:#fbbf24; }
+  .tarea-fecha-proxima  { background:rgba(52,211,153,0.15); color:#34d399; }
+  .tarea-acciones { display:flex; gap:4px; flex-shrink:0; }
+
+  /* Panel filtros guardados */
+  .filtros-panel { background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:16px; margin-bottom:16px; }
+  .filtro-guardado-item { display:flex; align-items:center; gap:8px; padding:8px 10px; background:var(--bg-input); border-radius:var(--radius-md); margin-bottom:6px; }
+  .filtro-nombre { flex:1; font-size:0.82rem; font-weight:600; color:var(--text-main); }
+  .filtro-desc { font-size:0.7rem; color:var(--text-muted); }
+
+  /* Dashboard tareas pendientes */
+  .dash-tareas-card { grid-column: 1 / -1; }
   </style>
 </head>
 <body>
@@ -2025,6 +2120,41 @@ try {
             </table>
           </div>
         </div>
+
+        <!-- === GRÁFICAS Y ANALYTICS === -->
+        <div class="dash-charts-grid" style="margin-top:16px;">
+          <!-- Tickets por mes -->
+          <div class="dash-chart-card">
+            <div class="dash-chart-title">📊 Tickets por Mes <span style="font-size:0.7rem;font-weight:400;color:var(--text-muted);">(últimos 6 meses)</span></div>
+            <canvas id="chart-tickets-mes" height="160"></canvas>
+          </div>
+          <!-- Distribución por estado -->
+          <div class="dash-chart-card">
+            <div class="dash-chart-title">🍩 Tickets por Estado</div>
+            <div style="display:flex;align-items:center;justify-content:center;height:160px;">
+              <canvas id="chart-estados" style="max-height:160px;max-width:160px;"></canvas>
+            </div>
+          </div>
+          <!-- Licencias por vencer en 90 días -->
+          <div class="dash-chart-card">
+            <div class="dash-chart-title">📅 Licencias por Vencer <span style="font-size:0.7rem;font-weight:400;color:var(--text-muted);">(próximos 90 días)</span></div>
+            <div id="dash-licencias-prox"><div class="dash-empty-mini">Sin licencias próximas a vencer</div></div>
+          </div>
+          <!-- Tickets sin resolver >5 días -->
+          <div class="dash-chart-card">
+            <div class="dash-chart-title">⏰ Tickets Abiertos &gt;5 Días</div>
+            <div id="dash-tickets-viejos"><div class="dash-empty-mini">No hay tickets abiertos con más de 5 días</div></div>
+          </div>
+        </div>
+
+        <!-- === TAREAS PENDIENTES === -->
+        <div class="card dash-tareas-card" style="margin-top:16px;" id="dash-card-tareas">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div class="card-title" style="margin-bottom:0;">📌 Tareas Pendientes</div>
+            <button class="btn btn-primary btn-xs" id="btnNuevaTareaDash">➕ Nueva Tarea</button>
+          </div>
+          <div id="dash-tareas-lista"><div class="dash-empty-mini">No hay tareas pendientes</div></div>
+        </div>
       </div>
 
       <!-- ============================== -->
@@ -2082,6 +2212,7 @@ try {
                   {listaSistemasOpciones.map(sistema => <option value={sistema}>{sistema}</option>)}
                 </select>
                 <button class="btn btn-warning btn-sm" id="btnFiltroFavoritos">☆ Favoritos</button>
+                <button class="btn btn-ghost btn-sm" id="btnFiltrosGuardados" title="Filtros Guardados">🔖 Filtros</button>
               </div>
               <div class="controls-right">
                 <button class="btn btn-ghost btn-sm" id="btnImportCSVEmpresas">📥 Importar CSV</button>
@@ -2091,6 +2222,23 @@ try {
                 <button class="btn btn-whatsapp btn-sm" id="btnWspMasivo">📢 WhatsApp (<span class="lblCountSel">0</span>)</button>
                 <button class="btn btn-email btn-sm" id="btnMailMasivo">✉️ Email (<span class="lblCountSel">0</span>)</button>
                 <button class="btn btn-primary btn-sm" id="btnNuevoEmpresa">➕ Registrar Empresa</button>
+              </div>
+            </div>
+
+            <!-- Panel Filtros Guardados (oculto) -->
+            <div class="filtros-panel hidden" id="panel-filtros-guardados">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <div style="font-size:0.85rem;font-weight:700;color:var(--brand-primary);">🔖 Filtros Guardados</div>
+                <button class="btn btn-ghost btn-xs" id="btnCerrarFiltrosPanel">✕ Cerrar</button>
+              </div>
+              <div id="lista-filtros-guardados" style="margin-bottom:12px;"></div>
+              <div style="border-top:1px dashed rgba(255,255,255,0.08);padding-top:12px;">
+                <div style="font-size:0.78rem;font-weight:600;color:var(--text-muted);margin-bottom:8px;">💾 Guardar filtro actual como:</div>
+                <div style="display:flex;gap:8px;">
+                  <input id="filtro-nuevo-nombre" placeholder="Ej: Clientes CONTPAQi Nóminas..." style="font-size:0.82rem;flex:1;">
+                  <button class="btn btn-success btn-sm" id="btnGuardarFiltroActual">💾 Guardar</button>
+                </div>
+                <div style="font-size:0.7rem;color:var(--text-muted);margin-top:6px;">Se guardará: sistema seleccionado + texto buscado + vencimiento en X días (si aplica)</div>
               </div>
             </div>
 
@@ -2556,6 +2704,31 @@ try {
 
         <button class="btn btn-success" id="btnGuardarConfig" style="margin-top:16px;">💾 Guardar Configuración</button>
 
+        <!-- SLA por Prioridad -->
+        <div class="card" style="margin-top:20px;">
+          <div class="card-title">⏱️ SLA — Tiempo Máximo de Respuesta</div>
+          <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">Define cuántas horas máximo tiene cada ticket según su prioridad. Los tickets que superen este tiempo se marcarán en rojo automáticamente.</p>
+          <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px;">
+            <div class="form-group">
+              <label style="color:#f87171;">🔴 Urgente (h)</label>
+              <input type="number" id="sla-urgente" min="1" max="168" value="4" style="text-align:center;">
+            </div>
+            <div class="form-group">
+              <label style="color:#fb923c;">🟠 Alta (h)</label>
+              <input type="number" id="sla-alta" min="1" max="168" value="8" style="text-align:center;">
+            </div>
+            <div class="form-group">
+              <label style="color:#fbbf24;">🟡 Media (h)</label>
+              <input type="number" id="sla-media" min="1" max="168" value="24" style="text-align:center;">
+            </div>
+            <div class="form-group">
+              <label style="color:#34d399;">🟢 Baja (h)</label>
+              <input type="number" id="sla-baja" min="1" max="168" value="72" style="text-align:center;">
+            </div>
+          </div>
+          <button class="btn btn-success btn-sm" id="btnGuardarSLA" style="margin-top:10px;">💾 Guardar SLA</button>
+        </div>
+
         <div class="card" style="margin-top:20px;">
           <div class="card-title">🎨 Apariencia</div>
           <div class="form-group" style="flex-direction:row; align-items:center; gap:14px;">
@@ -2604,6 +2777,8 @@ try {
               <option value="">— Selecciona un evento —</option>
             </select>
             <button class="btn btn-primary btn-sm" id="btnNuevoEvento">➕ Nuevo Evento</button>
+            <button class="btn btn-ghost btn-sm" id="btnLinkRegistroEvento" style="display:none; background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:#34d399;" title="Copiar link de registro público">🔗 Link Registro</button>
+            <button class="btn btn-ghost btn-sm" id="btnVerInscripciones" style="display:none; background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;">👥 Inscritos <span id="badge-inscritos" style="background:#6366f1;color:white;border-radius:10px;padding:1px 7px;font-size:0.75rem;margin-left:4px;">0</span></button>
             <button class="btn btn-danger btn-sm" id="btnEliminarEvento" style="display:none;">🗑️ Eliminar Evento</button>
           </div>
         </div>
@@ -3213,6 +3388,106 @@ try {
   </div>
 </div>
 
+<!-- ===== MODAL: Inscritos a Evento ===== -->
+<div id="modal-inscritos" class="modal-center" style="display:none;">
+  <div class="modal-box" style="width:520px;max-width:95%;">
+    <div class="modal-header">
+      <h2 id="modal-inscritos-titulo">👥 Inscritos</h2>
+      <button class="modal-close" id="btnCerrarInscritos">×</button>
+    </div>
+    <div style="padding:16px 18px;max-height:480px;overflow-y:auto;" id="modal-inscritos-lista"></div>
+  </div>
+</div>
+
+<!-- ===== DRAWER: Historial y Tareas de Empresa ===== -->
+<div id="drawer-overlay" class="drawer-overlay"></div>
+<div id="drawer-empresa" class="drawer-panel">
+  <div class="drawer-header">
+    <div>
+      <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Empresa</div>
+      <div class="drawer-empresa-nombre" id="drawer-emp-nombre">—</div>
+    </div>
+    <button class="modal-close" id="btnCerrarDrawer" style="font-size:1.4rem;">×</button>
+  </div>
+  <div class="drawer-tabs">
+    <div class="drawer-tab active" data-drawer-tab="historial">📋 Historial</div>
+    <div class="drawer-tab" data-drawer-tab="tareas">📌 Tareas</div>
+  </div>
+  <!-- Panel Historial -->
+  <div class="drawer-body" id="drawer-panel-historial">
+    <div class="drawer-form" id="form-nueva-interaccion">
+      <div class="drawer-form-title">➕ Registrar Interacción</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+        <select id="int-tipo" style="font-size:0.82rem; padding:7px 10px;">
+          <option value="Nota">📝 Nota</option>
+          <option value="Llamada">📞 Llamada</option>
+          <option value="Correo">✉️ Correo</option>
+          <option value="Reunión">🤝 Reunión</option>
+        </select>
+        <input type="date" id="int-fecha" style="font-size:0.82rem; padding:7px 10px;">
+      </div>
+      <textarea id="int-texto" rows="3" placeholder="Describe la interacción..." style="font-size:0.82rem; resize:vertical; margin-bottom:8px;"></textarea>
+      <button class="btn btn-primary btn-sm btn-block" id="btnGuardarInteraccion">💾 Guardar</button>
+    </div>
+    <div class="timeline" id="drawer-historial-timeline">
+      <div class="timeline-empty">Sin interacciones registradas.</div>
+    </div>
+  </div>
+  <!-- Panel Tareas -->
+  <div class="drawer-body" id="drawer-panel-tareas" style="display:none;">
+    <div class="drawer-form" id="form-nueva-tarea-emp">
+      <div class="drawer-form-title">➕ Nueva Tarea</div>
+      <input id="tarea-emp-titulo" placeholder="Título de la tarea *" style="font-size:0.82rem; margin-bottom:8px;">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+        <input type="date" id="tarea-emp-fecha" style="font-size:0.82rem; padding:7px 10px;">
+        <select id="tarea-emp-asignado" style="font-size:0.82rem; padding:7px 10px;">
+          <option value="">Sin asignar</option>
+          <option value="Erick">Erick</option>
+          <option value="Arturo">Arturo</option>
+          <option value="Gelmi">Gelmi</option>
+          <option value="Gaby">Gaby</option>
+        </select>
+      </div>
+      <textarea id="tarea-emp-desc" rows="2" placeholder="Descripción (opcional)" style="font-size:0.82rem; resize:vertical; margin-bottom:8px;"></textarea>
+      <button class="btn btn-primary btn-sm btn-block" id="btnGuardarTareaEmp">💾 Guardar Tarea</button>
+    </div>
+    <div id="drawer-tareas-lista"><div class="timeline-empty">Sin tareas para esta empresa.</div></div>
+  </div>
+</div>
+
+<!-- ===== MODAL: Nueva Tarea (desde Dashboard) ===== -->
+<div id="modal-nueva-tarea" class="modal-center" style="display:none;">
+  <div class="modal-box" style="width:460px; max-width:95%;">
+    <div class="modal-header">
+      <h2>📌 Nueva Tarea</h2>
+      <button class="modal-close" id="btnCerrarModalTarea">×</button>
+    </div>
+    <div style="padding:16px 18px; display:flex; flex-direction:column; gap:10px;">
+      <div class="form-group"><label>Título <span class="required">*</span></label><input id="modal-tarea-titulo" placeholder="Ej: Llamar a cliente para renovación..."></div>
+      <div class="form-group"><label>Empresa</label>
+        <div class="autocomplete-wrap">
+          <input id="modal-tarea-empresa" placeholder="Nombre de la empresa (opcional)" autocomplete="off">
+          <div class="autocomplete-list hidden" id="modal-tarea-empresa-ac"></div>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div class="form-group"><label>Fecha límite</label><input type="date" id="modal-tarea-fecha"></div>
+        <div class="form-group"><label>Asignar a</label>
+          <select id="modal-tarea-asignado">
+            <option value="">Sin asignar</option>
+            <option value="Erick">Erick</option>
+            <option value="Arturo">Arturo</option>
+            <option value="Gelmi">Gelmi</option>
+            <option value="Gaby">Gaby</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label>Descripción</label><textarea id="modal-tarea-desc" rows="2" style="resize:vertical;"></textarea></div>
+      <button class="btn btn-primary btn-block" id="btnGuardarModalTarea">💾 Crear Tarea</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL: Acerca De ===== -->
 <div id="modal-acerca-de" class="modal-center" style="display:none;">
   <div class="modal-box" style="width:480px; max-width:95%;">
@@ -3352,7 +3627,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo } from "../data/firebase.js";
+import { firebaseEnabled, authListo, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento } from "../data/firebase.js";
 
 // ── Modal confirmación (reemplaza confirm() — funciona en móvil) ──
 function confirmar(msg: string, icon = "⚠️"): Promise<boolean> {
@@ -3529,8 +3804,16 @@ verificarSesion();
     prioridades: ["Baja", "Media", "Alta", "Urgente"],
     grupos: ["Ventas", "Soporte", "Marketing", "Otros"],
     agentes: ["Erick", "Arturo", "Gelmi", "Gaby"],
-    correoSoporte: "erick.casas@dattasoft.mx"
+    correoSoporte: "erick.casas@dattasoft.mx",
+    sla: { Urgente: 4, Alta: 8, Media: 24, Baja: 72 }
   };
+
+  let interacciones = [];
+  let tareas = [];
+  let filtrosGuardados = [];
+  let alertasVencimiento = {};
+
+  let drawerEmpresaActual = null;
 
   let filtrarSoloFavoritos = false;
   let seleccionadosIdx = [];
@@ -3976,6 +4259,14 @@ verificarSesion();
       }
       logoCargar();
     }
+    if (datos.interacciones !== undefined && (datos.interacciones.length > 0 || interacciones.length === 0))
+      interacciones = datos.interacciones || [];
+    if (datos.tareas !== undefined && (datos.tareas.length > 0 || tareas.length === 0))
+      tareas = datos.tareas || [];
+    if (datos.filtrosGuardados !== undefined)
+      filtrosGuardados = datos.filtrosGuardados || [];
+    if (datos.alertasVencimiento !== undefined)
+      alertasVencimiento = datos.alertasVencimiento || {};
     document.dispatchEvent(new CustomEvent("crm:datosFirebase", { detail: datos }));
   }
 
@@ -4651,7 +4942,371 @@ verificarSesion();
       tr.addEventListener("click", () => { navegarA("tickets"); });
       tbody.appendChild(tr);
     });
+
+    renderDashboardCharts();
+    renderDashboardTareas();
   }
+
+  let chartTicketsMes = null;
+  let chartEstados = null;
+
+  function renderDashboardCharts() {
+    const Chart = (window as any).Chart;
+    if (!Chart) return;
+
+    // --- Gráfica 1: Tickets por mes ---
+    const canvasMes = document.getElementById("chart-tickets-mes") as HTMLCanvasElement;
+    if (canvasMes) {
+      if (chartTicketsMes) { chartTicketsMes.destroy(); chartTicketsMes = null; }
+      const meses = [];
+      const counts = [];
+      const ahora = new Date();
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1);
+        meses.push(d.toLocaleDateString("es-MX", { month: "short", year: "2-digit" }));
+        counts.push(tickets.filter(t => {
+          if (!t.fechaCreacion) return false;
+          const fd = new Date(t.fechaCreacion);
+          return fd.getFullYear() === d.getFullYear() && fd.getMonth() === d.getMonth();
+        }).length);
+      }
+      const isDark = !document.body.classList.contains("light-mode");
+      const textColor = isDark ? "#94a3b8" : "#64748b";
+      chartTicketsMes = new Chart(canvasMes, {
+        type: "bar",
+        data: { labels: meses, datasets: [{ label: "Tickets", data: counts, backgroundColor: "rgba(99,102,241,0.65)", borderRadius: 6, borderSkipped: false }] },
+        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } },
+          scales: { x: { ticks: { color: textColor, font: { size: 11 } }, grid: { display: false } }, y: { ticks: { color: textColor, font: { size: 11 }, stepSize: 1 }, grid: { color: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" } } } }
+      });
+    }
+
+    // --- Gráfica 2: Distribución por estado ---
+    const canvasEst = document.getElementById("chart-estados") as HTMLCanvasElement;
+    if (canvasEst) {
+      if (chartEstados) { chartEstados.destroy(); chartEstados = null; }
+      const estados = ["Abierto","Pendiente","Resuelto","Cerrado"];
+      const colores = ["rgba(248,113,113,0.8)","rgba(251,191,36,0.8)","rgba(52,211,153,0.8)","rgba(148,163,184,0.8)"];
+      const dataEst = estados.map(e => tickets.filter(t => t.estado === e).length);
+      if (dataEst.some(v => v > 0)) {
+        chartEstados = new Chart(canvasEst, {
+          type: "doughnut",
+          data: { labels: estados, datasets: [{ data: dataEst, backgroundColor: colores, borderWidth: 2, borderColor: "transparent" }] },
+          options: { responsive: true, maintainAspectRatio: true, cutout: "65%",
+            plugins: { legend: { position: "right", labels: { color: document.body.classList.contains("light-mode") ? "#475569" : "#94a3b8", font: { size: 11 }, padding: 10 } } } }
+        });
+      } else {
+        canvasEst.parentElement.innerHTML = '<div class="dash-empty-mini" style="height:160px;display:flex;align-items:center;justify-content:center;">Sin tickets aún</div>';
+      }
+    }
+
+    // --- Licencias por vencer en 90 días ---
+    const licDiv = document.getElementById("dash-licencias-prox");
+    if (licDiv) {
+      const hoy = new Date(); hoy.setHours(0,0,0,0);
+      const items = [];
+      clientes.forEach(c => {
+        if (!c.VENCIMIENTOS) return;
+        Object.entries(c.VENCIMIENTOS).forEach(([sis, fecha]) => {
+          if (!fecha) return;
+          const d = Math.ceil((new Date((fecha as string) + "T00:00:00").getTime() - hoy.getTime()) / 86400000);
+          if (d >= 0 && d <= 90) items.push({ empresa: c.EMPRESA, sistema: sis, dias: d });
+        });
+      });
+      items.sort((a, b) => a.dias - b.dias);
+      if (!items.length) {
+        licDiv.innerHTML = '<div class="dash-empty-mini">No hay licencias por vencer en 90 días</div>';
+      } else {
+        licDiv.innerHTML = items.slice(0, 6).map(it => {
+          const pct = Math.max(0, Math.round((1 - it.dias / 90) * 100));
+          const cls = it.dias <= 15 ? "lic-dias-critico" : it.dias <= 30 ? "lic-dias-warn" : "lic-dias-ok";
+          const barColor = it.dias <= 15 ? "#f87171" : it.dias <= 30 ? "#fbbf24" : "#6366f1";
+          return `<div class="lic-item">
+            <div class="lic-item-header">
+              <span class="lic-item-empresa">${it.empresa} <span style="font-weight:400;color:var(--text-muted);font-size:0.7rem;">${it.sistema}</span></span>
+              <span class="lic-item-dias ${cls}">${it.dias === 0 ? "Hoy" : it.dias + "d"}</span>
+            </div>
+            <div class="lic-progress"><div class="lic-progress-bar" style="width:${pct}%;background:${barColor};"></div></div>
+          </div>`;
+        }).join("");
+      }
+    }
+
+    // --- Tickets abiertos >5 días ---
+    const tkViejosDiv = document.getElementById("dash-tickets-viejos");
+    if (tkViejosDiv) {
+      const hoyMs = Date.now();
+      const viejos = tickets
+        .filter(t => (t.estado === "Abierto" || t.estado === "Pendiente") && t.fechaCreacion)
+        .map(t => ({ ...t, diasAbierto: Math.floor((hoyMs - new Date(t.fechaCreacion).getTime()) / 86400000) }))
+        .filter(t => t.diasAbierto >= 5)
+        .sort((a, b) => b.diasAbierto - a.diasAbierto);
+      if (!viejos.length) {
+        tkViejosDiv.innerHTML = '<div class="dash-empty-mini">No hay tickets abiertos con más de 5 días</div>';
+      } else {
+        tkViejosDiv.innerHTML = viejos.slice(0, 6).map(t =>
+          `<div class="tk-viejo-row">
+            <div><strong>#${t.numero}</strong> <span style="color:var(--text-main);font-size:0.8rem;">${t.asunto}</span><div style="font-size:0.7rem;color:var(--text-muted);">🏢 ${t.empresa||"—"} · 🧑 ${t.agente||"—"}</div></div>
+            <span class="badge-sla badge-sla-over">${t.diasAbierto}d</span>
+          </div>`
+        ).join("");
+      }
+    }
+  }
+
+  function renderDashboardTareas() {
+    const lista = document.getElementById("dash-tareas-lista");
+    if (!lista) return;
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    const pendientes = tareas.filter(t => !t.completada).sort((a, b) => new Date(a.fechaVencimiento || "9999").getTime() - new Date(b.fechaVencimiento || "9999").getTime());
+    if (!pendientes.length) {
+      lista.innerHTML = '<div class="dash-empty-mini">No hay tareas pendientes 🎉</div>';
+      return;
+    }
+    lista.innerHTML = pendientes.slice(0, 8).map(t => {
+      const fv = t.fechaVencimiento ? new Date(t.fechaVencimiento + "T00:00:00") : null;
+      const diasDiff = fv ? Math.ceil((fv.getTime() - hoy.getTime()) / 86400000) : null;
+      const cls = diasDiff === null ? "proxima" : diasDiff < 0 ? "vencida" : diasDiff === 0 ? "hoy" : "proxima";
+      const fechaCls = diasDiff === null ? "" : diasDiff < 0 ? "tarea-fecha-vencida" : diasDiff === 0 ? "tarea-fecha-hoy" : "tarea-fecha-proxima";
+      const fechaTxt = fv ? (diasDiff < 0 ? `⚠️ Venció ${fv.toLocaleDateString("es-MX")}` : diasDiff === 0 ? "🔔 Vence hoy" : `📅 ${fv.toLocaleDateString("es-MX")}`) : "";
+      return `<div class="tarea-item ${cls}" data-tarea-id="${t.id}">
+        <input type="checkbox" class="tarea-chk" data-id="${t.id}">
+        <div class="tarea-info">
+          <div class="tarea-titulo">${t.titulo}</div>
+          ${t.empresa ? `<div class="tarea-empresa">🏢 ${t.empresa}</div>` : ""}
+          ${fechaTxt ? `<span class="tarea-fecha ${fechaCls}">${fechaTxt}</span>` : ""}
+          ${t.asignado ? `<span style="font-size:0.7rem;color:var(--text-muted);margin-left:6px;">👤 ${t.asignado}</span>` : ""}
+        </div>
+        <div class="tarea-acciones">
+          <button class="btn btn-danger btn-xs btn-del-tarea" data-id="${t.id}" title="Eliminar">🗑️</button>
+        </div>
+      </div>`;
+    }).join("");
+    lista.querySelectorAll(".tarea-chk").forEach(chk => chk.addEventListener("change", async function() {
+      const id = this.dataset.id;
+      const idx = tareas.findIndex(t => t.id === id);
+      if (idx < 0) return;
+      tareas[idx].completada = true;
+      await guardarTareas(tareas);
+      renderDashboardTareas();
+      renderDrawerTareas();
+      toast("✅ Tarea completada");
+    }));
+    lista.querySelectorAll(".btn-del-tarea").forEach(b => b.addEventListener("click", async function() {
+      const id = this.dataset.id;
+      tareas = tareas.filter(t => t.id !== id);
+      await guardarTareas(tareas);
+      renderDashboardTareas();
+      renderDrawerTareas();
+    }));
+  }
+
+  // ============================================================
+  // DRAWER: HISTORIAL Y TAREAS POR EMPRESA
+  // ============================================================
+  function abrirDrawerEmpresa(idx, tab = "historial") {
+    drawerEmpresaActual = idx;
+    const c = clientes[idx];
+    if (!c) return;
+    document.getElementById("drawer-emp-nombre").textContent = c.EMPRESA || "Empresa";
+    document.getElementById("drawer-overlay").classList.add("open");
+    document.getElementById("drawer-empresa").classList.add("open");
+    cambiarTabDrawer(tab);
+    document.getElementById("int-fecha").value = new Date().toISOString().split("T")[0];
+  }
+
+  function cerrarDrawer() {
+    document.getElementById("drawer-overlay").classList.remove("open");
+    document.getElementById("drawer-empresa").classList.remove("open");
+    drawerEmpresaActual = null;
+  }
+
+  function cambiarTabDrawer(tab) {
+    document.querySelectorAll(".drawer-tab").forEach(t => t.classList.toggle("active", t.dataset.drawerTab === tab));
+    document.getElementById("drawer-panel-historial").style.display = tab === "historial" ? "" : "none";
+    document.getElementById("drawer-panel-tareas").style.display = tab === "tareas" ? "" : "none";
+    if (tab === "historial") renderDrawerHistorial();
+    else renderDrawerTareas();
+  }
+
+  function renderDrawerHistorial() {
+    const tl = document.getElementById("drawer-historial-timeline");
+    if (!tl || drawerEmpresaActual === null) return;
+    const empresa = clientes[drawerEmpresaActual]?.EMPRESA || "";
+    const ints = interacciones.filter(i => i.empresa === empresa).sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+    // Agregar tickets como interacciones automáticas
+    const ticketsEmp = tickets.filter(t => t.empresa === empresa).map(t => ({
+      id: "tk_" + t.numero, tipo: "Ticket", texto: `Ticket #${t.numero}: ${t.asunto} (${t.estado})`,
+      fecha: t.fechaCreacion, usuario: t.agente || "Sistema", _auto: true
+    }));
+    const todos = [...ints, ...ticketsEmp].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+    if (!todos.length) { tl.innerHTML = '<div class="timeline-empty">Sin interacciones registradas.<br><span style="font-size:0.75rem;">Usa el formulario de arriba para agregar una nota, llamada o reunión.</span></div>'; return; }
+    const iconos = { Nota: "📝", Llamada: "📞", Correo: "✉️", Reunión: "🤝", Ticket: "🎫" };
+    tl.innerHTML = todos.map(it => {
+      const tipoCls = (it.tipo || "Nota").toLowerCase();
+      const fecha = it.fecha ? new Date(it.fecha).toLocaleDateString("es-MX", { day:"2-digit", month:"short", year:"numeric" }) : "";
+      return `<div class="timeline-item">
+        <div class="timeline-dot timeline-dot-${tipoCls}"></div>
+        <div class="timeline-content">
+          <div class="timeline-meta">
+            <span class="timeline-tipo timeline-tipo-${tipoCls}">${iconos[it.tipo] || "📌"} ${it.tipo}</span>
+            <span>${fecha}</span>
+            ${it.usuario ? `<span>· ${it.usuario}</span>` : ""}
+            ${!it._auto ? `<button class="btn btn-danger btn-xs" data-int-id="${it.id}" style="margin-left:auto;padding:1px 5px;">✕</button>` : ""}
+          </div>
+          <div class="timeline-text">${it.texto || ""}</div>
+        </div>
+      </div>`;
+    }).join("");
+    tl.querySelectorAll("[data-int-id]").forEach(b => b.addEventListener("click", async function() {
+      const id = this.dataset.intId;
+      interacciones = interacciones.filter(i => i.id !== id);
+      await guardarInteracciones(interacciones);
+      renderDrawerHistorial();
+    }));
+  }
+
+  function renderDrawerTareas() {
+    const lista = document.getElementById("drawer-tareas-lista");
+    if (!lista || drawerEmpresaActual === null) return;
+    const empresa = clientes[drawerEmpresaActual]?.EMPRESA || "";
+    const tareasEmp = tareas.filter(t => t.empresa === empresa && !t.completada).sort((a, b) => new Date(a.fechaVencimiento || "9999").getTime() - new Date(b.fechaVencimiento || "9999").getTime());
+    if (!tareasEmp.length) { lista.innerHTML = '<div class="timeline-empty">Sin tareas para esta empresa.</div>'; return; }
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    lista.innerHTML = tareasEmp.map(t => {
+      const fv = t.fechaVencimiento ? new Date(t.fechaVencimiento + "T00:00:00") : null;
+      const dias = fv ? Math.ceil((fv.getTime() - hoy.getTime()) / 86400000) : null;
+      const cls = dias === null ? "proxima" : dias < 0 ? "vencida" : dias === 0 ? "hoy" : "proxima";
+      const fechaCls = dias === null ? "" : dias < 0 ? "tarea-fecha-vencida" : dias === 0 ? "tarea-fecha-hoy" : "tarea-fecha-proxima";
+      const fechaTxt = fv ? (dias < 0 ? `⚠️ Venció ${fv.toLocaleDateString("es-MX")}` : dias === 0 ? "🔔 Vence hoy" : `📅 ${fv.toLocaleDateString("es-MX")}`) : "";
+      return `<div class="tarea-item ${cls}">
+        <input type="checkbox" class="tarea-chk" data-id="${t.id}">
+        <div class="tarea-info">
+          <div class="tarea-titulo">${t.titulo}</div>
+          ${fechaTxt ? `<span class="tarea-fecha ${fechaCls}">${fechaTxt}</span>` : ""}
+          ${t.asignado ? `<span style="font-size:0.7rem;color:var(--text-muted);margin-left:6px;">👤 ${t.asignado}</span>` : ""}
+        </div>
+        <div class="tarea-acciones">
+          <button class="btn btn-danger btn-xs btn-del-tarea-drawer" data-id="${t.id}">🗑️</button>
+        </div>
+      </div>`;
+    }).join("");
+    lista.querySelectorAll(".tarea-chk").forEach(chk => chk.addEventListener("change", async function() {
+      const idx2 = tareas.findIndex(t => t.id === this.dataset.id);
+      if (idx2 < 0) return;
+      tareas[idx2].completada = true;
+      await guardarTareas(tareas);
+      renderDrawerTareas();
+      renderDashboardTareas();
+      toast("✅ Tarea completada");
+    }));
+    lista.querySelectorAll(".btn-del-tarea-drawer").forEach(b => b.addEventListener("click", async function() {
+      tareas = tareas.filter(t => t.id !== this.dataset.id);
+      await guardarTareas(tareas);
+      renderDrawerTareas();
+      renderDashboardTareas();
+    }));
+  }
+
+  // Eventos del drawer
+  document.getElementById("btnCerrarDrawer")?.addEventListener("click", cerrarDrawer);
+  document.getElementById("drawer-overlay")?.addEventListener("click", cerrarDrawer);
+  document.querySelectorAll(".drawer-tab").forEach(tab => tab.addEventListener("click", function() {
+    cambiarTabDrawer(this.dataset.drawerTab);
+  }));
+
+  document.getElementById("btnGuardarInteraccion")?.addEventListener("click", async () => {
+    if (drawerEmpresaActual === null) return;
+    const texto = (document.getElementById("int-texto") as HTMLTextAreaElement).value.trim();
+    if (!texto) { toast("Escribe una descripción", "error"); return; }
+    const empresa = clientes[drawerEmpresaActual]?.EMPRESA || "";
+    const sesion = JSON.parse(sessionStorage.getItem("crm_session") || "{}");
+    const nueva = {
+      id: "int_" + Date.now(),
+      empresa,
+      tipo: (document.getElementById("int-tipo") as HTMLSelectElement).value,
+      texto,
+      fecha: (document.getElementById("int-fecha") as HTMLInputElement).value || new Date().toISOString(),
+      usuario: sesion.nombre || "Sistema"
+    };
+    interacciones.push(nueva);
+    await guardarInteracciones(interacciones);
+    (document.getElementById("int-texto") as HTMLTextAreaElement).value = "";
+    renderDrawerHistorial();
+    toast("✅ Interacción guardada");
+  });
+
+  document.getElementById("btnGuardarTareaEmp")?.addEventListener("click", async () => {
+    if (drawerEmpresaActual === null) return;
+    const titulo = (document.getElementById("tarea-emp-titulo") as HTMLInputElement).value.trim();
+    if (!titulo) { toast("El título es obligatorio", "error"); return; }
+    const empresa = clientes[drawerEmpresaActual]?.EMPRESA || "";
+    const nueva = {
+      id: "tarea_" + Date.now(),
+      empresa,
+      titulo,
+      descripcion: (document.getElementById("tarea-emp-desc") as HTMLTextAreaElement).value.trim(),
+      fechaVencimiento: (document.getElementById("tarea-emp-fecha") as HTMLInputElement).value || "",
+      asignado: (document.getElementById("tarea-emp-asignado") as HTMLSelectElement).value,
+      completada: false,
+      fechaCreacion: new Date().toISOString()
+    };
+    tareas.push(nueva);
+    await guardarTareas(tareas);
+    (document.getElementById("tarea-emp-titulo") as HTMLInputElement).value = "";
+    (document.getElementById("tarea-emp-desc") as HTMLTextAreaElement).value = "";
+    renderDrawerTareas();
+    renderDashboardTareas();
+    toast("✅ Tarea creada");
+  });
+
+  // Modal nueva tarea desde Dashboard
+  document.getElementById("btnNuevaTareaDash")?.addEventListener("click", () => {
+    document.getElementById("modal-nueva-tarea").style.display = "flex";
+    document.getElementById("modal-tarea-fecha").value = new Date().toISOString().split("T")[0];
+  });
+  document.getElementById("btnCerrarModalTarea")?.addEventListener("click", () => {
+    document.getElementById("modal-nueva-tarea").style.display = "none";
+  });
+  document.getElementById("modal-nueva-tarea")?.addEventListener("click", e => {
+    if (e.target === document.getElementById("modal-nueva-tarea")) document.getElementById("modal-nueva-tarea").style.display = "none";
+  });
+  // Autocomplete empresa en modal tarea
+  document.getElementById("modal-tarea-empresa")?.addEventListener("input", function() {
+    const val = this.value.toLowerCase().trim();
+    const ac = document.getElementById("modal-tarea-empresa-ac");
+    if (!ac) return;
+    if (!val) { ac.classList.add("hidden"); return; }
+    const matches = clientes.filter(c => (c.EMPRESA || "").toLowerCase().includes(val)).slice(0, 8);
+    if (!matches.length) { ac.classList.add("hidden"); return; }
+    ac.innerHTML = matches.map(c => `<div class="autocomplete-item" data-val="${c.EMPRESA}">${c.EMPRESA}</div>`).join("");
+    ac.classList.remove("hidden");
+    ac.querySelectorAll(".autocomplete-item").forEach(item => item.addEventListener("click", function() {
+      (document.getElementById("modal-tarea-empresa") as HTMLInputElement).value = this.dataset.val;
+      ac.classList.add("hidden");
+    }));
+  });
+  document.getElementById("btnGuardarModalTarea")?.addEventListener("click", async () => {
+    const titulo = (document.getElementById("modal-tarea-titulo") as HTMLInputElement).value.trim();
+    if (!titulo) { toast("El título es obligatorio", "error"); return; }
+    const sesion = JSON.parse(sessionStorage.getItem("crm_session") || "{}");
+    const nueva = {
+      id: "tarea_" + Date.now(),
+      empresa: (document.getElementById("modal-tarea-empresa") as HTMLInputElement).value.trim(),
+      titulo,
+      descripcion: (document.getElementById("modal-tarea-desc") as HTMLTextAreaElement).value.trim(),
+      fechaVencimiento: (document.getElementById("modal-tarea-fecha") as HTMLInputElement).value || "",
+      asignado: (document.getElementById("modal-tarea-asignado") as HTMLSelectElement).value,
+      completada: false,
+      fechaCreacion: new Date().toISOString()
+    };
+    tareas.push(nueva);
+    await guardarTareas(tareas);
+    document.getElementById("modal-nueva-tarea").style.display = "none";
+    (document.getElementById("modal-tarea-titulo") as HTMLInputElement).value = "";
+    (document.getElementById("modal-tarea-empresa") as HTMLInputElement).value = "";
+    renderDashboardTareas();
+    toast("✅ Tarea creada");
+  });
 
   // ============================================================
   // EMPRESAS
@@ -4795,6 +5450,8 @@ verificarSesion();
             <button class="btn btn-whatsapp btn-xs btn-wsp-emp" data-idx="${idx}" title="WhatsApp">💬</button>
             <button class="btn btn-ghost btn-xs btn-mail-emp-zoho" data-idx="${idx}" title="Enviar email por Zoho Mail" style="background:rgba(249,115,22,0.15); border:1px solid rgba(249,115,22,0.4); color:#f97316; font-weight:700;">✉️</button>
             <button class="btn btn-ghost btn-xs btn-toggle-versiones" data-idx="${idx}" title="Ver versiones de sistemas" style="${verBtnStyle} font-size:0.7rem; font-weight:700; padding:3px 7px;">${verIcon} Versiones</button>
+            <button class="btn btn-ghost btn-xs btn-historial-emp" data-idx="${idx}" title="Historial de interacciones" style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;font-size:0.7rem;font-weight:700;padding:3px 7px;">📋</button>
+            <button class="btn btn-ghost btn-xs btn-tareas-emp" data-idx="${idx}" title="Tareas" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:#34d399;font-size:0.7rem;font-weight:700;padding:3px 7px;">📌</button>
             <button class="btn btn-danger btn-xs btn-del-emp" data-idx="${idx}" title="Eliminar">🗑️</button>
           </div>
         </td>
@@ -4870,6 +5527,12 @@ verificarSesion();
       tr2.style.display = visible ? "none" : "";
       this.style.fontWeight = visible ? "700" : "900";
       this.style.boxShadow = visible ? "" : "0 0 0 2px currentColor";
+    }));
+    tbody.querySelectorAll(".btn-historial-emp").forEach(b => b.addEventListener("click", function() {
+      abrirDrawerEmpresa(parseInt(this.dataset.idx), "historial");
+    }));
+    tbody.querySelectorAll(".btn-tareas-emp").forEach(b => b.addEventListener("click", function() {
+      abrirDrawerEmpresa(parseInt(this.dataset.idx), "tareas");
     }));
     tbody.querySelectorAll(".chk-emp").forEach(b => {
       b.addEventListener("change", function() {
@@ -5202,6 +5865,79 @@ verificarSesion();
     filtrarSoloFavoritos = !filtrarSoloFavoritos;
     document.getElementById("btnFiltroFavoritos").textContent = filtrarSoloFavoritos ? "⭐ Favoritos" : "☆ Favoritos";
     renderEmpresas();
+  });
+
+  // ============================================================
+  // FILTROS GUARDADOS
+  // ============================================================
+  function renderListaFiltros() {
+    const cont = document.getElementById("lista-filtros-guardados");
+    if (!cont) return;
+    if (!filtrosGuardados.length) { cont.innerHTML = '<div style="font-size:0.78rem;color:var(--text-muted);padding:6px 0;">No tienes filtros guardados aún.</div>'; return; }
+    cont.innerHTML = filtrosGuardados.map(f => {
+      const desc = [f.busqueda ? `"${f.busqueda}"` : "", f.sistema ? f.sistema : "", f.vencimientoDias ? `Vence en ${f.vencimientoDias}d` : ""].filter(Boolean).join(" · ");
+      return `<div class="filtro-guardado-item">
+        <div style="flex:1;min-width:0;">
+          <div class="filtro-nombre">${f.nombre}</div>
+          <div class="filtro-desc">${desc || "Sin condiciones"}</div>
+        </div>
+        <button class="btn btn-success btn-xs btn-aplicar-filtro" data-id="${f.id}" title="Aplicar filtro">▶ Aplicar</button>
+        <button class="btn btn-danger btn-xs btn-del-filtro" data-id="${f.id}" title="Eliminar">🗑️</button>
+      </div>`;
+    }).join("");
+    cont.querySelectorAll(".btn-aplicar-filtro").forEach(b => b.addEventListener("click", function() {
+      const f = filtrosGuardados.find(x => x.id === this.dataset.id);
+      if (!f) return;
+      if (f.busqueda) (document.getElementById("txtBuscar") as HTMLInputElement).value = f.busqueda;
+      if (f.sistema) (document.getElementById("selectFiltroSistema") as HTMLSelectElement).value = f.sistema;
+      renderEmpresas();
+      // Auto-seleccionar empresas que coinciden
+      const vis = obtenerEmpresasFiltradas();
+      seleccionadosIdx = [];
+      if (f.vencimientoDias) {
+        const hoy = new Date(); hoy.setHours(0,0,0,0);
+        vis.forEach(c => {
+          if (!c.VENCIMIENTOS) return;
+          const vence = Object.values(c.VENCIMIENTOS).some((fecha: any) => {
+            if (!fecha) return false;
+            const dias = Math.ceil((new Date(fecha + "T00:00:00").getTime() - hoy.getTime()) / 86400000);
+            return dias >= 0 && dias <= parseInt(f.vencimientoDias);
+          });
+          if (vence) seleccionadosIdx.push(c._idx);
+        });
+      } else {
+        vis.forEach(c => { if (!seleccionadosIdx.includes(c._idx)) seleccionadosIdx.push(c._idx); });
+      }
+      renderEmpresas();
+      document.getElementById("panel-filtros-guardados").classList.add("hidden");
+      toast(`✅ Filtro "${f.nombre}" aplicado — ${seleccionadosIdx.length} empresas seleccionadas`);
+    }));
+    cont.querySelectorAll(".btn-del-filtro").forEach(b => b.addEventListener("click", async function() {
+      filtrosGuardados = filtrosGuardados.filter(x => x.id !== this.dataset.id);
+      await guardarFiltrosGuardados(filtrosGuardados);
+      renderListaFiltros();
+    }));
+  }
+
+  document.getElementById("btnFiltrosGuardados")?.addEventListener("click", () => {
+    const panel = document.getElementById("panel-filtros-guardados");
+    panel.classList.toggle("hidden");
+    if (!panel.classList.contains("hidden")) renderListaFiltros();
+  });
+  document.getElementById("btnCerrarFiltrosPanel")?.addEventListener("click", () => {
+    document.getElementById("panel-filtros-guardados").classList.add("hidden");
+  });
+  document.getElementById("btnGuardarFiltroActual")?.addEventListener("click", async () => {
+    const nombre = (document.getElementById("filtro-nuevo-nombre") as HTMLInputElement).value.trim();
+    if (!nombre) { toast("Escribe un nombre para el filtro", "error"); return; }
+    const busqueda = (document.getElementById("txtBuscar") as HTMLInputElement).value.trim();
+    const sistema = (document.getElementById("selectFiltroSistema") as HTMLSelectElement).value;
+    const nuevo = { id: "filtro_" + Date.now(), nombre, busqueda, sistema, vencimientoDias: "" };
+    filtrosGuardados.push(nuevo);
+    await guardarFiltrosGuardados(filtrosGuardados);
+    (document.getElementById("filtro-nuevo-nombre") as HTMLInputElement).value = "";
+    renderListaFiltros();
+    toast(`✅ Filtro "${nombre}" guardado`);
   });
 
   // Select all checkbox
@@ -5661,6 +6397,19 @@ verificarSesion();
     filtrados.forEach(t => {
       const tr = document.createElement("tr");
       tr.dataset.idx = t._idx;
+      // SLA cálculo
+      let slaBadge = "";
+      const esActivo = t.estado === "Abierto" || t.estado === "Pendiente";
+      if (esActivo && t.fechaCreacion) {
+        const slaHoras = configTickets.sla?.[t.prioridad] ?? null;
+        if (slaHoras) {
+          const horasTranscurridas = (Date.now() - new Date(t.fechaCreacion).getTime()) / 3600000;
+          const pct = horasTranscurridas / slaHoras;
+          if (pct >= 1) { slaBadge = `<br><span class="badge-sla badge-sla-over">⏰ +${Math.floor(horasTranscurridas - slaHoras)}h SLA</span>`; tr.classList.add("sla-vencido"); }
+          else if (pct >= 0.8) { slaBadge = `<br><span class="badge-sla badge-sla-warn">⚠️ ${Math.ceil(slaHoras - horasTranscurridas)}h</span>`; }
+          else { slaBadge = `<br><span class="badge-sla badge-sla-ok">✅ ${Math.ceil(slaHoras - horasTranscurridas)}h</span>`; }
+        }
+      }
       tr.innerHTML = `
         <td style="text-align:center; font-weight:700; color:var(--text-muted);">#${t.numero}</td>
         <td><strong style="color:var(--text-bright);">${t.asunto}</strong></td>
@@ -5669,7 +6418,7 @@ verificarSesion();
           <span style="display:block; font-size:0.72rem; color:var(--text-light);">🏢 ${t.empresa || "—"}</span>
         </td>
         <td style="text-align:center;"><span class="badge" style="background:rgba(99,102,241,0.12); color:#a5b4fc;">${t.tipo || "General"}</span></td>
-        <td style="text-align:center;"><span class="badge badge-${(t.prioridad || "media").toLowerCase()}">${t.prioridad}</span></td>
+        <td style="text-align:center;"><span class="badge badge-${(t.prioridad || "media").toLowerCase()}">${t.prioridad}</span>${slaBadge}</td>
         <td style="text-align:center;"><span class="badge badge-${(t.estado || "abierto").toLowerCase()}">${t.estado}</span></td>
         <td style="font-size:0.8rem; color:var(--text-muted);">${t.agente || "—"}</td>
         <td style="font-size:0.78rem; color:var(--text-light);">${t.fechaCreacion ? new Date(t.fechaCreacion).toLocaleDateString() : "—"}</td>
@@ -6068,6 +6817,7 @@ verificarSesion();
   function renderConfig() {
     actualizarUIBackup();
     document.getElementById("cfg-correo-soporte").value = configTickets.correoSoporte || "";
+    renderConfigSLA();
 
     // Cargar proveedor de correo guardado
     const providerRadio = document.querySelector(`input[name="cfg-mail-provider"][value="${configCorreo.provider || "brevo"}"]`);
@@ -6214,6 +6964,27 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const ok = await guardarConfigTickets(configTickets);
     if (ok) { toast("💾 Configuración guardada"); ocultarEstado(); }
     else { guardarLocal("crm_config_tickets", configTickets); mostrarEstado("⚠️ Guardado localmente", 3000); }
+  });
+
+  // SLA config load
+  function renderConfigSLA() {
+    const sla = configTickets.sla || { Urgente: 4, Alta: 8, Media: 24, Baja: 72 };
+    const el = id => document.getElementById(id);
+    if (el("sla-urgente")) el("sla-urgente").value = sla.Urgente ?? 4;
+    if (el("sla-alta"))    el("sla-alta").value    = sla.Alta    ?? 8;
+    if (el("sla-media"))   el("sla-media").value   = sla.Media   ?? 24;
+    if (el("sla-baja"))    el("sla-baja").value    = sla.Baja    ?? 72;
+  }
+  document.getElementById("btnGuardarSLA")?.addEventListener("click", async () => {
+    configTickets.sla = {
+      Urgente: parseInt((document.getElementById("sla-urgente") as HTMLInputElement).value) || 4,
+      Alta:    parseInt((document.getElementById("sla-alta")    as HTMLInputElement).value) || 8,
+      Media:   parseInt((document.getElementById("sla-media")   as HTMLInputElement).value) || 24,
+      Baja:    parseInt((document.getElementById("sla-baja")    as HTMLInputElement).value) || 72,
+    };
+    const ok = await guardarConfigTickets(configTickets);
+    if (ok) { toast("⏱️ SLA guardado"); renderTickets(); }
+    else toast("⚠️ Error al guardar SLA", "error");
   });
 
   function renderUsuariosPanel() {
@@ -7353,6 +8124,13 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     document.getElementById("ev-empty").style.display = "none";
     document.getElementById("panel-evento").style.display = "block";
     document.getElementById("btnEliminarEvento").style.display = "inline-flex";
+    document.getElementById("btnLinkRegistroEvento").style.display = "inline-flex";
+    document.getElementById("btnVerInscripciones").style.display = "inline-flex";
+    // Contar inscritos async
+    obtenerInscripcionesEvento(ev.id).then(list => {
+      const badge = document.getElementById("badge-inscritos");
+      if (badge) badge.textContent = list.length;
+    }).catch(() => {});
 
     document.getElementById("ev-nombre-display").textContent = ev.nombre || "—";
     const sistEl = document.getElementById("ev-sistema-display");
@@ -7380,9 +8158,18 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   function ocultarPanelEvento() {
     document.getElementById("panel-evento").style.display = "none";
     document.getElementById("btnEliminarEvento").style.display = "none";
+    document.getElementById("btnLinkRegistroEvento").style.display = "none";
+    document.getElementById("btnVerInscripciones").style.display = "none";
     const hayEventos = eventos.length > 0;
     document.getElementById("ev-empty").style.display = hayEventos ? "none" : "block";
   }
+
+  document.getElementById("btnCerrarInscritos")?.addEventListener("click", () => {
+    document.getElementById("modal-inscritos").style.display = "none";
+  });
+  document.getElementById("modal-inscritos")?.addEventListener("click", e => {
+    if (e.target === document.getElementById("modal-inscritos")) document.getElementById("modal-inscritos").style.display = "none";
+  });
 
   function getHistorialEmpresaEventos(nombreEmpresa, excludeId) {
     const historial = [];
@@ -7638,6 +8425,44 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     toast("🗑️ Evento eliminado");
   });
 
+  document.getElementById("btnLinkRegistroEvento")?.addEventListener("click", () => {
+    const ev = getEventoActivo(); if (!ev) return;
+    const url = `${location.origin}/registro-evento?id=${ev.id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      toast("🔗 Link copiado al portapapeles");
+    }).catch(() => {
+      prompt("Copia este link para compartir en redes:", url);
+    });
+  });
+
+  document.getElementById("btnVerInscripciones")?.addEventListener("click", async () => {
+    const ev = getEventoActivo(); if (!ev) return;
+    const modal = document.getElementById("modal-inscritos");
+    const lista = document.getElementById("modal-inscritos-lista");
+    const titulo = document.getElementById("modal-inscritos-titulo");
+    if (!modal || !lista || !titulo) return;
+    titulo.textContent = `👥 Inscritos — ${ev.nombre}`;
+    lista.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-muted);">Cargando...</div>`;
+    modal.style.display = "flex";
+    try {
+      const inscritos = await obtenerInscripcionesEvento(ev.id);
+      if (!inscritos.length) {
+        lista.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);">Aún no hay nadie inscrito.</div>`;
+      } else {
+        lista.innerHTML = `<div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:10px;">${inscritos.length} persona(s) registrada(s)</div>` +
+          inscritos.map(i => `<div style="padding:10px 12px;background:var(--bg-input);border-radius:8px;margin-bottom:6px;">
+            <div style="font-weight:700;color:var(--text-bright);">👤 ${i.nombre}</div>
+            ${i.empresa ? `<div style="font-size:0.78rem;color:var(--text-muted);">🏢 ${i.empresa}</div>` : ""}
+            ${i.correo ? `<div style="font-size:0.78rem;color:var(--text-muted);">✉️ ${i.correo}</div>` : ""}
+            ${i.telefono ? `<div style="font-size:0.78rem;color:var(--text-muted);">📞 ${i.telefono}</div>` : ""}
+            ${i.fuente ? `<div style="font-size:0.72rem;color:var(--brand-primary);margin-top:4px;">📌 ${i.fuente}</div>` : ""}
+          </div>`).join("");
+      }
+    } catch(e) {
+      lista.innerHTML = `<div style="text-align:center;padding:24px;color:#f87171;">Error al cargar inscritos.</div>`;
+    }
+  });
+
   // Buscar empresa para agregar al evento — usa event delegation para ser
   // robusto ante re-renders del panel sin perder los listeners.
   function mostrarEmpresasAutoComplete() {
@@ -7748,7 +8573,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   // Cerrar modales con Escape
   document.addEventListener("keydown", e => {
     if (e.key !== "Escape") return;
-    ["modal-acerca-de", "modal-papelera", "modal-exportar-excel", "kb-export-modal"].forEach(id => {
+    ["modal-acerca-de", "modal-papelera", "modal-exportar-excel", "kb-export-modal", "modal-inscritos", "modal-nueva-tarea"].forEach(id => {
       const m = document.getElementById(id);
       if (m && m.style.display !== "none") m.style.display = "none";
     });
@@ -9366,8 +10191,81 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     if (e.key === "Escape") {
       const m = document.getElementById("modal-gh-punto");
       if (m && m.style.display !== "none") m.style.display = "none";
+      cerrarDrawer();
     }
   });
+
+  // ============================================================
+  // F3: ALERTAS AUTOMÁTICAS DE VENCIMIENTO DE LICENCIAS
+  // ============================================================
+  let alertasVerificadas = false;
+  async function verificarAlertasVencimiento() {
+    if (alertasVerificadas) return;
+    if (!firebaseEnabled) return;
+    alertasVerificadas = true;
+
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    const hoyStr = hoy.toISOString().split("T")[0];
+    const diasAlerta = [30, 15, 5];
+    const correo = configTickets.correoSoporte;
+    if (!correo) return;
+
+    const nuevasAlertas = { ...alertasVencimiento };
+    const alertasPorEnviar: { empresa: string; sistema: string; dias: number; fecha: string }[] = [];
+
+    clientes.forEach(c => {
+      if (!c.VENCIMIENTOS) return;
+      Object.entries(c.VENCIMIENTOS).forEach(([sis, fecha]) => {
+        if (!fecha) return;
+        const fVenc = new Date((fecha as string) + "T00:00:00");
+        const dias = Math.ceil((fVenc.getTime() - hoy.getTime()) / 86400000);
+        diasAlerta.forEach(d => {
+          if (dias === d) {
+            const clave = `${c.EMPRESA}|${sis}|${d}`;
+            if (nuevasAlertas[clave] !== hoyStr) {
+              alertasPorEnviar.push({ empresa: c.EMPRESA, sistema: sis, dias: d, fecha: fecha as string });
+              nuevasAlertas[clave] = hoyStr;
+            }
+          }
+        });
+      });
+    });
+
+    if (!alertasPorEnviar.length) return;
+
+    const rows = alertasPorEnviar.map(a =>
+      `<tr><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;"><strong>${a.empresa}</strong></td><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;">${a.sistema}</td><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;color:${a.dias <= 5 ? "#ef4444" : a.dias <= 15 ? "#f59e0b" : "#6366f1"};font-weight:700;">${a.dias} días</td><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;">${a.fecha}</td></tr>`
+    ).join("");
+
+    const html = `<div style="font-family:sans-serif;max-width:600px;">
+      <h2 style="color:#1e293b;border-bottom:2px solid #6366f1;padding-bottom:8px;">⚠️ Alerta de Vencimiento de Licencias</h2>
+      <p style="color:#475569;">Las siguientes licencias están próximas a vencer:</p>
+      <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+        <thead><tr style="background:#f1f5f9;"><th style="padding:8px 12px;text-align:left;">Empresa</th><th style="padding:8px 12px;text-align:left;">Sistema</th><th style="padding:8px 12px;text-align:left;">Días restantes</th><th style="padding:8px 12px;text-align:left;">Vencimiento</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <p style="color:#64748b;font-size:0.85rem;">Este correo fue generado automáticamente por DATTASOFT CRM.</p>
+    </div>`;
+
+    try {
+      await fetch("/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: correo, subject: `⚠️ Alerta: ${alertasPorEnviar.length} licencia(s) por vencer — DATTASOFT CRM`, html })
+      });
+      alertasVencimiento = nuevasAlertas;
+      await guardarAlertasVencimiento(alertasVencimiento);
+      toast(`📧 Alerta enviada: ${alertasPorEnviar.length} licencia(s) por vencer`);
+    } catch (err) {
+      console.warn("[Alertas] No se pudo enviar email:", err);
+    }
+  }
+
+  // Ejecutar alertas una vez que lleguen datos de Firebase
+  document.addEventListener("crm:datosFirebase", () => {
+    setTimeout(verificarAlertasVencimiento, 3000);
+  }, { once: true });
+
 })();
 </script>
 
