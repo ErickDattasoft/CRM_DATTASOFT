@@ -283,7 +283,7 @@
       const formCard = document.getElementById("form-card");
 
       // Cargar datos de empresa (logo, nombre, correo admin)
-      let correoAdmin = null;
+      let correoAdmin = "erick.casas@dattasoft.mx"; // fallback si aún no se guardó Configuración → Correo de soporte
       let nombreEmpresaCRM = "DATTASOFT";
       try {
         const snap = await getDoc(doc(db, "agenda", "datos"));
@@ -300,7 +300,7 @@
             document.getElementById("empresa-nombre").textContent = nombreEmpresaCRM;
             document.title = `Registro — ${nombreEmpresaCRM}`;
           }
-          correoAdmin = d.configTickets?.correoSoporte || null;
+          correoAdmin = d.configTickets?.correoSoporte || "erick.casas@dattasoft.mx";
         }
       } catch(e) {}
 

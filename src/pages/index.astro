@@ -1462,6 +1462,9 @@ try {
       table { font-size: 0.75rem; }
       th, td { padding: 8px 10px; }
 
+      /* Tabla de tickets: columnas fijas obligan a scroll horizontal en vez de amontonarse */
+      #section-tickets .table-wrap table { min-width: 760px; }
+
       /* Formularios a pantalla completa */
       .form-card {
         position: fixed !important;
@@ -2519,7 +2522,7 @@ try {
       <!-- ============================== -->
       <div class="section" id="section-tickets">
         <!-- Dashboard cards -->
-        <div class="stats-grid" style="grid-template-columns: repeat(5, 1fr);">
+        <div class="stats-grid">
           <div class="stat-card stat-total">
             <span class="stat-value" id="tk-count-total">0</span>
             <span class="stat-label">Total Tickets</span>
@@ -2585,7 +2588,7 @@ try {
             <input id="form-tk-contacto-buscar" placeholder="Escribe el nombre de la empresa, contacto o correo..." autocomplete="off" style="font-size:0.83rem;">
             <div class="autocomplete-list hidden" id="tk-contacto-autocomplete"></div>
           </div>
-          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:16px; background:rgba(99,102,241,0.05); border:1px solid rgba(99,102,241,0.15); border-radius:var(--radius-md); padding:12px;">
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:12px; margin-bottom:16px; background:rgba(99,102,241,0.05); border:1px solid rgba(99,102,241,0.15); border-radius:var(--radius-md); padding:12px;">
             <div class="form-group">
               <label>Nombre del Contacto <span class="required">*</span></label>
               <input id="form-tk-contacto" placeholder="Nombre del contacto" style="font-size:0.83rem;">
@@ -2609,6 +2612,7 @@ try {
             <div class="form-group">
               <label>💻 Sistema</label>
               <select id="form-tk-sistema"></select>
+              <input id="form-tk-sistema-otro" placeholder="Especifica el sistema..." style="display:none; margin-top:6px;">
             </div>
             <div class="form-group">
               <label>Estado <span class="required">*</span></label>
@@ -2830,6 +2834,11 @@ try {
             <div class="card-title">👥 Grupos</div>
             <div class="config-list" id="cfg-list-grupo"></div>
             <button class="btn btn-ghost btn-xs" style="margin-top:10px;" data-cfg-add="grupo">➕ Agregar</button>
+          </div>
+          <div class="card">
+            <div class="card-title">💻 Sistemas (Tickets)</div>
+            <div class="config-list" id="cfg-list-sistema"></div>
+            <button class="btn btn-ghost btn-xs" style="margin-top:10px;" data-cfg-add="sistema">➕ Agregar</button>
           </div>
           <div class="card">
             <div class="card-title">🧑‍💼 Agentes</div>
@@ -4105,6 +4114,9 @@ async function sha256(str: string): Promise<string> {
 const SESSION_KEY = "crm_session";
 const USUARIOS_KEY = "crm_usuarios";
 const PASS_DEFECTO = "Datta2026";
+// Dominio público real del CRM — los links que se comparten (registro a eventos, etc.)
+// siempre deben apuntar aquí, nunca a location.origin (que en desarrollo sería localhost).
+const URL_PRODUCCION = "https://crm-dattasoft.pages.dev";
 
 interface Usuario { id: string; nombre: string; rol: "admin" | "normal"; passHash: string; activo: boolean; }
 
@@ -4261,6 +4273,7 @@ verificarSesion();
     prioridades: ["Baja", "Media", "Alta", "Urgente"],
     grupos: ["Ventas", "Soporte", "Marketing", "Otros"],
     agentes: ["Erick", "Arturo", "Gelmi", "Gaby"],
+    sistemas: [...listaSistemas],
     correoSoporte: "erick.casas@dattasoft.mx",
     sla: { Urgente: 4, Alta: 8, Media: 24, Baja: 72 }
   };
@@ -4482,6 +4495,12 @@ verificarSesion();
   };
 
   function navegarA(sectionId, filtroEstado = "") {
+    // Si hay un formulario de edición abierto (empresa, contacto o ticket), se cancela
+    // automáticamente al navegar a otro apartado — no hace falta dar clic en "Cancelar".
+    cerrarFormEmpresa();
+    cerrarFormContacto();
+    cerrarFormTicket();
+
     navItems.forEach(n => n.classList.toggle("active", n.dataset.section === sectionId));
     sections.forEach(s => s.classList.toggle("active", s.id === `section-${sectionId}`));
     const meta = sectionMeta[sectionId] || {};
@@ -6936,7 +6955,11 @@ verificarSesion();
 
   function initTicketFormDropdowns(ticket) {
     populateSelectOptions("form-tk-tipo", configTickets.tipos, ticket?.tipo || configTickets.tipos[0]);
-    populateSelectOptions("form-tk-sistema", ["No aplica", ...listaSistemas], ticket?.sistema || "No aplica");
+    populateSelectOptions("form-tk-sistema", ["No aplica", ...(configTickets.sistemas || listaSistemas), "__otro__"], ticket?.sistema || "No aplica");
+    const optOtroSistema = document.querySelector('#form-tk-sistema option[value="__otro__"]');
+    if (optOtroSistema) optOtroSistema.textContent = "➕ Otro (especificar)";
+    const inputOtroSistema = document.getElementById("form-tk-sistema-otro") as HTMLInputElement | null;
+    if (inputOtroSistema) { inputOtroSistema.style.display = "none"; inputOtroSistema.value = ""; }
     populateSelectOptions("form-tk-estado", configTickets.estados, ticket?.estado || "Abierto");
     populateSelectOptions("form-tk-prioridad", configTickets.prioridades, ticket?.prioridad || "Media");
     populateSelectOptions("form-tk-grupo", configTickets.grupos, ticket?.grupo || configTickets.grupos[0]);
@@ -7164,15 +7187,28 @@ verificarSesion();
     ["form-tk-contacto-buscar", "form-tk-contacto", "form-tk-correo-contacto", "form-tk-empresa",
      "form-tk-asunto", "form-tk-cc", "form-tk-cco",
      "form-tk-referido", "form-tk-solicitado", "form-tk-canalizado", "form-tk-realizado",
-     "form-tk-notas-internas"].forEach(id => {
-      const el = document.getElementById(id);
+     "form-tk-notas-internas", "form-tk-sistema-otro"].forEach(id => {
+      const el = document.getElementById(id) as HTMLInputElement | null;
       if (el) el.value = "";
     });
+    const inputOtroReset = document.getElementById("form-tk-sistema-otro");
+    if (inputOtroReset) inputOtroReset.style.display = "none";
     const rte = document.getElementById("form-tk-descripcion");
     if (rte) rte.innerHTML = "";
     adjuntosTicketActual = [];
     renderAdjuntosForm();
   }
+
+  document.getElementById("form-tk-sistema")?.addEventListener("change", function() {
+    const inputOtro = document.getElementById("form-tk-sistema-otro") as HTMLInputElement | null;
+    if (!inputOtro) return;
+    if (this.value === "__otro__") {
+      inputOtro.style.display = "block";
+      inputOtro.focus();
+    } else {
+      inputOtro.style.display = "none";
+    }
+  });
 
   document.getElementById("btnNuevoTicket")?.addEventListener("click", () => {
     cerrarFormTicket();
@@ -7201,7 +7237,7 @@ verificarSesion();
     const empresa = document.getElementById("form-tk-empresa").value.trim();
     const asunto = document.getElementById("form-tk-asunto").value.trim();
     const tipo = document.getElementById("form-tk-tipo").value;
-    const sistema = document.getElementById("form-tk-sistema").value;
+    let sistema = document.getElementById("form-tk-sistema").value;
     const estado = document.getElementById("form-tk-estado").value;
     const prioridad = document.getElementById("form-tk-prioridad").value;
     const grupo = document.getElementById("form-tk-grupo").value;
@@ -7218,6 +7254,21 @@ verificarSesion();
     if (!contacto || !asunto || !descripcion) {
       alert("Por favor rellena los campos obligatorios: Contacto, Asunto, Descripción.");
       return;
+    }
+
+    if (sistema === "__otro__") {
+      const sistemaOtro = (document.getElementById("form-tk-sistema-otro") as HTMLInputElement | null)?.value.trim() || "";
+      if (!sistemaOtro) {
+        alert("Especifica el nombre del sistema.");
+        return;
+      }
+      sistema = sistemaOtro;
+      if (!configTickets.sistemas) configTickets.sistemas = [];
+      if (!configTickets.sistemas.some(s => s.toLowerCase() === sistema.toLowerCase())) {
+        configTickets.sistemas.push(sistema);
+        if (crmLocalOnly) guardarLocal("crm_config_tickets", configTickets);
+        else guardarConfigTickets(configTickets).catch(() => {});
+      }
     }
 
     if (idx === "") {
@@ -7519,7 +7570,7 @@ verificarSesion();
       localOnlyCheckbox.checked = crmLocalOnly;
     }
 
-    const fields = ["tipo", "estado", "prioridad", "grupo", "agente"];
+    const fields = ["tipo", "estado", "prioridad", "grupo", "agente", "sistema"];
     fields.forEach(field => {
       const listEl = document.getElementById(`cfg-list-${field}`);
       if (!listEl) return;
@@ -9254,7 +9305,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
   document.getElementById("btnLinkRegistroEvento")?.addEventListener("click", () => {
     const ev = getEventoActivo(); if (!ev) return;
-    const url = `${location.origin}/registro-evento?id=${ev.id}`;
+    const url = `${URL_PRODUCCION}/registro-evento?id=${ev.id}`;
     navigator.clipboard.writeText(url).then(() => {
       toast("🔗 Link copiado al portapapeles");
     }).catch(() => {
