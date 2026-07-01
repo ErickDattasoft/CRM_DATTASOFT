@@ -3669,7 +3669,10 @@ try {
   <div class="modal-drawer">
     <div class="modal-header">
       <h2 id="det-tk-num">Ticket #1001</h2>
-      <button class="modal-close" id="btnCerrarDetalle">×</button>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button class="btn btn-ghost btn-sm" id="btnReenviarCorreoTicket" title="Reenviar correo de notificación al contacto">✉️ Reenviar correo</button>
+        <button class="modal-close" id="btnCerrarDetalle">×</button>
+      </div>
     </div>
     <div>
       <h3 id="det-tk-asunto" style="color:var(--text-bright); font-size:1.15rem; margin-bottom:10px;">Asunto</h3>
@@ -6509,6 +6512,33 @@ verificarSesion();
     }
   }
 
+  async function enviarNotificacionTicket(t) {
+    const mailTo = t.contactoCorreo || contactos.find(c => c.nombre === t.contacto)?.correo || "";
+    if (!mailTo) { toast("⚠️ El contacto no tiene correo registrado", "warning"); return { ok: false }; }
+    const soporteEmails = parseEmailList(configTickets.correoSoporte);
+    const mailReplyTo = soporteEmails[0] || "";
+    const mailCC = [...new Set([...soporteEmails, ...parseEmailList(t.cc || "")])].filter(e => e !== mailTo).join(",");
+    const mailSubject = `[Ticket #${t.numero}] ${t.asunto}`;
+    const htmlTicket = `
+      <h2 style="color:#4f46e5; font-family:sans-serif;">[Ticket #${t.numero}] ${t.asunto}</h2>
+      <table style="border-collapse:collapse; width:100%; font-family:sans-serif; font-size:14px;">
+        <tr><td style="padding:6px 12px; font-weight:bold; background:#f3f4f6; width:130px;">Empresa</td><td style="padding:6px 12px;">${t.empresa || ""}</td></tr>
+        <tr><td style="padding:6px 12px; font-weight:bold; background:#f3f4f6;">Contacto</td><td style="padding:6px 12px;">${t.contacto || ""}</td></tr>
+        <tr><td style="padding:6px 12px; font-weight:bold; background:#f3f4f6;">Tipo</td><td style="padding:6px 12px;">${t.tipo || ""}</td></tr>
+        <tr><td style="padding:6px 12px; font-weight:bold; background:#f3f4f6;">Prioridad</td><td style="padding:6px 12px;">${t.prioridad || ""}</td></tr>
+        <tr><td style="padding:6px 12px; font-weight:bold; background:#f3f4f6;">Estado</td><td style="padding:6px 12px;">${t.estado || ""}</td></tr>
+      </table>
+      <h3 style="margin-top:16px; font-family:sans-serif;">Descripción</h3>
+      <div style="background:#f9fafb; padding:12px; border-radius:6px; font-family:sans-serif; white-space:pre-wrap;">${(t.descripcion || "").replace(/<[^>]*>/g, "")}</div>
+      <hr style="margin-top:24px; border:none; border-top:1px solid #e5e7eb;">
+      <p style="font-size:12px; color:#6b7280; font-family:sans-serif;">DATTASOFT BY INFOXPERT — Sistema de Tickets</p>
+    `;
+    const sent = await enviarEmailConProveedor({ to: mailTo, subject: mailSubject, html: htmlTicket, replyTo: mailReplyTo, cc: mailCC });
+    if (sent?.ok) { toast(`✉️ Notificación enviada a ${mailTo}`); logBitacora(`✉️ Correo enviado a ${mailTo} — Ticket #${t.numero}`, "📧"); }
+    else toast(`⚠️ No se pudo enviar: ${sent?.error || "error desconocido"}`, "error");
+    return sent;
+  }
+
   async function enviarEmailEmpresa(e) {
     const idx = parseInt(e.target.closest("button").dataset.idx);
     const c = clientes[idx];
@@ -7282,43 +7312,19 @@ verificarSesion();
 
     if (idx === "") {
       const num = tickets.length > 0 ? Math.max(...tickets.map(t => t.numero)) + 1 : 1001;
-      tickets.push({
+      const nuevoTicket = {
         numero: num, asunto, empresa, contacto, contactoCorreo, tipo, sistema, estado, prioridad, grupo, agente,
         descripcion, notasInternas, cc, cco, referido, solicitado, canalizado, realizado,
         adjuntos: [...adjuntosTicketActual],
         fechaCreacion: new Date().toISOString(),
         fechaActualizacion: new Date().toISOString(),
         notas: []
-      });
+      };
+      tickets.push(nuevoTicket);
       logBitacora(`Ticket #${num} creado: "${asunto}" — ${empresa || contacto}`, "🎫");
 
       const enviarCorreo = document.getElementById("chk-enviar-correo")?.checked;
-      const mailTo = contactoCorreo || contactos.find(c => c.nombre === contacto)?.correo || "";
-      if (enviarCorreo && mailTo) {
-        const soporteEmails = parseEmailList(configTickets.correoSoporte);
-        const mailReplyTo = soporteEmails[0] || "";
-        const mailCC = [...new Set([...soporteEmails, ...parseEmailList(cc)])].filter(e => e !== mailTo).join(",");
-        const mailSubject = `[Ticket #${num}] ${asunto}`;
-        const htmlTicket = `
-          <h2 style="color:#4f46e5; font-family:sans-serif;">[Ticket #${num}] ${asunto}</h2>
-          <table style="border-collapse:collapse; width:100%; font-family:sans-serif; font-size:14px;">
-            <tr><td style="padding:6px 12px; font-weight:bold; background:#f3f4f6; width:130px;">Empresa</td><td style="padding:6px 12px;">${empresa}</td></tr>
-            <tr><td style="padding:6px 12px; font-weight:bold; background:#f3f4f6;">Contacto</td><td style="padding:6px 12px;">${contacto}</td></tr>
-            <tr><td style="padding:6px 12px; font-weight:bold; background:#f3f4f6;">Tipo</td><td style="padding:6px 12px;">${tipo}</td></tr>
-            <tr><td style="padding:6px 12px; font-weight:bold; background:#f3f4f6;">Prioridad</td><td style="padding:6px 12px;">${prioridad}</td></tr>
-            <tr><td style="padding:6px 12px; font-weight:bold; background:#f3f4f6;">Estado</td><td style="padding:6px 12px;">${estado}</td></tr>
-          </table>
-          <h3 style="margin-top:16px; font-family:sans-serif;">Descripción</h3>
-          <div style="background:#f9fafb; padding:12px; border-radius:6px; font-family:sans-serif; white-space:pre-wrap;">${descripcion.replace(/<[^>]*>/g, "")}</div>
-          <hr style="margin-top:24px; border:none; border-top:1px solid #e5e7eb;">
-          <p style="font-size:12px; color:#6b7280; font-family:sans-serif;">DATTASOFT BY INFOXPERT — Sistema de Tickets</p>
-        `;
-        const sent = await enviarEmailConProveedor({ to: mailTo, subject: mailSubject, html: htmlTicket, replyTo: mailReplyTo, cc: mailCC });
-        if (sent?.ok) { toast(`✉️ Notificación enviada a ${mailTo}`); logBitacora(`✉️ Correo enviado a ${mailTo} — Ticket #${num}`, "📧"); }
-        else toast(`⚠️ No se pudo enviar: ${sent?.error || "error desconocido"}`, "error");
-      } else if (enviarCorreo && !mailTo) {
-        toast("⚠️ El contacto no tiene correo registrado", "warning");
-      }
+      if (enviarCorreo) await enviarNotificacionTicket(nuevoTicket);
     } else {
       const t = tickets[parseInt(idx)];
       const adjuntosExistentes = t.adjuntos || [];
@@ -7460,6 +7466,21 @@ verificarSesion();
     if (modalDetalle) modalDetalle.style.display = "none";
     ticketDetalleIdx = null;
     document.getElementById("txtNuevaNotaTicket").value = "";
+  });
+
+  document.getElementById("btnReenviarCorreoTicket")?.addEventListener("click", async (e) => {
+    if (ticketDetalleIdx === null) return;
+    const btn = e.currentTarget as HTMLButtonElement;
+    btn.disabled = true;
+    const textoOriginal = btn.textContent;
+    btn.textContent = "Enviando...";
+    try {
+      const t = tickets[ticketDetalleIdx];
+      await enviarNotificacionTicket(t);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = textoOriginal;
+    }
   });
 
   document.getElementById("btnAgregarNotaTicket")?.addEventListener("click", async () => {
