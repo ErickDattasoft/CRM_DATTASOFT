@@ -39,10 +39,11 @@ export const onRequestPost = async (context) => {
   const replyToEmail = Array.isArray(replyTo) ? replyTo[0] : String(replyTo || "").split(",")[0].trim();
   if (replyToEmail) body.replyTo = { email: replyToEmail };
   if (cc) {
+    // No excluir fromEmail: el remitente NO recibe copia automática solo por ser el "From".
     const ccList = (Array.isArray(cc) ? cc : String(cc).split(","))
       .map(e => String(e).trim())
       .filter(Boolean)
-      .filter(e => e !== fromEmail && !toList.some(t => t.email === e));
+      .filter(e => !toList.some(t => t.email === e));
     if (ccList.length) body.cc = ccList.map(email => ({ email }));
   }
 
