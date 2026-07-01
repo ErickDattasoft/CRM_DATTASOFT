@@ -15,7 +15,7 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: "JSON inválido" }) };
   }
 
-  const { to, subject, html, replyTo } = payload;
+  const { to, subject, html, replyTo, cc } = payload;
   if (!to || !subject || !html) {
     return { statusCode: 400, body: JSON.stringify({ error: "Faltan campos: to, subject, html" }) };
   }
@@ -29,6 +29,7 @@ exports.handler = async (event) => {
     html,
   };
   if (replyTo) body.reply_to = replyTo;
+  if (cc) body.cc = Array.isArray(cc) ? cc : String(cc).split(",").map(e => e.trim()).filter(Boolean);
 
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",

@@ -17,7 +17,7 @@ export const onRequestPost = async (context) => {
     });
   }
 
-  const { to, subject, html, replyTo, from } = payload;
+  const { to, subject, html, replyTo, from, cc } = payload;
   if (!to || !subject || !html) {
     return new Response(JSON.stringify({ error: "Faltan campos: to, subject, html" }), {
       status: 400, headers: { "Content-Type": "application/json" },
@@ -35,7 +35,16 @@ export const onRequestPost = async (context) => {
     subject,
     htmlContent: html,
   };
-  if (replyTo) body.replyTo = { email: replyTo };
+  // Brevo solo acepta UN correo en replyTo — si llega una lista (separada por coma), usar solo el primero.
+  const replyToEmail = Array.isArray(replyTo) ? replyTo[0] : String(replyTo || "").split(",")[0].trim();
+  if (replyToEmail) body.replyTo = { email: replyToEmail };
+  if (cc) {
+    const ccList = (Array.isArray(cc) ? cc : String(cc).split(","))
+      .map(e => String(e).trim())
+      .filter(Boolean)
+      .filter(e => e !== fromEmail && !toList.some(t => t.email === e));
+    if (ccList.length) body.cc = ccList.map(email => ({ email }));
+  }
 
   const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",

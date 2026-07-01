@@ -6480,14 +6480,14 @@ verificarSesion();
     };
   }
 
-  async function enviarEmailConProveedor({ to, subject, html, text, replyTo = "" }) {
+  async function enviarEmailConProveedor({ to, subject, html, text, replyTo = "", cc = "" }) {
     const cuerpo = html || `<pre style="font-family:sans-serif; white-space:pre-wrap;">${text || ""}</pre>`;
     const fromEmail = parseEmailList(document.getElementById("cfg-correo-soporte")?.value.trim() || configTickets.correoSoporte)[0] || "";
     try {
       const response = await fetch("/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to, subject, html: cuerpo, replyTo, from: fromEmail }),
+        body: JSON.stringify({ to, subject, html: cuerpo, replyTo, cc, from: fromEmail }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || data.message || JSON.stringify(data));
@@ -7286,7 +7286,9 @@ verificarSesion();
       const enviarCorreo = document.getElementById("chk-enviar-correo")?.checked;
       const mailTo = contactoCorreo || contactos.find(c => c.nombre === contacto)?.correo || "";
       if (enviarCorreo && mailTo) {
-        const mailCC = [parseEmailList(configTickets.correoSoporte)[0] || "", cc].filter(Boolean).join(",");
+        const soporteEmails = parseEmailList(configTickets.correoSoporte);
+        const mailReplyTo = soporteEmails[0] || "";
+        const mailCC = [...new Set([...soporteEmails, ...parseEmailList(cc)])].filter(e => e !== mailTo).join(",");
         const mailSubject = `[Ticket #${num}] ${asunto}`;
         const htmlTicket = `
           <h2 style="color:#4f46e5; font-family:sans-serif;">[Ticket #${num}] ${asunto}</h2>
@@ -7302,7 +7304,7 @@ verificarSesion();
           <hr style="margin-top:24px; border:none; border-top:1px solid #e5e7eb;">
           <p style="font-size:12px; color:#6b7280; font-family:sans-serif;">DATTASOFT BY INFOXPERT — Sistema de Tickets</p>
         `;
-        const sent = await enviarEmailConProveedor({ to: mailTo, subject: mailSubject, html: htmlTicket, replyTo: mailCC || "" });
+        const sent = await enviarEmailConProveedor({ to: mailTo, subject: mailSubject, html: htmlTicket, replyTo: mailReplyTo, cc: mailCC });
         if (sent?.ok) { toast(`✉️ Notificación enviada a ${mailTo}`); logBitacora(`✉️ Correo enviado a ${mailTo} — Ticket #${num}`, "📧"); }
         else toast(`⚠️ No se pudo enviar: ${sent?.error || "error desconocido"}`, "error");
       } else if (enviarCorreo && !mailTo) {
