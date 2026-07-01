@@ -1515,7 +1515,7 @@ try {
     box-shadow: 0 20px 60px rgba(0,0,0,0.5);
   }
   #confirm-modal-icon { font-size: 2rem; margin-bottom: 10px; }
-  #confirm-modal-msg { font-size: 0.95rem; font-weight: 600; color: var(--text-main, #e2e8f0); margin-bottom: 20px; line-height: 1.4; }
+  #confirm-modal-msg { font-size: 0.95rem; font-weight: 600; color: var(--text-main, #e2e8f0); margin-bottom: 20px; line-height: 1.4; white-space: pre-line; }
   #confirm-modal-actions { display: flex; gap: 10px; }
   #confirm-modal-actions button { flex: 1; padding: 11px; border-radius: 10px; font-size: 0.9rem; font-weight: 700; cursor: pointer; border: none; }
   #confirm-modal-cancel { background: rgba(255,255,255,0.07); color: var(--text-main, #e2e8f0); }
@@ -5014,8 +5014,8 @@ verificarSesion();
     }).join("");
   }
 
-  document.getElementById("btnLimpiarBitacora")?.addEventListener("click", () => {
-    if (!confirm("¿Limpiar toda la bitácora?")) return;
+  document.getElementById("btnLimpiarBitacora")?.addEventListener("click", async () => {
+    if (!await confirmar("¿Limpiar toda la bitácora?", "🗑️")) return;
     bitacoraLog = [];
     guardarLocal("crm_bitacora", []);
     if (firebaseEnabled) guardarBitacora(bitacoraLog).catch(() => {});
@@ -5139,9 +5139,9 @@ verificarSesion();
       renderTickets();
       renderDashboard();
     }));
-    tbody.querySelectorAll(".btn-eliminar-def-tk").forEach(b => b.addEventListener("click", (e) => {
+    tbody.querySelectorAll(".btn-eliminar-def-tk").forEach(b => b.addEventListener("click", async (e) => {
       const i = parseInt(e.target.closest("button").dataset.idx);
-      if (!confirm("¿Eliminar definitivamente? Esta acción no se puede deshacer.")) return;
+      if (!await confirmar("¿Eliminar definitivamente? Esta acción no se puede deshacer.", "🔥")) return;
       const t = papelera.splice(i, 1)[0];
       if (firebaseEnabled) guardarPapelera(papelera).catch(() => {});
       logBitacora(`Ticket #${t.numero} eliminado definitivamente`, "🔥");
@@ -5167,9 +5167,9 @@ verificarSesion();
     const m = document.getElementById("modal-papelera");
     if (m) m.style.display = "none";
   });
-  document.getElementById("btnVaciarPapelera")?.addEventListener("click", () => {
+  document.getElementById("btnVaciarPapelera")?.addEventListener("click", async () => {
     if (!papelera.length) return;
-    if (!confirm(`¿Vaciar papelera? Se eliminarán ${papelera.length} ticket(s) permanentemente.`)) return;
+    if (!await confirmar(`¿Vaciar papelera? Se eliminarán ${papelera.length} ticket(s) permanentemente.`, "🔥")) return;
     papelera = [];
     if (firebaseEnabled) guardarPapelera(papelera).catch(() => {});
     logBitacora("Papelera vaciada", "🔥");
@@ -6396,7 +6396,7 @@ verificarSesion();
 
   async function eliminarEmpresa(e) {
     const idx = parseInt(e.target.closest("button").dataset.idx);
-    if (!confirm("¿Eliminar esta empresa?")) return;
+    if (!await confirmar("¿Eliminar esta empresa?", "🗑️")) return;
     const nombreEmp = clientes[idx]?.EMPRESA || "desconocida";
     clientes.splice(idx, 1);
     guardarLocal("crm_clientes", clientes);
@@ -6873,7 +6873,7 @@ verificarSesion();
 
   async function eliminarContacto(e) {
     const idx = parseInt(e.target.closest("button").dataset.idx);
-    if (!confirm("¿Eliminar este contacto?")) return;
+    if (!await confirmar("¿Eliminar este contacto?", "🗑️")) return;
     const ct = contactos[idx];
     const nombreCt = ct?.nombre || "desconocido";
     const empresaCt = ct?.empresa || "";
@@ -7360,7 +7360,7 @@ verificarSesion();
 
   async function eliminarTicket(e) {
     const idx = parseInt(e.target.closest("button").dataset.idx);
-    if (!confirm("¿Mover este ticket a la papelera?")) return;
+    if (!await confirmar("¿Mover este ticket a la papelera?", "🗑️")) return;
     const [t] = tickets.splice(idx, 1);
     t.fechaEliminado = new Date().toISOString();
     papelera.unshift(t);
@@ -7661,10 +7661,10 @@ verificarSesion();
 
     // Delete events
     document.querySelectorAll(".cfg-del-item").forEach(btn => {
-      btn.onclick = () => {
+      btn.onclick = async () => {
         const field = btn.dataset.field;
         const idx = parseInt(btn.dataset.idx);
-        if (confirm(`¿Eliminar "${configTickets[field][idx]}"?`)) {
+        if (await confirmar(`¿Eliminar "${configTickets[field][idx]}"?`, "🗑️")) {
           configTickets[field].splice(idx, 1);
           renderConfig();
         }
@@ -7772,10 +7772,10 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           const adminsActivos = usuarios.filter(x => x.rol === "admin" && x.activo);
           if (adminsActivos.length <= 1) { toast("⚠️ No puedes quitar el único administrador activo", "error"); return; }
           if (u.nombre === uActual.nombre) { toast("⚠️ No puedes quitarte tus propios permisos de administrador", "error"); return; }
-          if (!confirm(`¿Quitar permisos de administrador a ${u.nombre}?`)) return;
+          if (!await confirmar(`¿Quitar permisos de administrador a ${u.nombre}?`, "🛡️")) return;
           usuarios[i].rol = "normal";
         } else {
-          if (!confirm(`¿Dar permisos de administrador a ${u.nombre}?`)) return;
+          if (!await confirmar(`¿Dar permisos de administrador a ${u.nombre}?`, "🛡️")) return;
           usuarios[i].rol = "admin";
         }
         saveUsuariosLocal(usuarios);
@@ -7811,7 +7811,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const nombreLimpio = nombre.trim().toUpperCase();
     const usuarios = getUsuarios();
     if (usuarios.find(u => u.nombre === nombreLimpio)) { toast("⚠️ Ya existe un usuario con ese nombre", "error"); return; }
-    const esAdmin = confirm(`¿${nombreLimpio} será administrador?\n\nAceptar = Admin   Cancelar = Normal`);
+    const esAdmin = await confirmar(`¿${nombreLimpio} será administrador?\n\nConfirmar = Admin   Cancelar = Normal`, "🛡️");
     const hashDef = await sha256(PASS_DEFECTO);
     usuarios.push({ id: `u${Date.now()}`, nombre: nombreLimpio, rol: esAdmin ? "admin" : "normal", passHash: hashDef, activo: true });
     saveUsuariosLocal(usuarios);
@@ -8218,7 +8218,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
                 modal.style.display = 'flex';
                 return;
               }
-              if (!confirm(`⚠️ Esto REEMPLAZARÁ todas las empresas y contactos actuales con los datos del Excel.\n\n¿Ya descargaste el respaldo? Continuar de todos modos?`)) return;
+              if (!await confirmar(`Esto REEMPLAZARÁ todas las empresas y contactos actuales con los datos del Excel.\n\n¿Ya descargaste el respaldo? Continuar de todos modos?`, "⚠️")) return;
               modal.style.display = 'none';
               mostrarEstado('🔄 Subiendo datos a Firebase...');
               // Usar datos de la hoja seleccionada
@@ -8934,7 +8934,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       div.querySelector(".btn-rechazar-pub").addEventListener("click", async (e) => {
         const idx = parseInt(e.target.dataset.i);
         const tp = ticketsPublicos[idx];
-        if (!confirm(`¿Rechazar el ticket "${tp.asunto}"? Se eliminará del portal.`)) return;
+        if (!await confirmar(`¿Rechazar el ticket "${tp.asunto}"? Se eliminará del portal.`, "🗑️")) return;
         if (tp._fbId) await eliminarTicketPublico(tp._fbId).catch(() => {});
         ticketsPublicos.splice(idx, 1);
         logBitacora(`Ticket público rechazado: "${tp.asunto}"`, "🗑️");
@@ -9293,9 +9293,9 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   });
 
   // Eliminar evento
-  document.getElementById("btnEliminarEvento")?.addEventListener("click", () => {
+  document.getElementById("btnEliminarEvento")?.addEventListener("click", async () => {
     const ev = getEventoActivo(); if (!ev) return;
-    if (!confirm(`¿Eliminar el evento "${ev.nombre}"? Esta acción no se puede deshacer.`)) return;
+    if (!await confirmar(`¿Eliminar el evento "${ev.nombre}"? Esta acción no se puede deshacer.`, "🗑️")) return;
     eventos = eventos.filter(e => e.id !== ev.id);
     guardarEventos();
     eventoActivoId = null;
@@ -9921,7 +9921,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   }
 
   async function kbEliminar(id: string) {
-    if (!confirm("¿Eliminar este documento? Esta acción no se puede deshacer.")) return;
+    if (!await confirmar("¿Eliminar este documento? Esta acción no se puede deshacer.", "🗑️")) return;
     if (firebaseEnabled) {
       await eliminarDocKB(id);
     } else {
@@ -10712,7 +10712,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       });
       listEl.querySelectorAll<HTMLElement>(".tf-del").forEach(btn => {
         btn.addEventListener("click", async () => {
-          if (!confirm("¿Eliminar este archivo? El enlace dejará de funcionar.")) return;
+          if (!await confirmar("¿Eliminar este archivo? El enlace dejará de funcionar.", "🗑️")) return;
           await eliminarArchivoTransferencia(btn.dataset.path!);
           await eliminarRegistroTransferencia(btn.dataset.id!);
           transferList = transferList.filter(t => t._id !== btn.dataset.id);
@@ -10810,8 +10810,8 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     });
 
     // Limpiar
-    document.getElementById("kb-pizarra-limpiar")?.addEventListener("click", () => {
-      if (!texto.innerText.trim() || confirm("¿Limpiar la pizarra?")) {
+    document.getElementById("kb-pizarra-limpiar")?.addEventListener("click", async () => {
+      if (!texto.innerText.trim() || await confirmar("¿Limpiar la pizarra?", "🗑️")) {
         texto.innerHTML = "";
         localStorage.removeItem(LS_KEY);
       }
