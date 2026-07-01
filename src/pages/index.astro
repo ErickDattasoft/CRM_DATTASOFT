@@ -245,6 +245,8 @@ try {
       min-width: 20px;
       text-align: center;
     }
+    .nav-badge + .nav-badge { margin-left: 4px; }
+    .nav-badge-warning { background: var(--brand-warning); }
 
     /* ===== MAIN CONTENT ===== */
     .main-content {
@@ -2072,7 +2074,8 @@ try {
       <div class="nav-item" data-section="tickets" data-tooltip="Tickets">
         <span class="nav-icon">🎫</span>
         <span class="nav-label">Tickets</span>
-        <span class="nav-badge" id="badge-tickets-abiertos">0</span>
+        <span class="nav-badge" id="badge-tickets-abiertos" title="Abiertos / Pendientes">0</span>
+        <span class="nav-badge nav-badge-warning" id="badge-tickets-resueltos" title="Resueltos — falta facturar" style="display:none;">0</span>
       </div>
       <div class="sidebar-section-label">Gestión</div>
       <div class="nav-item" data-section="eventos" data-tooltip="Eventos">
@@ -5414,6 +5417,12 @@ verificarSesion();
     el("badge-contactos").textContent = contactos.length;
     const abiertos = tickets.filter(t => t.estado === "Abierto" || t.estado === "Pendiente").length;
     el("badge-tickets-abiertos").textContent = abiertos;
+    const resueltosPorFacturar = tickets.filter(t => t.estado === "Resuelto").length;
+    const badgeResueltos = el("badge-tickets-resueltos");
+    if (badgeResueltos) {
+      badgeResueltos.textContent = resueltosPorFacturar;
+      badgeResueltos.style.display = resueltosPorFacturar > 0 ? "inline-flex" : "none";
+    }
     updateBrowserTabTitle();
 
     // Recent tickets
