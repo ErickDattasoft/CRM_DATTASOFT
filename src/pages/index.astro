@@ -2198,6 +2198,13 @@ try {
       </div>
     </div>
 
+    <div id="banner-sesion-anonima" style="display:none; align-items:center; flex-wrap:wrap; gap:8px 12px; background:rgba(234,179,8,0.12); border-bottom:1px solid rgba(234,179,8,0.35); padding:10px 18px; font-size:0.85rem;">
+      <span style="font-size:1.1rem; flex-shrink:0;">🔐</span>
+      <span id="banner-sesion-anonima-msg" style="flex:1; min-width:200px;"></span>
+      <button class="btn btn-primary btn-sm" id="btn-banner-sesion-anonima-accion" style="flex-shrink:0;"></button>
+      <button class="btn btn-ghost btn-sm" id="btn-banner-sesion-anonima-cerrar" title="Cerrar" style="flex-shrink:0;">✕</button>
+    </div>
+
     <div class="content-scroll">
 
       <!-- ============================== -->
@@ -2972,10 +2979,17 @@ try {
       <!-- ============================== -->
       <div class="section" id="section-bitacora">
         <div class="card">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
             <div class="card-title" style="margin-bottom:0;">📋 Bitácora de Acciones</div>
-            <button class="btn btn-ghost btn-xs" id="btnLimpiarBitacora">🗑️ Limpiar</button>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <input type="date" id="bit-filtro-desde" title="Desde" style="font-size:0.78rem; padding:6px 8px;">
+              <span style="color:var(--text-muted); font-size:0.75rem;">a</span>
+              <input type="date" id="bit-filtro-hasta" title="Hasta" style="font-size:0.78rem; padding:6px 8px;">
+              <button class="btn btn-ghost btn-xs" id="btnLimpiarFiltroBitacora" title="Quitar filtro de fechas">✕</button>
+              <button class="btn btn-ghost btn-xs" id="btnLimpiarBitacora">🗑️ Limpiar</button>
+            </div>
           </div>
+          <div style="font-size:0.72rem; color:var(--text-muted); margin-bottom:10px;">La bitácora conserva solo los últimos 60 días.</div>
           <div id="bitacora-list" style="max-height:500px; overflow-y:auto;">
             <div style="text-align:center; color:var(--text-muted); padding:24px; font-size:0.85rem;">Sin actividad registrada.</div>
           </div>
@@ -3510,8 +3524,9 @@ try {
               <tr><td><span class="btn-demo btn-demo-warning">✉️</span></td><td><strong>Correo:</strong> Abre tu cliente de correo con los datos de la empresa para mandar notificaciones.</td></tr>
               <tr><td><span class="btn-demo btn-demo-danger">🗑️</span></td><td><strong>Eliminar:</strong> Borra la empresa del CRM. <strong>Esta acción es permanente</strong> — el sistema pedirá confirmación.</td></tr>
               <tr><td><span class="btn-demo btn-demo-ghost">🔽 Ver</span></td><td><strong>Versiones:</strong> Expande la fila para ver qué versión tiene instalada cada sistema CONTPAQi, comparada con la versión oficial más reciente.</td></tr>
-              <tr><td><span class="btn-demo btn-demo-primary">📋 Hist.</span></td><td><strong>Historial:</strong> Abre un panel lateral con todas las interacciones registradas para esta empresa (notas, llamadas, correos, reuniones y tickets).</td></tr>
+              <tr><td><span class="btn-demo btn-demo-primary">📋 Hist.</span></td><td><strong>Historial:</strong> Abre un panel lateral con todas las interacciones registradas para esta empresa (notas, llamadas, correos, reuniones y tickets). Cada ticket trae un botón "Ver ticket →" que abre su detalle completo.</td></tr>
               <tr><td><span class="btn-demo btn-demo-success">📌 Tar.</span></td><td><strong>Tareas:</strong> Abre el panel lateral con las tareas pendientes asignadas a esta empresa.</td></tr>
+              <tr><td>📅 Desde/Hasta</td><td><strong>Filtro de fechas:</strong> Arriba del Historial y las Tareas, filtra ambos listados por rango de fechas (fecha de la interacción/ticket, o fecha de vencimiento de la tarea). El rango elegido se mantiene aunque cambies de empresa, hasta que lo borres con ✕.</td></tr>
             </table>
 
             <div class="manual-subtitulo">Colores en las celdas de versión</div>
@@ -3613,6 +3628,9 @@ try {
               <tr><td>🟢 Baja</td><td>72 horas</td><td><span class="manual-badge" style="background:rgba(16,185,129,.12);color:#34d399;">✅ En tiempo</span></td></tr>
             </table>
             <div class="manual-aviso"><span class="manual-tip-icon">⚠️</span><span>El badge SLA aparece junto a la prioridad en la tabla de tickets. Si ves un badge rojo, ese ticket necesita atención inmediata — ya se pasó del tiempo de respuesta.</span></div>
+
+            <div class="manual-subtitulo">🕵️ Actividad del ticket (trazabilidad)</div>
+            <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;margin-bottom:8px;">Dentro del detalle de cada ticket hay una sección plegable "Actividad del ticket" que registra automáticamente quién creó el ticket, quién cambió el estado (y de qué a qué), y quién cambió el agente asignado — con fecha y usuario. Es información de solo lectura, útil cuando varios usuarios trabajan los mismos tickets y necesitas saber quién hizo qué.</p>
           </div>
 
           <!-- ── CONTACTOS ──────────────────────────────────── -->
@@ -3832,6 +3850,12 @@ try {
       <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:8px;">📎 Adjuntos</div>
       <div class="attachment-list" id="det-tk-adjuntos"></div>
     </div>
+    <div style="border-top:1px solid var(--border-color); padding-top:12px;">
+      <details id="det-tk-actividad-details">
+        <summary style="cursor:pointer; font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; user-select:none;">🕵️ Actividad del ticket (<span id="det-tk-actividad-count">0</span>)</summary>
+        <div id="det-tk-actividad" style="margin-top:10px; display:flex; flex-direction:column; gap:8px; max-height:180px; overflow-y:auto;"></div>
+      </details>
+    </div>
     <div style="border-top:1px solid var(--border-color); padding-top:14px;">
       <h4 style="font-size:0.88rem; color:var(--brand-primary-hover); font-family:var(--font-heading); margin-bottom:8px;">💬 Bitácora de Soporte</h4>
       <div class="notes-timeline" id="det-tk-notas"></div>
@@ -3980,6 +4004,12 @@ try {
   <div class="drawer-tabs">
     <div class="drawer-tab active" data-drawer-tab="historial">📋 Historial</div>
     <div class="drawer-tab" data-drawer-tab="tareas">📌 Tareas</div>
+  </div>
+  <div style="display:flex; gap:6px; align-items:center; padding:10px 20px 0;">
+    <input type="date" id="hist-filtro-desde" title="Desde" style="font-size:0.78rem; padding:6px 8px; flex:1; min-width:0;">
+    <span style="color:var(--text-muted); font-size:0.75rem;">a</span>
+    <input type="date" id="hist-filtro-hasta" title="Hasta" style="font-size:0.78rem; padding:6px 8px; flex:1; min-width:0;">
+    <button class="btn btn-ghost btn-xs" id="btnLimpiarFiltroHistorial" title="Quitar filtro de fechas" style="padding:6px 8px;">✕</button>
   </div>
   <!-- Panel Historial -->
   <div class="drawer-body" id="drawer-panel-historial">
@@ -4235,7 +4265,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica } from "../data/firebase.js";
+import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica } from "../data/firebase.js";
 
 // ── Modal confirmación (reemplaza confirm() — funciona en móvil) ──
 function confirmar(msg: string, icon = "⚠️"): Promise<boolean> {
@@ -4603,6 +4633,7 @@ verificarSesion();
   let solicitudesAcceso: any[] = [];
 
   let drawerEmpresaActual = null;
+  let drawerTabActual = "historial";
 
   let filtrarSoloFavoritos = false;
   let seleccionadosIdx = [];
@@ -5405,7 +5436,47 @@ verificarSesion();
     logBitacora("Sesión iniciada", "🔐");
     initKB();
     actualizarBadgeCuentaSegura();
+    revisarSesionAnonima();
   }, { once: false });
+
+  // El login viejo (usuario+contraseña local) solo controla la entrada a la UI — no toca la
+  // sesión real de Firebase Auth. Cada navegador/dispositivo mantiene su propia sesión de Auth
+  // por separado, así que un dispositivo donde nunca se inició sesión con la cuenta segura sigue
+  // siendo anónimo ahí aunque el login viejo "funcione". Las reglas de Firestore rechazan
+  // escrituras anónimas, así que sin este aviso el usuario solo veía fallar guardados uno por
+  // uno (bitácora, tickets, clientes...) sin entender por qué.
+  function revisarSesionAnonima() {
+    const banner = document.getElementById("banner-sesion-anonima");
+    if (!banner) return;
+    if (!firebaseEnabled || !sesionEsAnonima()) { banner.style.display = "none"; return; }
+    const u = getUsuarioActual();
+    if (!u) { banner.style.display = "none"; return; }
+    const registro = getUsuarios().find((x: any) => x.nombre === u.nombre);
+    const msgEl = document.getElementById("banner-sesion-anonima-msg")!;
+    const btnAccion = document.getElementById("btn-banner-sesion-anonima-accion") as HTMLButtonElement;
+    if (registro?.authEmail) {
+      msgEl.textContent = "Este dispositivo no tiene tu sesión segura activa — por seguridad se inicia por separado en cada equipo. Mientras tanto, lo que hagas aquí no se guardará.";
+      btnAccion.textContent = "Iniciar sesión segura →";
+      btnAccion.onclick = () => {
+        document.getElementById("login-overlay")?.classList.remove("hidden");
+        document.getElementById("login-step-user")!.style.display = "none";
+        document.getElementById("login-step-pass")!.style.display = "none";
+        document.getElementById("login-step-securo")!.style.display = "block";
+        const correoInp = document.getElementById("login-securo-correo") as HTMLInputElement;
+        if (correoInp) correoInp.value = registro.authEmail;
+        const passInp = document.getElementById("login-securo-pass") as HTMLInputElement;
+        if (passInp) { passInp.value = ""; passInp.focus(); }
+      };
+    } else {
+      msgEl.textContent = "Este dispositivo necesita activar tu cuenta segura (correo+contraseña) para poder guardar cambios — por seguridad se activa por separado en cada equipo.";
+      btnAccion.textContent = "🔒 Activar ahora";
+      btnAccion.onclick = () => abrirModalCuentaSegura();
+    }
+    banner.style.display = "flex";
+  }
+  document.getElementById("btn-banner-sesion-anonima-cerrar")?.addEventListener("click", () => {
+    document.getElementById("banner-sesion-anonima")!.style.display = "none";
+  });
 
   // ============================================================
   // CUENTA SEGURA (paso 1 de migración a autenticación real — ver plan)
@@ -5526,8 +5597,17 @@ verificarSesion();
       cont.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:24px; font-size:0.85rem;">Sin actividad registrada.</div>';
       return;
     }
+    const desde = (document.getElementById("bit-filtro-desde") as HTMLInputElement)?.value || "";
+    const hasta = (document.getElementById("bit-filtro-hasta") as HTMLInputElement)?.value || "";
+    let entradas = bitacoraLog;
+    if (desde) entradas = entradas.filter(e => e.fecha && e.fecha.slice(0, 10) >= desde);
+    if (hasta) entradas = entradas.filter(e => e.fecha && e.fecha.slice(0, 10) <= hasta);
+    if (!entradas.length) {
+      cont.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:24px; font-size:0.85rem;">Sin resultados en ese rango de fechas.</div>';
+      return;
+    }
     const hoy = new Date().getFullYear();
-    cont.innerHTML = bitacoraLog.map(e => {
+    cont.innerHTML = entradas.map(e => {
       const d = new Date(e.fecha);
       const opts = d.getFullYear() !== hoy
         ? { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' }
@@ -5546,6 +5626,14 @@ verificarSesion();
     bitacoraLog = [];
     guardarLocal("crm_bitacora", []);
     if (firebaseEnabled) guardarBitacora(bitacoraLog).catch(() => {});
+    renderBitacora();
+  });
+
+  document.getElementById("bit-filtro-desde")?.addEventListener("change", renderBitacora);
+  document.getElementById("bit-filtro-hasta")?.addEventListener("change", renderBitacora);
+  document.getElementById("btnLimpiarFiltroBitacora")?.addEventListener("click", () => {
+    (document.getElementById("bit-filtro-desde") as HTMLInputElement).value = "";
+    (document.getElementById("bit-filtro-hasta") as HTMLInputElement).value = "";
     renderBitacora();
   });
 
@@ -6232,6 +6320,7 @@ verificarSesion();
   }
 
   function cambiarTabDrawer(tab) {
+    drawerTabActual = tab;
     document.querySelectorAll(".drawer-tab").forEach(t => t.classList.toggle("active", t.dataset.drawerTab === tab));
     document.getElementById("drawer-panel-historial").style.display = tab === "historial" ? "" : "none";
     document.getElementById("drawer-panel-tareas").style.display = tab === "tareas" ? "" : "none";
@@ -6246,11 +6335,21 @@ verificarSesion();
     const ints = interacciones.filter(i => i.empresa === empresa).sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
     // Agregar tickets como interacciones automáticas
     const ticketsEmp = tickets.filter(t => t.empresa === empresa).map(t => ({
-      id: "tk_" + t.numero, tipo: "Ticket", texto: `Ticket #${t.numero}: ${t.asunto} (${t.estado})`,
+      id: "tk_" + t.numero, numero: t.numero, tipo: "Ticket", texto: `Ticket #${t.numero}: ${t.asunto} (${t.estado})`,
       fecha: t.fechaCreacion, usuario: t.agente || "Sistema", _auto: true
     }));
-    const todos = [...ints, ...ticketsEmp].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
-    if (!todos.length) { tl.innerHTML = '<div class="timeline-empty">Sin interacciones registradas.<br><span style="font-size:0.75rem;">Usa el formulario de arriba para agregar una nota, llamada o reunión.</span></div>'; return; }
+    let todos = [...ints, ...ticketsEmp].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+    const desde = (document.getElementById("hist-filtro-desde") as HTMLInputElement)?.value || "";
+    const hasta = (document.getElementById("hist-filtro-hasta") as HTMLInputElement)?.value || "";
+    if (desde) todos = todos.filter(it => it.fecha && it.fecha.slice(0, 10) >= desde);
+    if (hasta) todos = todos.filter(it => it.fecha && it.fecha.slice(0, 10) <= hasta);
+    if (!todos.length) {
+      const sinResultados = desde || hasta;
+      tl.innerHTML = sinResultados
+        ? '<div class="timeline-empty">Sin resultados en ese rango de fechas.</div>'
+        : '<div class="timeline-empty">Sin interacciones registradas.<br><span style="font-size:0.75rem;">Usa el formulario de arriba para agregar una nota, llamada o reunión.</span></div>';
+      return;
+    }
     const iconos = { Nota: "📝", Llamada: "📞", Correo: "✉️", Reunión: "🤝", Ticket: "🎫" };
     tl.innerHTML = todos.map(it => {
       const tipoCssMap: Record<string,string> = { Nota:"nota", Llamada:"llamada", Correo:"correo", "Reunión":"reunion", Ticket:"ticket" };
@@ -6263,6 +6362,7 @@ verificarSesion();
             <span class="timeline-tipo timeline-tipo-${tipoCls}">${iconos[it.tipo] || "📌"} ${it.tipo}</span>
             <span>${fecha}</span>
             ${it.usuario ? `<span>· ${it.usuario}</span>` : ""}
+            ${it.tipo === "Ticket" ? `<button class="btn btn-ghost btn-xs btn-ver-ticket-historial" data-ticket-numero="${it.numero}" style="margin-left:auto;">Ver ticket →</button>` : ""}
             ${!it._auto ? `<button class="btn btn-danger btn-xs" data-int-id="${it.id}" style="margin-left:auto;padding:1px 5px;">✕</button>` : ""}
           </div>
           <div class="timeline-text">${it.texto || ""}</div>
@@ -6275,14 +6375,30 @@ verificarSesion();
       await guardarInteracciones(interacciones);
       renderDrawerHistorial();
     }));
+    tl.querySelectorAll("[data-ticket-numero]").forEach(b => b.addEventListener("click", function() {
+      const numero = this.dataset.ticketNumero;
+      const idx = tickets.findIndex(t => String(t.numero) === numero);
+      if (idx === -1) return;
+      cerrarDrawer();
+      mostrarDetalleTicket(idx);
+    }));
   }
 
   function renderDrawerTareas() {
     const lista = document.getElementById("drawer-tareas-lista");
     if (!lista || drawerEmpresaActual === null) return;
     const empresa = clientes[drawerEmpresaActual]?.EMPRESA || "";
-    const tareasEmp = tareas.filter(t => t.empresa === empresa && !t.completada).sort((a, b) => new Date(a.fechaVencimiento || "9999").getTime() - new Date(b.fechaVencimiento || "9999").getTime());
-    if (!tareasEmp.length) { lista.innerHTML = '<div class="timeline-empty">Sin tareas para esta empresa.</div>'; return; }
+    let tareasEmp = tareas.filter(t => t.empresa === empresa && !t.completada).sort((a, b) => new Date(a.fechaVencimiento || "9999").getTime() - new Date(b.fechaVencimiento || "9999").getTime());
+    const desde = (document.getElementById("hist-filtro-desde") as HTMLInputElement)?.value || "";
+    const hasta = (document.getElementById("hist-filtro-hasta") as HTMLInputElement)?.value || "";
+    if (desde) tareasEmp = tareasEmp.filter(t => t.fechaVencimiento && t.fechaVencimiento >= desde);
+    if (hasta) tareasEmp = tareasEmp.filter(t => t.fechaVencimiento && t.fechaVencimiento <= hasta);
+    if (!tareasEmp.length) {
+      lista.innerHTML = (desde || hasta)
+        ? '<div class="timeline-empty">Sin tareas con vencimiento en ese rango de fechas.</div>'
+        : '<div class="timeline-empty">Sin tareas para esta empresa.</div>';
+      return;
+    }
     const hoy = new Date(); hoy.setHours(0,0,0,0);
     lista.innerHTML = tareasEmp.map(t => {
       const fv = t.fechaVencimiento ? new Date(t.fechaVencimiento + "T00:00:00") : null;
@@ -6325,6 +6441,18 @@ verificarSesion();
   document.querySelectorAll(".drawer-tab").forEach(tab => tab.addEventListener("click", function() {
     cambiarTabDrawer(this.dataset.drawerTab);
   }));
+
+  function renderDrawerTabActual() {
+    if (drawerTabActual === "tareas") renderDrawerTareas();
+    else renderDrawerHistorial();
+  }
+  document.getElementById("hist-filtro-desde")?.addEventListener("change", renderDrawerTabActual);
+  document.getElementById("hist-filtro-hasta")?.addEventListener("change", renderDrawerTabActual);
+  document.getElementById("btnLimpiarFiltroHistorial")?.addEventListener("click", () => {
+    (document.getElementById("hist-filtro-desde") as HTMLInputElement).value = "";
+    (document.getElementById("hist-filtro-hasta") as HTMLInputElement).value = "";
+    renderDrawerTabActual();
+  });
 
   document.getElementById("btnGuardarInteraccion")?.addEventListener("click", async () => {
     if (drawerEmpresaActual === null) return;
@@ -7941,9 +8069,11 @@ verificarSesion();
         adjuntos: [...adjuntosTicketActual],
         fechaCreacion: new Date().toISOString(),
         fechaActualizacion: new Date().toISOString(),
-        notas: []
+        notas: [],
+        actividad: []
       };
       tickets.push(nuevoTicket);
+      registrarActividadTicket(nuevoTicket, `Ticket creado${agente ? ` y asignado a ${agente}` : ""}`);
       logBitacora(`Ticket #${num} creado: "${asunto}" — ${empresa || contacto}`, "🎫");
 
       const enviarCorreo = document.getElementById("chk-enviar-correo")?.checked;
@@ -7957,10 +8087,14 @@ verificarSesion();
         return;
       }
       const adjuntosExistentes = t.adjuntos || [];
+      const estadoAnterior = t.estado, agenteAnterior = t.agente, prioridadAnterior = t.prioridad;
       Object.assign(t, { asunto, empresa, contacto, contactoCorreo, tipo, sistema, estado, prioridad, grupo, agente,
         descripcion, notasInternas, cc, cco, referido, solicitado, canalizado, realizado,
         adjuntos: [...adjuntosExistentes, ...adjuntosTicketActual],
         fechaActualizacion: new Date().toISOString() });
+      if (estado !== estadoAnterior) registrarActividadTicket(t, `Estado cambiado: "${estadoAnterior}" → "${estado}"`);
+      if (agente !== agenteAnterior) registrarActividadTicket(t, `Asignado cambiado: "${agenteAnterior || "sin asignar"}" → "${agente || "sin asignar"}"`);
+      if (prioridad !== prioridadAnterior) registrarActividadTicket(t, `Prioridad cambiada: "${prioridadAnterior}" → "${prioridad}"`);
       logBitacora(`Ticket #${t.numero} "${t.asunto}" actualizado a ${estado}${prioridad ? ` · ${prioridad}` : ""}`, "✏️");
     }
 
@@ -8035,9 +8169,38 @@ verificarSesion();
   function ticketPorNumero(numero: number | null) { return tickets.find(t => t.numero === numero) || null; }
   const modalDetalle = document.getElementById("modal-detalle-ticket");
 
+  function registrarActividadTicket(t, texto) {
+    if (!t.actividad) t.actividad = [];
+    const u = getUsuarioActual();
+    t.actividad.push({ fecha: new Date().toISOString(), usuario: u?.nombre || "Sistema", texto });
+  }
+
+  function renderActividadTicket(t) {
+    const cont = document.getElementById("det-tk-actividad");
+    const count = document.getElementById("det-tk-actividad-count");
+    if (!cont) return;
+    const act = (t.actividad || []).slice().sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+    if (count) count.textContent = String(act.length);
+    if (!act.length) {
+      cont.innerHTML = '<div style="text-align:center; color:var(--text-light); font-size:0.78rem; padding:8px;">Sin actividad registrada.</div>';
+      return;
+    }
+    cont.innerHTML = act.map(a => `
+      <div style="font-size:0.78rem; line-height:1.5; border-left:2px solid var(--brand-primary); padding-left:8px;">
+        <strong>👤 ${escapeHtml(a.usuario) || "Sistema"}</strong> · <span style="color:var(--text-muted);">${new Date(a.fecha).toLocaleString("es-MX")}</span><br>
+        ${escapeHtml(a.texto)}
+      </div>
+    `).join("");
+  }
+
   function abrirDetalleTicket(e) {
     const idx = parseInt(e.target.closest("button").dataset.idx);
+    mostrarDetalleTicket(idx);
+  }
+
+  function mostrarDetalleTicket(idx) {
     const t = tickets[idx];
+    if (!t) return;
     ticketDetalleNumero = t.numero;
 
     document.getElementById("det-tk-num").textContent = `Folio #${t.numero}`;
@@ -8073,6 +8236,7 @@ verificarSesion();
 
     populateSelectOptions("selectCambiarEstadoDetalle", configTickets.estados, t.estado);
     renderNotasTicket(t);
+    renderActividadTicket(t);
 
     if (modalDetalle) modalDetalle.style.display = "flex";
   }
@@ -8149,13 +8313,13 @@ verificarSesion();
 
     if (txt) {
       if (!t.notas) t.notas = [];
-      t.notas.push({ autor: "Soporte", fecha: new Date().toISOString(), texto: txt });
+      const u = getUsuarioActual();
+      t.notas.push({ autor: u?.nombre || "Soporte", fecha: new Date().toISOString(), texto: txt });
       document.getElementById("txtNuevaNotaTicket").value = "";
     }
 
     if (nuevoEstado && nuevoEstado !== t.estado) {
-      if (!t.notas) t.notas = [];
-      t.notas.push({ autor: "Sistema", fecha: new Date().toISOString(), texto: `Estado cambiado: "${t.estado}" → "${nuevoEstado}"` });
+      registrarActividadTicket(t, `Estado cambiado: "${t.estado}" → "${nuevoEstado}"`);
       t.estado = nuevoEstado;
       document.getElementById("det-tk-estado-badge").textContent = nuevoEstado;
       document.getElementById("det-tk-estado-badge").className = `badge badge-${slugBadge(nuevoEstado)}`;
@@ -8171,6 +8335,7 @@ verificarSesion();
     if (crmLocalOnly) {
       toast("💬 Cambios guardados (Local)");
       renderNotasTicket(t);
+      renderActividadTicket(t);
       renderTickets();
       renderDashboard();
       return;
@@ -8180,6 +8345,7 @@ verificarSesion();
     if (ok) { toast("💬 Cambios guardados"); ocultarEstado(); }
     else { mostrarEstado("⚠️ Guardado localmente (sin conexión)", 2000); }
     renderNotasTicket(t);
+    renderActividadTicket(t);
     renderTickets();
     renderDashboard();
   });
@@ -9652,7 +9818,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   // ============================================================
   // INIT — esperar Firebase Auth antes de conectar Firestore
   // ============================================================
-  authListo.then(() => inicializarApp());
+  authListo.then(() => { inicializarApp(); revisarSesionAnonima(); });
 
   // ============================================================
   // COLUMN RESIZE (drag borde de columna como Excel)
@@ -9809,7 +9975,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         const idx = parseInt(e.target.dataset.i);
         const tp = ticketsPublicos[idx];
         const num = tickets.length > 0 ? Math.max(...tickets.map(x => x.numero)) + 1 : 1001;
-        tickets.push({
+        const nuevoTicketPub = {
           numero: num,
           asunto: tp.asunto || "Sin asunto",
           empresa: tp.empresa || "",
@@ -9824,9 +9990,12 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           referido: "Portal Público", solicitado: "", canalizado: "", realizado: "",
           adjuntos: tp.adjuntos || [],
           notas: [{ autor: "Sistema", fecha: new Date().toISOString(), texto: `Ticket importado del portal público. Folio original: ${tp.folioPub || "—"}` }],
+          actividad: [],
           fechaCreacion: tp.fechaCreacion || new Date().toISOString(),
           fechaActualizacion: new Date().toISOString()
-        });
+        };
+        tickets.push(nuevoTicketPub);
+        registrarActividadTicket(nuevoTicketPub, `Ticket aceptado desde el portal público (folio original: ${tp.folioPub || "—"})`);
         guardarLocal("crm_tickets", tickets);
         if (!crmLocalOnly) await guardarTickets(tickets);
         if (tp._fbId) await eliminarTicketPublico(tp._fbId).catch(() => {});

@@ -42,6 +42,17 @@ const auth = firebaseEnabled ? getAuth(app) : null;
 let _authResolve;
 export const authListo = new Promise(res => { _authResolve = res; });
 
+/**
+ * true si la sesión de Firebase Auth de este navegador es anónima (o no hay ninguna) —
+ * es decir, este dispositivo específico nunca inició sesión con una cuenta segura real
+ * (correo+contraseña). Las reglas de Firestore rechazan escrituras de sesiones anónimas,
+ * así que si esto es true, cualquier guardado va a fallar sin importar que el login viejo
+ * (usuario+contraseña local) haya "funcionado" para entrar a la UI.
+ */
+export function sesionEsAnonima() {
+  return auth?.currentUser?.isAnonymous ?? true;
+}
+
 if (auth) {
   onAuthStateChanged(auth, user => {
     if (user) {
