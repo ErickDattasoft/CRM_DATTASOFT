@@ -2742,7 +2742,7 @@ try {
           <div class="form-group" style="max-width:460px; margin-bottom:16px;">
             <label>Correo(s) que reciben notificaciones de tickets</label>
             <div style="display:flex; gap:8px; align-items:flex-start;">
-              <input id="cfg-correo-soporte" type="email" multiple value="erick.casas@dattasoft.mx" style="flex:1;">
+              <input id="cfg-correo-soporte" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="erick.casas@dattasoft.mx" style="flex:1;">
               <button id="btn-guardar-correo-soporte" class="btn btn-primary btn-sm" style="white-space:nowrap;">💾 Guardar</button>
             </div>
             <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">Cuando un cliente crea un ticket desde el portal público, la notificación llega a este o estos correos (sepáralos con coma, ej. <code>erick.casas@dattasoft.mx, soporte@dattasoft.mx</code>). El primer correo de la lista también se usa como remitente en confirmaciones al cliente.</span>
@@ -6354,6 +6354,11 @@ verificarSesion();
     const nombre = document.getElementById("form-empresa").value.trim().toUpperCase();
     if (!nombre) return;
 
+    // Si el usuario escribió un contacto en el mini-formulario pero no dio clic en "+ Agregar",
+    // lo agregamos automáticamente para no obligarlo a repetir el paso.
+    const inlineNombrePendiente = (document.getElementById("form-ct-inline-nombre") as HTMLInputElement)?.value.trim();
+    if (inlineNombrePendiente) document.getElementById("btnAddCtInline")?.click();
+
     if (!formContactosTemp.length) {
       toast("⚠️ Agrega al menos un contacto antes de guardar");
       return;
@@ -6915,12 +6920,33 @@ verificarSesion();
     const nombre = document.getElementById("form-ct-nombre").value.trim();
     if (!nombre) return alert("El nombre es obligatorio.");
 
+    // Reconocer la empresa escrita contra las ya registradas (sin importar mayúsculas/minúsculas).
+    // Si no existe ninguna igual, se crea automáticamente — igual que "🏢 Nueva empresa rápida" —
+    // para que el contacto quede ligado a una empresa real y no a un texto suelto.
+    let empresaTexto = document.getElementById("form-ct-empresa").value.trim();
+    if (empresaTexto) {
+      const empExistente = clientes.find((c: any) => (c.EMPRESA || "").toLowerCase() === empresaTexto.toLowerCase());
+      if (empExistente) {
+        empresaTexto = empExistente.EMPRESA;
+      } else {
+        empresaTexto = empresaTexto.toUpperCase();
+        const nuevaEmp = {
+          EMPRESA: empresaTexto,
+          CONTACTO: "", CORREO: "", TELEFONO_1: "", TELEFONO_2: "",
+          RFC: "", FAVORITO: false, CAMPOS_EXTRAS: {}, SISTEMAS: {}, VENCIMIENTOS: {}
+        };
+        clientes.push(nuevaEmp);
+        if (crmLocalOnly) guardarLocal("crm_clientes", clientes); else await guardarClientes(clientes);
+        logBitacora(`Empresa "${empresaTexto}" creada automáticamente al guardar contacto`, "🏢");
+      }
+    }
+
     const obj = {
       nombre,
       correo: document.getElementById("form-ct-correo").value.trim(),
       telefono1: document.getElementById("form-ct-tel1").value.trim(),
       telefono2: document.getElementById("form-ct-tel2").value.trim(),
-      empresa: document.getElementById("form-ct-empresa").value
+      empresa: empresaTexto
     };
 
     const isEditCt = idx !== "";
