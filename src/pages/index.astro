@@ -2642,6 +2642,16 @@ try {
               <select id="form-tk-agente"></select>
             </div>
           </div>
+          <!-- Campos opcionales de gestión -->
+          <div style="border-top:1px dashed rgba(255,255,255,0.06); margin-top:14px; padding-top:12px;">
+            <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px;">📋 Información Adicional (opcional)</div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:12px;">
+              <div class="form-group"><label>Referido por</label><input id="form-tk-referido" placeholder="Nombre o fuente de referencia"></div>
+              <div class="form-group"><label>Solicitado por</label><input id="form-tk-solicitado" placeholder="Nombre de quien solicita"></div>
+              <div class="form-group"><label>Canalizado a</label><input id="form-tk-canalizado" placeholder="Área o persona destino"></div>
+              <div class="form-group"><label>Realizado por</label><input id="form-tk-realizado" placeholder="Técnico o agente asignado"></div>
+            </div>
+          </div>
           <div class="form-group" style="margin-top:8px;">
             <label>Descripción <span class="required">*</span></label>
             <div class="rte-toolbar" id="rte-toolbar-desc">
@@ -2668,16 +2678,6 @@ try {
               <input type="file" id="tk-attachment-input" multiple accept=".png,.jpg,.jpeg,.pdf,.xml" style="display:none;">
             </div>
             <div class="attachment-list" id="tk-attachment-list"></div>
-          </div>
-          <!-- Campos opcionales de gestión -->
-          <div style="border-top:1px dashed rgba(255,255,255,0.06); margin-top:14px; padding-top:12px;">
-            <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px;">📋 Información Adicional (opcional)</div>
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:12px;">
-              <div class="form-group"><label>Referido por</label><input id="form-tk-referido" placeholder="Nombre o fuente de referencia"></div>
-              <div class="form-group"><label>Solicitado por</label><input id="form-tk-solicitado" placeholder="Nombre de quien solicita"></div>
-              <div class="form-group"><label>Canalizado a</label><input id="form-tk-canalizado" placeholder="Área o persona destino"></div>
-              <div class="form-group"><label>Realizado por</label><input id="form-tk-realizado" placeholder="Técnico o agente asignado"></div>
-            </div>
           </div>
           <div class="form-group" style="margin-top:12px;">
             <label>CC / CCO al crear (separar con coma)</label>
@@ -3715,6 +3715,10 @@ try {
         <div>
           <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:3px;">💻 Sistema</div>
           <div id="det-tk-sistema">—</div>
+        </div>
+        <div>
+          <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:3px;">🔗 Referido por</div>
+          <div id="det-tk-referido">—</div>
         </div>
       </div>
     </div>
@@ -7490,6 +7494,7 @@ verificarSesion();
     document.getElementById("det-tk-grupo").textContent = t.grupo || "—";
     document.getElementById("det-tk-agente").textContent = t.agente || "—";
     document.getElementById("det-tk-sistema").textContent = (t.sistema && t.sistema !== "No aplica") ? t.sistema : "No aplica";
+    document.getElementById("det-tk-referido").textContent = t.referido || "—";
     document.getElementById("det-tk-descripcion").innerHTML = t.descripcion || "";
     const detNI = document.getElementById("det-tk-notas-internas");
     const detNISec = document.getElementById("det-tk-notas-internas-section");
