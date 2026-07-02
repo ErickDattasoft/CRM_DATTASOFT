@@ -5370,15 +5370,20 @@ verificarSesion();
   }
 
   function bindMarketVersionInputs() {
+    // initMarketForms() (y por lo tanto esta función) se llama cada vez que se navega a
+    // Versiones y en cada carga inicial de Firebase, sobre los mismos inputs estáticos del
+    // HTML (nunca se recrean). Usar addEventListener aquí acumulaba un listener por visita —
+    // cada tecla disparaba un guardado de más por cada vez que se había entrado a la sección.
+    // .oninput = reemplaza el handler anterior en vez de sumarlo.
     listaSistemas.forEach(s => {
       const k = s.toUpperCase().trim();
-      const iv = document.querySelector(`.input-version-oficial[data-sistema="${s}"]`);
+      const iv = document.querySelector(`.input-version-oficial[data-sistema="${s}"]`) as HTMLInputElement | null;
       if (!iv) return;
-      iv.addEventListener("input", () => {
+      iv.oninput = () => {
         versionesMercado[k] = iv.value.trim();
         updateMarketStatusIndicators();
         renderEmpresas();
-      });
+      };
     });
   }
 
