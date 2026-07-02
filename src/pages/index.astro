@@ -1472,8 +1472,14 @@ try {
       table { font-size: 0.75rem; }
       th, td { padding: 8px 10px; }
 
-      /* Tabla de tickets: columnas fijas obligan a scroll horizontal en vez de amontonarse */
-      #section-tickets .table-wrap table { min-width: 760px; }
+      /* Tabla de tickets: columnas fijas obligan a scroll horizontal en vez de amontonarse.
+         760px no alcanzaba: Asunto+Contacto ya usan 440px fijos (nth-child 2 y 3), dejando
+         solo ~45px por columna para Tipo/Prioridad/Estado/Agente/Creado/Acciones (3 botones) —
+         ahí se veían encimadas. Con 1150px cada una de esas queda con ~100px, suficiente para
+         badges y los botones de acción sin amontonarse. */
+      #section-tickets .table-wrap table { min-width: 1150px; }
+      #section-tickets .table-wrap th:nth-child(1), #section-tickets .table-wrap td:nth-child(1) { width: 60px; }
+      #section-tickets .table-wrap th:nth-child(9), #section-tickets .table-wrap td:nth-child(9) { width: 120px; }
 
       /* Formularios a pantalla completa */
       .form-card {
@@ -1512,7 +1518,7 @@ try {
   /* ── Login overlay ── */
   /* Modal confirmación genérico */
   #confirm-modal-overlay {
-    position: fixed; inset: 0; z-index: 10000;
+    position: fixed; inset: 0; z-index: 100001;
     background: rgba(0,0,0,0.6); display: none;
     align-items: center; justify-content: center; padding: 20px;
   }
@@ -3452,6 +3458,7 @@ try {
             <a href="#man-tareas">📌 Tareas</a>
             <a href="#man-filtros">🔖 Filtros</a>
             <a href="#man-config">⚙️ Configuración</a>
+            <a href="#man-cuenta-segura">🔒 Cuenta Segura</a>
           </div>
 
           <!-- ── DASHBOARD ─────────────────────────────────── -->
@@ -3682,6 +3689,34 @@ try {
               <tr><td>🛡️ Backup</td><td>Descarga un archivo JSON con todos los datos del CRM por si necesitas respaldo.</td></tr>
             </table>
             <div class="manual-aviso"><span class="manual-tip-icon">⚠️</span><span>Si cambias el correo de soporte, los correos de alertas y registros de eventos se enviarán a la nueva dirección. Verifica que sea correcta antes de guardar.</span></div>
+          </div>
+
+          <!-- ── CUENTA SEGURA ──────────────────────────────── -->
+          <div class="manual-seccion" id="man-cuenta-segura">
+            <div class="manual-seccion-title">🔒 Cuenta Segura</div>
+            <p style="font-size:0.84rem;color:var(--text-main);line-height:1.6;margin-bottom:14px;">
+              Además del login de siempre (elegir tu nombre + contraseña), el CRM ahora tiene un sistema de cuentas reales de correo/contraseña — más seguro, y necesario para que solo el equipo autorizado pueda ver los datos.
+            </p>
+
+            <div class="manual-subtitulo">Si ya eres parte del equipo (ERICK, ARTURO, GABY, GELMI...)</div>
+            <div class="manual-paso"><div class="manual-paso-num">1</div><div class="manual-paso-txt">Entra con tu usuario de siempre. En el sidebar verás <strong>"🔒 Cuenta segura"</strong> — si tiene un "!" en rojo, todavía no la activaste.</div></div>
+            <div class="manual-paso"><div class="manual-paso-num">2</div><div class="manual-paso-txt">Dale clic, pon tu correo y elige una contraseña nueva (no verifica por email — ya demostraste quién eres al entrar con tu login de siempre).</div></div>
+            <div class="manual-paso"><div class="manual-paso-num">3</div><div class="manual-paso-txt">Desde ese momento, en la pantalla de login puedes usar <strong>"🔒 ¿Ya tienes cuenta segura? Inicia sesión aquí"</strong> con tu correo y contraseña — funciona desde cualquier celular o computadora, no solo donde la activaste.</div></div>
+            <div class="manual-tip"><span class="manual-tip-icon">💡</span><span>El login de siempre (usuario + contraseña) sigue funcionando igual — la cuenta segura es un método adicional, no un reemplazo obligatorio.</span></div>
+
+            <div class="manual-subtitulo">Si eres nuevo en el equipo</div>
+            <div class="manual-paso"><div class="manual-paso-num">1</div><div class="manual-paso-txt">En la pantalla de login, dale clic a <strong>"🆕 ¿Nuevo aquí? Solicita acceso"</strong> y llena tu nombre, correo y una contraseña.</div></div>
+            <div class="manual-paso"><div class="manual-paso-num">2</div><div class="manual-paso-txt">Un administrador recibe un correo avisando de tu solicitud, y la aprueba o rechaza desde Configuración → Usuarios → Solicitudes pendientes.</div></div>
+            <div class="manual-paso"><div class="manual-paso-num">3</div><div class="manual-paso-txt">Hasta que te aprueben, no puedes ver ni tocar ningún dato del CRM — no es solo una pantalla, es un candado real a nivel de la base de datos.</div></div>
+            <div class="manual-paso"><div class="manual-paso-num">4</div><div class="manual-paso-txt">Una vez aprobado, ya apareces en el selector de usuarios del login (igual que el resto del equipo) y puedes entrar con tu correo y contraseña.</div></div>
+
+            <div class="manual-subtitulo">Para administradores</div>
+            <table class="manual-tabla">
+              <tr><th>Acción</th><th>¿Dónde?</th></tr>
+              <tr><td>Aprobar/rechazar solicitudes nuevas</td><td>Configuración → Usuarios → Solicitudes pendientes</td></tr>
+              <tr><td>Activar la cuenta segura de alguien que no está presente</td><td>Configuración → Usuarios → botón "🔒 Activar segura" en su fila (tú eliges una contraseña temporal y se la compartes después)</td></tr>
+              <tr><td>Ver quién ya tiene cuenta segura</td><td>Configuración → Usuarios — debajo de cada nombre dice "🔒 Cuenta segura: correo" o "🔓 Sin activar"</td></tr>
+            </table>
           </div>
 
           <!-- ── PREGUNTAS FRECUENTES ───────────────────────── -->
