@@ -4374,6 +4374,21 @@ verificarSesion();
       .filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
   }
 
+  // Los nombres de estado/prioridad de tickets son texto libre editable en Configuración.
+  // Antes se armaba la clase CSS con solo .toLowerCase() — un estado como "En Revisión" o
+  // "Espera Cliente" generaba "badge-en revisión" (espacio = dos clases distintas, ninguna
+  // definida) y el badge se quedaba sin color/estilo. slugBadge() normaliza a algo válido
+  // como clase CSS; para los estados por defecto (Abierto, Pendiente, etc.) el resultado es
+  // idéntico al de antes, así que no cambia nada de lo que ya funcionaba.
+  function slugBadge(texto) {
+    return (texto || "")
+      .toString()
+      .normalize("NFD").replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
   function safeParseLocal(key, fallback) {
     try {
       const raw = localStorage.getItem(key);
@@ -5168,7 +5183,7 @@ verificarSesion();
         <td style="text-align:center; font-weight:700; color:var(--text-muted);">#${t.numero}</td>
         <td><strong>${t.asunto || "—"}</strong></td>
         <td>${t.empresa || "—"}</td>
-        <td style="text-align:center;"><span class="badge badge-${(t.estado||"abierto").toLowerCase()}">${t.estado||"—"}</span></td>
+        <td style="text-align:center;"><span class="badge badge-${slugBadge(t.estado||"abierto")}">${t.estado||"—"}</span></td>
         <td style="font-size:0.78rem; color:var(--text-light);">${t.fechaEliminado ? new Date(t.fechaEliminado).toLocaleDateString('es-MX') : "—"}</td>
         <td style="text-align:center;">
           <div style="display:inline-flex; gap:4px;">
@@ -5498,8 +5513,8 @@ verificarSesion();
         <td style="text-align:center; font-weight:700; color:var(--text-muted);">#${t.numero}</td>
         <td><strong>${t.asunto}</strong></td>
         <td>${t.empresa || "—"}</td>
-        <td style="text-align:center;"><span class="badge badge-${(t.prioridad||"media").toLowerCase()}">${t.prioridad}</span></td>
-        <td style="text-align:center;"><span class="badge badge-${(t.estado||"abierto").toLowerCase()}">${t.estado}</span></td>
+        <td style="text-align:center;"><span class="badge badge-${slugBadge(t.prioridad||"media")}">${t.prioridad}</span></td>
+        <td style="text-align:center;"><span class="badge badge-${slugBadge(t.estado||"abierto")}">${t.estado}</span></td>
         <td style="font-size:0.78rem; color:var(--text-light);">${t.fechaCreacion ? new Date(t.fechaCreacion).toLocaleDateString() : "—"}</td>
       `;
       tr.addEventListener("click", () => { navegarA("tickets"); });
@@ -7315,8 +7330,8 @@ verificarSesion();
           <span class="badge" style="background:rgba(99,102,241,0.12); color:#a5b4fc;">${t.tipo || "General"}</span>
           ${t.sistema && t.sistema !== "No aplica" ? `<br><span style="font-size:0.68rem; color:var(--text-light);">💻 ${t.sistema}</span>` : ""}
         </td>
-        <td style="text-align:center;"><span class="badge badge-${(t.prioridad || "media").toLowerCase()}">${t.prioridad}</span>${slaBadge}</td>
-        <td style="text-align:center;"><span class="badge badge-${(t.estado || "abierto").toLowerCase()}">${t.estado}</span></td>
+        <td style="text-align:center;"><span class="badge badge-${slugBadge(t.prioridad || "media")}">${t.prioridad}</span>${slaBadge}</td>
+        <td style="text-align:center;"><span class="badge badge-${slugBadge(t.estado || "abierto")}">${t.estado}</span></td>
         <td style="font-size:0.8rem; color:var(--text-muted);">${t.agente || "—"}</td>
         <td style="font-size:0.78rem; color:var(--text-light);">${t.fechaCreacion ? new Date(t.fechaCreacion).toLocaleDateString() : "—"}</td>
         <td style="text-align:center;">
@@ -7575,11 +7590,11 @@ verificarSesion();
 
     const bPrior = document.getElementById("det-tk-prioridad-badge");
     bPrior.textContent = t.prioridad;
-    bPrior.className = `badge badge-${(t.prioridad || "media").toLowerCase()}`;
+    bPrior.className = `badge badge-${slugBadge(t.prioridad || "media")}`;
 
     const bEst = document.getElementById("det-tk-estado-badge");
     bEst.textContent = t.estado;
-    bEst.className = `badge badge-${(t.estado || "abierto").toLowerCase()}`;
+    bEst.className = `badge badge-${slugBadge(t.estado || "abierto")}`;
 
     const bTipo = document.getElementById("det-tk-tipo-badge");
     bTipo.textContent = t.tipo || "General";
@@ -7669,7 +7684,7 @@ verificarSesion();
       t.notas.push({ autor: "Sistema", fecha: new Date().toISOString(), texto: `Estado cambiado: "${t.estado}" → "${nuevoEstado}"` });
       t.estado = nuevoEstado;
       document.getElementById("det-tk-estado-badge").textContent = nuevoEstado;
-      document.getElementById("det-tk-estado-badge").className = `badge badge-${nuevoEstado.toLowerCase()}`;
+      document.getElementById("det-tk-estado-badge").className = `badge badge-${slugBadge(nuevoEstado)}`;
     }
 
     t.referido = nuevoReferido;
