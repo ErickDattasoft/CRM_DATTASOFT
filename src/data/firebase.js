@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, onSnapshot, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { getAuth, signInAnonymously, onAuthStateChanged, createUserWithEmailAndPassword } from "firebase/auth";
+import { getAuth, signInAnonymously, onAuthStateChanged, createUserWithEmailAndPassword, signOut } from "firebase/auth";
 
 // Configuración de Firebase — los valores web son públicos por diseño (seguridad via Firestore Rules)
 const firebaseConfig = {
@@ -417,15 +417,22 @@ export async function guardarConfigPublica(datos) {
 
 /**
  * Paso 1 de la migración a autenticación real (sin tocar el login viejo todavía):
- * crea una cuenta real de Firebase (correo + contraseña) para el usuario que ya inició sesión
- * con el login actual. No requiere verificar el correo — el usuario ya demostró quién es al
- * entrar con su usuario/contraseña de siempre. Al crearla, Firebase cambia automáticamente la
- * sesión del navegador de anónima a esta cuenta real (no afecta el resto de la app: las reglas
- * de Firestore siguen aceptando cualquier sesión autenticada, anónima o real, por ahora).
+ * crea una cuenta real de Firebase (correo + contraseña).
+ *
+ * Al crearla, Firebase cambia automáticamente la sesión del navegador de anónima (o de quien
+ * sea que esté activa) a esta cuenta nueva — eso es lo que queremos cuando alguien activa SU
+ * PROPIA cuenta (permanecer=true, default), pero NO cuando un admin la crea para otra persona
+ * que no está presente: en ese caso, con permanecer=false, se restaura la sesión anónima justo
+ * después de crearla, para no dejar al admin "metido" con la identidad de otra persona en su
+ * propio navegador.
  */
-export async function activarCuentaSegura(email, password) {
+export async function activarCuentaSegura(email, password, permanecer = true) {
   try {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
+    if (!permanecer) {
+      await signOut(auth);
+      await signInAnonymously(auth);
+    }
     return { ok: true, uid: cred.user.uid };
   } catch (error) {
     console.error("Error al activar cuenta segura:", error);

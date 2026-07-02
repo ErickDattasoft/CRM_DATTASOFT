@@ -5164,13 +5164,21 @@ verificarSesion();
     badge.style.display = registro?.authEmail ? "none" : "inline-flex";
   }
 
-  function abrirModalCuentaSegura() {
+  // Si se abre desde el sidebar (self-service), el objetivo es quien está logueado.
+  // Si se abre desde Configuración → Usuarios para otra persona, cuentaSeguraObjetivo trae su nombre.
+  let cuentaSeguraObjetivo: string | null = null;
+
+  function abrirModalCuentaSegura(nombreObjetivo?: string) {
     const modal = document.getElementById("modal-cuenta-segura");
     const u = getUsuarioActual();
-    const registro = getUsuarios().find((x: any) => x.nombre === u?.nombre);
+    cuentaSeguraObjetivo = nombreObjetivo || u?.nombre || null;
+    const esParaOtro = cuentaSeguraObjetivo !== u?.nombre;
+    const registro = getUsuarios().find((x: any) => x.nombre === cuentaSeguraObjetivo);
     const yaActiva = document.getElementById("cuenta-segura-ya-activa");
     const formWrap = document.getElementById("cuenta-segura-form-wrap");
     const errEl = document.getElementById("cuenta-segura-error");
+    const titulo = document.querySelector("#modal-cuenta-segura .modal-header h2");
+    if (titulo) titulo.textContent = esParaOtro ? `🔒 Activar cuenta segura — ${cuentaSeguraObjetivo}` : "🔒 Activar inicio de sesión seguro";
     if (errEl) { errEl.style.display = "none"; errEl.textContent = ""; }
     if (registro?.authEmail) {
       if (yaActiva) yaActiva.style.display = "block";
@@ -5187,7 +5195,7 @@ verificarSesion();
     if (modal) modal.style.display = "flex";
   }
 
-  document.getElementById("btnCuentaSegura")?.addEventListener("click", abrirModalCuentaSegura);
+  document.getElementById("btnCuentaSegura")?.addEventListener("click", () => abrirModalCuentaSegura());
   document.getElementById("btnCerrarCuentaSegura")?.addEventListener("click", () => {
     const m = document.getElementById("modal-cuenta-segura"); if (m) m.style.display = "none";
   });
@@ -5212,9 +5220,14 @@ verificarSesion();
       errEl.textContent = "Las contraseñas no coinciden."; errEl.style.display = "block"; return;
     }
 
+    const uSesion = getUsuarioActual();
+    const esParaOtro = cuentaSeguraObjetivo !== uSesion?.nombre;
+
     const btn = document.getElementById("btnActivarCuentaSegura") as HTMLButtonElement;
     btn.disabled = true; btn.textContent = "Activando...";
-    const res = await activarCuentaSegura(correo, pass1);
+    // permanecer=false cuando un admin la activa para otra persona: restaura la sesión anónima
+    // después de crearla, para no dejar al admin "metido" con la identidad de otra persona.
+    const res = await activarCuentaSegura(correo, pass1, !esParaOtro);
     btn.disabled = false; btn.textContent = "🔒 Activar";
 
     if (!res.ok) {
@@ -5222,18 +5235,18 @@ verificarSesion();
       return;
     }
 
-    const u = getUsuarioActual();
     const usuariosAct = getUsuarios();
-    const idx = usuariosAct.findIndex((x: any) => x.nombre === u?.nombre);
+    const idx = usuariosAct.findIndex((x: any) => x.nombre === cuentaSeguraObjetivo);
     if (idx !== -1) {
       usuariosAct[idx].authEmail = correo;
       saveUsuariosLocal(usuariosAct);
       guardarUsuarios(usuariosAct).catch(() => {});
     }
     actualizarBadgeCuentaSegura();
+    if (typeof renderUsuariosPanel === "function") renderUsuariosPanel();
     const m = document.getElementById("modal-cuenta-segura"); if (m) m.style.display = "none";
-    toast("🔒 Cuenta segura activada correctamente");
-    logBitacora(`Cuenta segura activada (${correo})`, "🔒");
+    toast(esParaOtro ? `🔒 Cuenta segura activada para ${cuentaSeguraObjetivo}` : "🔒 Cuenta segura activada correctamente");
+    logBitacora(`Cuenta segura activada${esParaOtro ? ` para ${cuentaSeguraObjetivo}` : ""} (${correo})`, "🔒");
   });
 
   // Aviso centralizado cuando un guardado a Firestore falla — varias funciones guardarX()
@@ -8179,10 +8192,17 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           <div style="font-size:0.7rem; color:${u.activo?"#34d399":"#f87171"};">${u.activo?"● Activo":"● Inactivo"}</div>
           <div style="font-size:0.68rem; color:${u.authEmail?"#34d399":"#fbbf24"}; margin-top:1px;">${u.authEmail?`🔒 Cuenta segura: ${escapeHtml(u.authEmail)}`:"🔓 Sin activar cuenta segura"}</div>
         </div>
+        ${!u.authEmail ? `<button class="btn btn-ghost btn-xs btn-activar-cuenta-segura" data-i="${i}" title="Activar cuenta segura para ${escapeHtml(u.nombre)}" style="color:#818cf8; white-space:nowrap;">🔒 Activar segura</button>` : ""}
         <button class="btn btn-ghost btn-xs btn-reset-pass" data-i="${i}" title="Restablecer contraseña" style="white-space:nowrap;">🔑 Reset</button>
         <button class="btn btn-ghost btn-xs btn-toggle-rol" data-i="${i}" title="${u.rol==="admin"?"Quitar permisos de administrador":"Dar permisos de administrador"}" style="color:${u.rol==="admin"?"#fbbf24":"#818cf8"}; white-space:nowrap;">${u.rol==="admin"?"⬇️ Quitar admin":"⬆️ Hacer admin"}</button>
         <button class="btn btn-ghost btn-xs btn-toggle-user" data-i="${i}" style="color:${u.activo?"#f87171":"#34d399"}; white-space:nowrap;">${u.activo?"🚫 Off":"✅ On"}</button>
       </div>`).join("");
+    cont.querySelectorAll<HTMLButtonElement>(".btn-activar-cuenta-segura").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const i = parseInt(btn.dataset.i!);
+        abrirModalCuentaSegura(usuarios[i].nombre);
+      });
+    });
     cont.querySelectorAll<HTMLButtonElement>(".btn-reset-pass").forEach(btn => {
       btn.addEventListener("click", async () => {
         const i = parseInt(btn.dataset.i!);
