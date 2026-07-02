@@ -6382,6 +6382,12 @@ verificarSesion();
     const nombre = document.getElementById("form-empresa").value.trim().toUpperCase();
     if (!nombre) return;
 
+    const idxActual = idx !== "" ? parseInt(idx) : -1;
+    if (clientes.some((c: any, i: number) => c.EMPRESA === nombre && i !== idxActual)) {
+      toast(`⚠️ Ya existe una empresa llamada "${nombre}"`, "error");
+      return;
+    }
+
     // Si el usuario escribió un contacto en el mini-formulario pero no dio clic en "+ Agregar",
     // lo agregamos automáticamente para no obligarlo a repetir el paso.
     const inlineNombrePendiente = (document.getElementById("form-ct-inline-nombre") as HTMLInputElement)?.value.trim();
@@ -6429,9 +6435,13 @@ verificarSesion();
     if (idx === "") clientes.push(nuevo);
     else clientes[parseInt(idx)] = nuevo;
 
-    // Sincronizar formContactosTemp → array global contactos
+    // Sincronizar formContactosTemp → array global contactos.
+    // Importante: hay que limpiar por el nombre ANTERIOR de la empresa (empExistente.EMPRESA),
+    // no por el nuevo — si no, al renombrar una empresa los contactos viejos (con el nombre
+    // anterior) se quedaban duplicados en vez de reemplazados.
+    const nombreAnterior = empExistente?.EMPRESA || nombre;
     formContactosTemp.forEach((ct: any) => { ct.empresa = nombre; });
-    contactos = contactos.filter((c: any) => c.empresa !== nombre);
+    contactos = contactos.filter((c: any) => c.empresa !== nombreAnterior && c.empresa !== nombre);
     formContactosTemp.forEach((ct: any) => contactos.push({ ...ct }));
     if (crmLocalOnly) guardarLocal("crm_contactos", contactos);
     else guardarContactos(contactos);
@@ -6459,19 +6469,34 @@ verificarSesion();
 
   async function eliminarEmpresa(e) {
     const idx = parseInt(e.target.closest("button").dataset.idx);
-    if (!await confirmar("¿Eliminar esta empresa?", "🗑️")) return;
     const nombreEmp = clientes[idx]?.EMPRESA || "desconocida";
+    const contactosLigados = contactos.filter((c: any) => c.empresa === nombreEmp).length;
+    const aviso = contactosLigados > 0
+      ? `¿Eliminar esta empresa? Tiene ${contactosLigados} contacto(s) asociado(s) — quedarán sin empresa asignada (no se borran).`
+      : "¿Eliminar esta empresa?";
+    if (!await confirmar(aviso, "🗑️")) return;
     clientes.splice(idx, 1);
+    // No se borran los contactos de esa empresa: se desvinculan para que no queden
+    // apuntando a una empresa fantasma, pero siguen visibles/editables en Contactos.
+    let contactosDesvinculados = 0;
+    contactos = contactos.map((c: any) => {
+      if (c.empresa === nombreEmp) { contactosDesvinculados++; return { ...c, empresa: "" }; }
+      return c;
+    });
     guardarLocal("crm_clientes", clientes);
-    logBitacora(`Empresa "${nombreEmp}" eliminada`, "🗑️");
+    guardarLocal("crm_contactos", contactos);
+    logBitacora(`Empresa "${nombreEmp}" eliminada${contactosDesvinculados ? ` (${contactosDesvinculados} contactos desvinculados)` : ""}`, "🗑️");
     if (crmLocalOnly) {
       toast("🗑️ Empresa eliminada (Local)");
       renderEmpresas();
+      renderContactos();
       renderDashboard();
       return;
     }
     await guardarClientes(clientes);
+    if (contactosDesvinculados) await guardarContactos(contactos);
     renderEmpresas();
+    renderContactos();
     renderDashboard();
   }
 
