@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, onSnapshot, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { getAuth, signInAnonymously, onAuthStateChanged, createUserWithEmailAndPassword, signOut } from "firebase/auth";
+import { getAuth, signInAnonymously, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
 
 // Configuración de Firebase — los valores web son públicos por diseño (seguridad via Firestore Rules)
 const firebaseConfig = {
@@ -441,6 +441,25 @@ export async function activarCuentaSegura(email, password, permanecer = true) {
     else if (error?.code === "auth/weak-password") mensaje = "La contraseña debe tener al menos 6 caracteres.";
     else if (error?.code === "auth/invalid-email") mensaje = "Correo inválido.";
     else if (error?.code === "auth/operation-not-allowed") mensaje = "El inicio de sesión con correo/contraseña no está habilitado en Firebase todavía — avísale a Erick.";
+    return { ok: false, error: error?.code || "error", mensaje };
+  }
+}
+
+/**
+ * Inicia sesión con la cuenta segura ya activada (correo + contraseña reales de Firebase),
+ * en vez de crear una nueva. Es la contraparte de activarCuentaSegura() para entrar día a día
+ * desde cualquier dispositivo, no solo el que se usó para activarla.
+ */
+export async function iniciarSesionSegura(email, password) {
+  try {
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    return { ok: true, uid: cred.user.uid };
+  } catch (error) {
+    console.error("Error al iniciar sesión segura:", error);
+    let mensaje = error?.message || String(error);
+    if (error?.code === "auth/invalid-credential" || error?.code === "auth/wrong-password") mensaje = "Correo o contraseña incorrectos.";
+    else if (error?.code === "auth/user-not-found") mensaje = "No hay ninguna cuenta segura con ese correo.";
+    else if (error?.code === "auth/too-many-requests") mensaje = "Demasiados intentos — espera un momento y vuelve a intentar.";
     return { ok: false, error: error?.code || "error", mensaje };
   }
 }

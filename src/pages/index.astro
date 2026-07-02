@@ -1554,20 +1554,26 @@ try {
     letter-spacing: 0.1em;
   }
   #login-pass-input:focus { border-color: #6366f1; }
-  #login-error { font-size: 0.8rem; color: #f87171; min-height: 20px; margin-bottom: 8px; }
-  #login-btn {
+  #login-securo-correo, #login-securo-pass {
+    width: 100%; background: #1e2231; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 12px 16px; color: #e2e8f0; font-size: 0.95rem;
+    font-family: inherit; outline: none; margin-bottom: 10px; text-align: center;
+  }
+  #login-securo-correo:focus, #login-securo-pass:focus { border-color: #6366f1; }
+  #login-error, #login-securo-error { font-size: 0.8rem; color: #f87171; min-height: 20px; margin-bottom: 8px; }
+  #login-btn, #login-securo-btn {
     width: 100%; background: #6366f1; color: #fff; border: none; border-radius: 10px;
     padding: 12px; font-size: 0.95rem; font-weight: 700; cursor: pointer; font-family: inherit;
     transition: background 0.2s, transform 0.1s;
   }
-  #login-btn:hover { background: #4f46e5; transform: translateY(-1px); }
-  #login-btn:active { transform: translateY(0); }
-  #login-back-btn {
+  #login-btn:hover, #login-securo-btn:hover { background: #4f46e5; transform: translateY(-1px); }
+  #login-btn:active, #login-securo-btn:active { transform: translateY(0); }
+  #login-back-btn, #login-securo-back-btn {
     background: rgba(255,255,255,0.06); color: #8b95a8; border: 1px solid rgba(255,255,255,0.1);
     border-radius: 10px; padding: 11px 16px; font-size: 0.88rem; font-weight: 600;
     cursor: pointer; font-family: inherit; transition: all 0.2s; white-space: nowrap;
   }
-  #login-back-btn:hover { background: rgba(255,255,255,0.1); }
+  #login-back-btn:hover, #login-securo-back-btn:hover { background: rgba(255,255,255,0.1); }
   #login-user-grid {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; margin-bottom: 4px;
   }
@@ -2034,6 +2040,9 @@ try {
     <div id="login-step-user">
       <div class="login-sub">Selecciona tu usuario</div>
       <div id="login-user-grid"></div>
+      <div style="text-align:center; margin-top:14px;">
+        <a href="#" id="link-login-securo" style="font-size:0.78rem; color:#818cf8; text-decoration:none;">🔒 ¿Ya tienes cuenta segura? Inicia sesión aquí</a>
+      </div>
     </div>
     <!-- Paso 2: contraseña -->
     <div id="login-step-pass" style="display:none;">
@@ -2043,6 +2052,17 @@ try {
       <div style="display:flex; gap:8px; margin-top:4px;">
         <button id="login-back-btn">← Cambiar</button>
         <button id="login-btn" style="flex:1;">Ingresar →</button>
+      </div>
+    </div>
+    <!-- Paso 3: cuenta segura (correo + contraseña real de Firebase) -->
+    <div id="login-step-securo" style="display:none;">
+      <div class="login-sub">Inicia sesión con tu cuenta segura</div>
+      <input id="login-securo-correo" type="email" placeholder="Correo" autocomplete="username" style="margin-bottom:8px;">
+      <input id="login-securo-pass" type="password" placeholder="Contraseña" autocomplete="current-password">
+      <div id="login-securo-error"></div>
+      <div style="display:flex; gap:8px; margin-top:4px;">
+        <button id="login-securo-back-btn">← Volver</button>
+        <button id="login-securo-btn" style="flex:1;">Ingresar →</button>
       </div>
     </div>
   </div>
@@ -4155,7 +4175,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura } from "../data/firebase.js";
+import { firebaseEnabled, authListo, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, iniciarSesionSegura } from "../data/firebase.js";
 
 // ── Modal confirmación (reemplaza confirm() — funciona en móvil) ──
 function confirmar(msg: string, icon = "⚠️"): Promise<boolean> {
@@ -4315,6 +4335,78 @@ document.getElementById("btnLogout")?.addEventListener("click", async () => {
   if (!await confirmar("¿Cerrar sesión?", "🔓")) return;
   sessionStorage.removeItem(SESSION_KEY);
   location.reload();
+});
+
+// ── Cuenta segura: iniciar sesión con correo/contraseña reales de Firebase ──
+// Alternativa al login de siempre, para entrar día a día desde cualquier dispositivo una vez
+// que la cuenta ya fue activada (ver "🔒 Activar cuenta segura" dentro del CRM).
+document.getElementById("link-login-securo")?.addEventListener("click", (e) => {
+  e.preventDefault();
+  document.getElementById("login-step-user")!.style.display = "none";
+  document.getElementById("login-step-securo")!.style.display = "block";
+  const errEl = document.getElementById("login-securo-error");
+  if (errEl) errEl.textContent = "";
+  document.getElementById("login-securo-correo")?.focus();
+});
+document.getElementById("login-securo-back-btn")?.addEventListener("click", () => {
+  document.getElementById("login-step-securo")!.style.display = "none";
+  document.getElementById("login-step-user")!.style.display = "block";
+  const errEl = document.getElementById("login-securo-error");
+  if (errEl) errEl.textContent = "";
+});
+
+async function intentarLoginSeguro() {
+  const correoInp = document.getElementById("login-securo-correo") as HTMLInputElement;
+  const passInp = document.getElementById("login-securo-pass") as HTMLInputElement;
+  const errEl = document.getElementById("login-securo-error");
+  const correo = correoInp?.value.trim().toLowerCase();
+  const pass = passInp?.value;
+  if (!correo || !pass) { if (errEl) errEl.textContent = "Ingresa correo y contraseña."; return; }
+
+  const btn = document.getElementById("login-securo-btn") as HTMLButtonElement;
+  btn.disabled = true; btn.textContent = "Ingresando...";
+  const res = await iniciarSesionSegura(correo, pass);
+  btn.disabled = false; btn.textContent = "Ingresar →";
+
+  if (!res.ok) {
+    if (errEl) errEl.textContent = res.mensaje || "No se pudo iniciar sesión.";
+    passInp.value = ""; passInp.focus();
+    return;
+  }
+
+  // La cuenta de Firebase ya inició sesión — ahora hay que resolver a qué usuario del CRM
+  // corresponde (por el correo guardado en usuarios[].authEmail). Se busca primero en la caché
+  // local, pero en un dispositivo nuevo (sin caché) eso vendría vacío aunque el login sí haya
+  // sido correcto — por eso, si no aparece ahí, se consulta Firestore directo antes de rendirse.
+  let usuariosActuales = getUsuarios();
+  let usuarioCRM = usuariosActuales.find((u: any) => (u.authEmail || "").toLowerCase() === correo);
+  if (!usuarioCRM && firebaseEnabled) {
+    try {
+      const datos = await cargarDatosCRM();
+      if (datos?.usuarios?.length) {
+        usuariosActuales = datos.usuarios;
+        saveUsuariosLocal(usuariosActuales);
+        usuarioCRM = usuariosActuales.find((u: any) => (u.authEmail || "").toLowerCase() === correo);
+      }
+    } catch { /* se maneja abajo con el mensaje de "no vinculada" */ }
+  }
+  if (!usuarioCRM) {
+    if (errEl) errEl.textContent = "Esta cuenta segura no está vinculada a ningún usuario del CRM. Avísale a un administrador.";
+    return;
+  }
+  if (!usuarioCRM.activo) {
+    if (errEl) errEl.textContent = "Tu usuario está desactivado. Avísale a un administrador.";
+    return;
+  }
+
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify({ nombre: usuarioCRM.nombre, rol: usuarioCRM.rol }));
+  document.getElementById("login-overlay")?.classList.add("hidden");
+  if (errEl) errEl.textContent = "";
+  document.dispatchEvent(new CustomEvent("crm:login", { detail: { nombre: usuarioCRM.nombre, rol: usuarioCRM.rol } }));
+}
+document.getElementById("login-securo-btn")?.addEventListener("click", intentarLoginSeguro);
+document.getElementById("login-securo-pass")?.addEventListener("keydown", e => {
+  if ((e as KeyboardEvent).key === "Enter") intentarLoginSeguro();
 });
 
 verificarSesion();
