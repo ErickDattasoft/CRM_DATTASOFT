@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, onSnapshot, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "firebase/auth";
+import { getAuth, signInAnonymously, onAuthStateChanged, createUserWithEmailAndPassword } from "firebase/auth";
 
 // Configuración de Firebase — los valores web son públicos por diseño (seguridad via Firestore Rules)
 const firebaseConfig = {
@@ -412,6 +412,29 @@ export async function guardarConfigPublica(datos) {
   } catch (error) {
     avisarErrorGuardado("configuración pública", error);
     return false;
+  }
+}
+
+/**
+ * Paso 1 de la migración a autenticación real (sin tocar el login viejo todavía):
+ * crea una cuenta real de Firebase (correo + contraseña) para el usuario que ya inició sesión
+ * con el login actual. No requiere verificar el correo — el usuario ya demostró quién es al
+ * entrar con su usuario/contraseña de siempre. Al crearla, Firebase cambia automáticamente la
+ * sesión del navegador de anónima a esta cuenta real (no afecta el resto de la app: las reglas
+ * de Firestore siguen aceptando cualquier sesión autenticada, anónima o real, por ahora).
+ */
+export async function activarCuentaSegura(email, password) {
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    return { ok: true, uid: cred.user.uid };
+  } catch (error) {
+    console.error("Error al activar cuenta segura:", error);
+    let mensaje = error?.message || String(error);
+    if (error?.code === "auth/email-already-in-use") mensaje = "Ese correo ya tiene una cuenta segura activada.";
+    else if (error?.code === "auth/weak-password") mensaje = "La contraseña debe tener al menos 6 caracteres.";
+    else if (error?.code === "auth/invalid-email") mensaje = "Correo inválido.";
+    else if (error?.code === "auth/operation-not-allowed") mensaje = "El inicio de sesión con correo/contraseña no está habilitado en Firebase todavía — avísale a Erick.";
+    return { ok: false, error: error?.code || "error", mensaje };
   }
 }
 

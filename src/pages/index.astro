@@ -2120,6 +2120,11 @@ try {
       <a href="/ticket-publico/" target="_blank" class="sidebar-portal-btn" title="Abrir portal de tickets para clientes">
         <span>🔗</span><span class="portal-label">Portal Clientes</span>
       </a>
+      <div class="nav-item" id="btnCuentaSegura" data-tooltip="Cuenta segura">
+        <span class="nav-icon">🔒</span>
+        <span class="nav-label">Cuenta segura</span>
+        <span class="nav-badge nav-badge-warning" id="badge-cuenta-segura" style="display:none;" title="Aún no activada">!</span>
+      </div>
       <button id="btnLogout" class="sidebar-logout-btn" title="Cerrar sesión">
         <span>🔓</span><span class="logout-label">Cerrar sesión</span>
       </button>
@@ -4051,6 +4056,46 @@ try {
   </div>
 </div>
 
+<!-- ===== MODAL: Activar cuenta segura ===== -->
+<div id="modal-cuenta-segura" class="modal-center" style="display:none;">
+  <div class="modal-box" style="width:440px; max-width:95%;">
+    <div class="modal-header">
+      <h2>🔒 Activar inicio de sesión seguro</h2>
+      <button class="modal-close" id="btnCerrarCuentaSegura">×</button>
+    </div>
+    <div style="padding:20px; display:flex; flex-direction:column; gap:14px;">
+      <p style="font-size:0.82rem; color:var(--text-muted); line-height:1.55;">
+        Ya entraste con tu usuario de siempre, así que no hace falta confirmar tu correo por
+        correo. Solo elige el correo y una contraseña nueva (no tiene que ser la misma de hoy)
+        para tu cuenta segura. El login de siempre <strong>sigue funcionando igual</strong>
+        mientras se activa para todo el equipo.
+      </p>
+      <div id="cuenta-segura-ya-activa" style="display:none; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:8px; padding:12px 14px; font-size:0.82rem; color:#34d399;">
+        ✅ Ya activaste tu cuenta segura con <strong id="cuenta-segura-correo-activo"></strong>.
+      </div>
+      <div id="cuenta-segura-form-wrap">
+        <div class="form-group">
+          <label>Tu correo</label>
+          <input id="cs-correo" type="email" placeholder="tu.nombre@dattasoft.mx">
+        </div>
+        <div class="form-group">
+          <label>Nueva contraseña (mínimo 6 caracteres)</label>
+          <input id="cs-pass1" type="password" placeholder="Elige una contraseña nueva">
+        </div>
+        <div class="form-group">
+          <label>Confirmar contraseña</label>
+          <input id="cs-pass2" type="password" placeholder="Repite la contraseña">
+        </div>
+        <div id="cuenta-segura-error" style="display:none; color:#f87171; font-size:0.8rem; margin-top:4px;"></div>
+        <div class="form-actions" style="margin-top:6px;">
+          <button class="btn btn-primary btn-sm" id="btnActivarCuentaSegura">🔒 Activar</button>
+          <button class="btn btn-secondary btn-sm" id="btnCancelarCuentaSegura">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL: Papelera de Reciclaje ===== -->
 <div id="modal-papelera" class="modal-center" style="display:none;">
   <div class="modal-box" style="width:720px; max-width:96%;">
@@ -4110,7 +4155,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica } from "../data/firebase.js";
+import { firebaseEnabled, authListo, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura } from "../data/firebase.js";
 
 // ── Modal confirmación (reemplaza confirm() — funciona en móvil) ──
 function confirmar(msg: string, icon = "⚠️"): Promise<boolean> {
@@ -4153,7 +4198,7 @@ const PASS_DEFECTO = "Datta2026";
 // siempre deben apuntar aquí, nunca a location.origin (que en desarrollo sería localhost).
 const URL_PRODUCCION = "https://crm-dattasoft.pages.dev";
 
-interface Usuario { id: string; nombre: string; rol: "admin" | "normal"; passHash: string; activo: boolean; }
+interface Usuario { id: string; nombre: string; rol: "admin" | "normal"; passHash: string; activo: boolean; authEmail?: string; }
 
 function getUsuarioActual(): { nombre: string; rol: string } | null {
   try { const s = sessionStorage.getItem(SESSION_KEY); return s ? JSON.parse(s) : null; } catch { return null; }
@@ -5037,6 +5082,7 @@ verificarSesion();
           checkLicenciasPorVencer();
           aplicarPermisosNavegacion();
           sincronizarConfigPublica();
+          actualizarBadgeCuentaSegura();
 
         } else {
           // ── ACTUALIZACIÓN REMOTA (otro dispositivo guardó algo) ───────
@@ -5101,7 +5147,94 @@ verificarSesion();
     aplicarPermisosNavegacion();
     logBitacora("Sesión iniciada", "🔐");
     initKB();
+    actualizarBadgeCuentaSegura();
   }, { once: false });
+
+  // ============================================================
+  // CUENTA SEGURA (paso 1 de migración a autenticación real — ver plan)
+  // Cada usuario activa su propia cuenta de correo/contraseña real de Firebase sin necesitar
+  // confirmar por correo (ya demostró quién es al entrar con el login de siempre). El login
+  // viejo sigue funcionando igual mientras el equipo migra a su propio ritmo.
+  // ============================================================
+  function actualizarBadgeCuentaSegura() {
+    const u = getUsuarioActual();
+    const badge = document.getElementById("badge-cuenta-segura");
+    if (!badge || !u) return;
+    const registro = getUsuarios().find((x: any) => x.nombre === u.nombre);
+    badge.style.display = registro?.authEmail ? "none" : "inline-flex";
+  }
+
+  function abrirModalCuentaSegura() {
+    const modal = document.getElementById("modal-cuenta-segura");
+    const u = getUsuarioActual();
+    const registro = getUsuarios().find((x: any) => x.nombre === u?.nombre);
+    const yaActiva = document.getElementById("cuenta-segura-ya-activa");
+    const formWrap = document.getElementById("cuenta-segura-form-wrap");
+    const errEl = document.getElementById("cuenta-segura-error");
+    if (errEl) { errEl.style.display = "none"; errEl.textContent = ""; }
+    if (registro?.authEmail) {
+      if (yaActiva) yaActiva.style.display = "block";
+      const spanCorreo = document.getElementById("cuenta-segura-correo-activo");
+      if (spanCorreo) spanCorreo.textContent = registro.authEmail;
+      if (formWrap) formWrap.style.display = "none";
+    } else {
+      if (yaActiva) yaActiva.style.display = "none";
+      if (formWrap) formWrap.style.display = "block";
+      (document.getElementById("cs-correo") as HTMLInputElement).value = "";
+      (document.getElementById("cs-pass1") as HTMLInputElement).value = "";
+      (document.getElementById("cs-pass2") as HTMLInputElement).value = "";
+    }
+    if (modal) modal.style.display = "flex";
+  }
+
+  document.getElementById("btnCuentaSegura")?.addEventListener("click", abrirModalCuentaSegura);
+  document.getElementById("btnCerrarCuentaSegura")?.addEventListener("click", () => {
+    const m = document.getElementById("modal-cuenta-segura"); if (m) m.style.display = "none";
+  });
+  document.getElementById("btnCancelarCuentaSegura")?.addEventListener("click", () => {
+    const m = document.getElementById("modal-cuenta-segura"); if (m) m.style.display = "none";
+  });
+
+  document.getElementById("btnActivarCuentaSegura")?.addEventListener("click", async () => {
+    const errEl = document.getElementById("cuenta-segura-error") as HTMLElement;
+    const correo = (document.getElementById("cs-correo") as HTMLInputElement).value.trim().toLowerCase();
+    const pass1 = (document.getElementById("cs-pass1") as HTMLInputElement).value;
+    const pass2 = (document.getElementById("cs-pass2") as HTMLInputElement).value;
+    errEl.style.display = "none"; errEl.textContent = "";
+
+    if (!correo || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+      errEl.textContent = "Ingresa un correo válido."; errEl.style.display = "block"; return;
+    }
+    if (pass1.length < 6) {
+      errEl.textContent = "La contraseña debe tener al menos 6 caracteres."; errEl.style.display = "block"; return;
+    }
+    if (pass1 !== pass2) {
+      errEl.textContent = "Las contraseñas no coinciden."; errEl.style.display = "block"; return;
+    }
+
+    const btn = document.getElementById("btnActivarCuentaSegura") as HTMLButtonElement;
+    btn.disabled = true; btn.textContent = "Activando...";
+    const res = await activarCuentaSegura(correo, pass1);
+    btn.disabled = false; btn.textContent = "🔒 Activar";
+
+    if (!res.ok) {
+      errEl.textContent = res.mensaje || "No se pudo activar."; errEl.style.display = "block";
+      return;
+    }
+
+    const u = getUsuarioActual();
+    const usuariosAct = getUsuarios();
+    const idx = usuariosAct.findIndex((x: any) => x.nombre === u?.nombre);
+    if (idx !== -1) {
+      usuariosAct[idx].authEmail = correo;
+      saveUsuariosLocal(usuariosAct);
+      guardarUsuarios(usuariosAct).catch(() => {});
+    }
+    actualizarBadgeCuentaSegura();
+    const m = document.getElementById("modal-cuenta-segura"); if (m) m.style.display = "none";
+    toast("🔒 Cuenta segura activada correctamente");
+    logBitacora(`Cuenta segura activada (${correo})`, "🔒");
+  });
 
   // Aviso centralizado cuando un guardado a Firestore falla — varias funciones guardarX()
   // devuelven solo `false`/`undefined` y no todos los call sites revisan el resultado, así que
@@ -8044,6 +8177,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         <div style="flex:1; min-width:0;">
           <div style="font-weight:700; color:var(--text-bright); font-size:0.88rem;">${u.nombre} <span style="font-size:0.68rem; padding:1px 6px; border-radius:3px; background:${u.rol==="admin"?"rgba(99,102,241,0.12)":"rgba(255,255,255,0.06)"}; color:${u.rol==="admin"?"#818cf8":"var(--text-muted)"};">${u.rol==="admin"?"Admin":"Normal"}</span></div>
           <div style="font-size:0.7rem; color:${u.activo?"#34d399":"#f87171"};">${u.activo?"● Activo":"● Inactivo"}</div>
+          <div style="font-size:0.68rem; color:${u.authEmail?"#34d399":"#fbbf24"}; margin-top:1px;">${u.authEmail?`🔒 Cuenta segura: ${escapeHtml(u.authEmail)}`:"🔓 Sin activar cuenta segura"}</div>
         </div>
         <button class="btn btn-ghost btn-xs btn-reset-pass" data-i="${i}" title="Restablecer contraseña" style="white-space:nowrap;">🔑 Reset</button>
         <button class="btn btn-ghost btn-xs btn-toggle-rol" data-i="${i}" title="${u.rol==="admin"?"Quitar permisos de administrador":"Dar permisos de administrador"}" style="color:${u.rol==="admin"?"#fbbf24":"#818cf8"}; white-space:nowrap;">${u.rol==="admin"?"⬇️ Quitar admin":"⬆️ Hacer admin"}</button>
