@@ -3464,11 +3464,12 @@ try {
               <tr><td><span class="manual-badge" style="background:rgba(148,163,184,.1);color:#94a3b8;">— Sin dato</span></td><td>No se ha registrado la versión de ese sistema.</td></tr>
             </table>
 
-            <div class="manual-subtitulo">¿Cómo agregar una empresa nueva?</div>
+            <div class="manual-subtitulo">¿Cómo agregar una empresa nueva? (y su primer contacto)</div>
             <div class="manual-paso"><div class="manual-paso-num">1</div><div class="manual-paso-txt">Haz clic en el botón <span class="btn-demo btn-demo-primary">➕ Nueva Empresa</span> en la esquina superior derecha.</div></div>
-            <div class="manual-paso"><div class="manual-paso-num">2</div><div class="manual-paso-txt">Llena los datos: nombre, RFC, contactos, teléfonos. Los sistemas y vencimientos se pueden agregar después con el botón ✏️ Editar.</div></div>
-            <div class="manual-paso"><div class="manual-paso-num">3</div><div class="manual-paso-txt">Haz clic en <strong>Guardar</strong>. La empresa aparecerá en la tabla de inmediato.</div></div>
+            <div class="manual-paso"><div class="manual-paso-num">2</div><div class="manual-paso-txt">Llena nombre y RFC. Dentro del mismo formulario hay una sección <strong>"📇 Contactos de esta empresa"</strong> con un mini-formulario (nombre, celular, correo) y un botón <strong>+ Agregar</strong> — agrega ahí al menos un contacto, es obligatorio para poder guardar.</div></div>
+            <div class="manual-paso"><div class="manual-paso-num">3</div><div class="manual-paso-txt">Haz clic en <strong>💾 Guardar Empresa</strong>. La empresa y su(s) contacto(s) se crean juntos en un solo paso, ya asociados — y también aparecerán en el módulo <strong>Contactos</strong>. Los sistemas y vencimientos se pueden agregar después con el botón ✏️ Editar.</div></div>
 
+            <div class="manual-tip"><span class="manual-tip-icon">💡</span><span><strong>¿Empresa primero o contacto primero?</strong> Siempre empresa primero — el formulario de "Nueva Empresa" ya incluye la sección para agregar el contacto, así que se crean juntos. Si en cambio ya estás en el módulo Contactos y la empresa aún no existe, usa "🏢 Nueva empresa rápida" dentro del formulario de contacto para crearla al vuelo sin salir de ahí.</span></div>
             <div class="manual-tip"><span class="manual-tip-icon">💡</span><span>Puedes marcar una empresa como favorita ⭐ editándola. Las empresas favoritas aparecen con una estrella y se pueden filtrar fácilmente.</span></div>
           </div>
 
@@ -3562,10 +3563,10 @@ try {
             <p style="font-size:0.84rem;color:var(--text-main);line-height:1.6;margin-bottom:14px;">
               Directorio de personas asociadas a las empresas. Cada contacto tiene nombre, cargo, correo y teléfono.
             </p>
-            <div class="manual-paso"><div class="manual-paso-num">1</div><div class="manual-paso-txt"><strong>Agregar contacto:</strong> Botón <span class="btn-demo btn-demo-primary">➕ Nuevo Contacto</span>. Vincula el contacto a una empresa del CRM.</div></div>
+            <div class="manual-paso"><div class="manual-paso-num">1</div><div class="manual-paso-txt"><strong>Agregar contacto:</strong> Botón <span class="btn-demo btn-demo-primary">➕ Nuevo Contacto</span>. Busca la empresa en el buscador y selecciónala de la lista (o usa "🏢 Nueva empresa rápida" si aún no existe) — el vínculo es por nombre exacto de empresa.</div></div>
             <div class="manual-paso"><div class="manual-paso-num">2</div><div class="manual-paso-txt"><strong>Buscar:</strong> Escribe nombre, empresa o correo en el buscador.</div></div>
             <div class="manual-paso"><div class="manual-paso-num">3</div><div class="manual-paso-txt"><strong>Importar:</strong> Puedes importar contactos desde un archivo Excel. Las columnas deben ser: Nombre, Empresa, Cargo, Correo, Teléfono.</div></div>
-            <div class="manual-tip"><span class="manual-tip-icon">💡</span><span>Los contactos que pongas al crear/editar una empresa (Contacto 1, Contacto 2) <strong>no</strong> aparecen aquí automáticamente — son campos independientes de la empresa. Esta sección es para contactos adicionales.</span></div>
+            <div class="manual-tip"><span class="manual-tip-icon">💡</span><span>Los contactos que agregas al crear/editar una empresa (sección "Contactos de esta empresa") <strong>sí</strong> aparecen aquí automáticamente — es el mismo directorio. Esta sección también sirve para agregar contactos adicionales a una empresa que ya tiene otros, o contactos sin correo/teléfono todavía.</span></div>
           </div>
 
           <!-- ── EVENTOS ──────────────────────────────────────── -->
@@ -3623,7 +3624,7 @@ try {
               <tr><td>🏷️ Tipos de ticket</td><td>Define los tipos disponibles al crear tickets (ej. Bug, Consulta, Instalación).</td></tr>
               <tr><td>📊 Estados</td><td>Configura los estados que puede tener un ticket.</td></tr>
               <tr><td>👥 Agentes</td><td>Lista de personas que pueden ser asignadas como responsables de un ticket.</td></tr>
-              <tr><td>✉️ Correo soporte</td><td>Dirección donde llegarán las alertas y notificaciones de nuevos registros en eventos.</td></tr>
+              <tr><td>✉️ Correo soporte</td><td>Dirección(es) donde llegan las notificaciones de tickets nuevos y de registros en eventos. Acepta varios correos separados por coma — el primero también se usa como remitente. Tiene su propio botón <strong>💾 Guardar</strong> junto al campo, no hace falta bajar hasta "Guardar Configuración".</td></tr>
               <tr><td>⏱️ SLA por Prioridad</td><td>Horas máximas de respuesta para cada nivel de prioridad de tickets.</td></tr>
               <tr><td>🖼️ Logo empresa</td><td>Imagen que aparece en el sidebar y en la página pública de registro de eventos.</td></tr>
               <tr><td>👤 Usuarios del sistema</td><td>Crea, edita o desactiva usuarios del CRM. Solo admins pueden hacer esto.</td></tr>
@@ -3643,10 +3644,10 @@ try {
             <p style="font-size:0.83rem;color:var(--text-main);line-height:1.55;margin-bottom:14px;">Sí. El CRM funciona en celular y tablet, aunque la experiencia está optimizada para pantalla grande. En celular, el menú lateral se abre con el botón ☰ en la esquina superior izquierda.</p>
 
             <div class="manual-subtitulo">¿Cómo sé si los datos se guardaron?</div>
-            <p style="font-size:0.83rem;color:var(--text-main);line-height:1.55;margin-bottom:14px;">Aparece un mensaje breve (toast) en la esquina superior derecha confirmando el guardado. Si hay un error, el mensaje aparece en rojo.</p>
+            <p style="font-size:0.83rem;color:var(--text-main);line-height:1.55;margin-bottom:14px;">Aparece un mensaje breve (toast) en la esquina inferior derecha confirmando el guardado. Si hay un error, el mensaje aparece en rojo. Si salen varios seguidos, se apilan uno arriba del otro.</p>
 
             <div class="manual-subtitulo">¿Los correos de alerta llegan automáticamente?</div>
-            <p style="font-size:0.83rem;color:var(--text-main);line-height:1.55;margin-bottom:14px;"><strong>No.</strong> Las alertas de vencimiento de licencias son solo visuales (banner en el Dashboard). No se envían correos automáticos a los clientes para evitar enviar a clientes que ya renovaron. El correo automático solo se envía cuando alguien se registra en un evento.</p>
+            <p style="font-size:0.83rem;color:var(--text-main);line-height:1.55;margin-bottom:14px;">Las alertas de vencimiento de licencias son <strong>solo visuales</strong> (banner en el Dashboard) — no se manda correo automático de esas, para evitar avisar a clientes que ya renovaron. Los correos automáticos que sí existen son: registro en un evento (cliente + admin), y notificación de ticket nuevo/reenvío al contacto (con copia al correo de soporte configurado). Si el ticket no tiene correo de contacto registrado, igual se notifica al correo de soporte para que no se pierda.</p>
 
             <div class="manual-subtitulo">¿Qué es el Portal de Clientes?</div>
             <p style="font-size:0.83rem;color:var(--text-main);line-height:1.55;">El botón <strong>🔗 Portal Clientes</strong> al fondo del menú abre una página pública donde los clientes pueden enviar tickets de soporte sin necesidad de usuario. Esos tickets aparecen en el Dashboard como notificación para que los revises y los asignes.</p>
