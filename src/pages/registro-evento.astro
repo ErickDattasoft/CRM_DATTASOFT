@@ -1,6 +1,7 @@
 ---
 // Página pública de registro a eventos — DATTASOFT CRM
 // URL: /registro-evento?id=ev_XXXXX
+const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk0pMA9t_APJlLPku_EWco_OMM3Q";
 ---
 <!DOCTYPE html>
 <html lang="es">
@@ -257,14 +258,14 @@
 
   </div>
 
-  <script type="module" is:inline>
+  <script type="module" is:inline define:vars={{ firebaseApiKey }}>
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getFirestore, doc, getDoc, collection, addDoc, query, where, getDocs, serverTimestamp }
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyDT6EkBk0pMA9t_APJlLPku_EWco_OMM3Q",
+      apiKey: firebaseApiKey,
       authDomain: "agenda-crm-netlify.firebaseapp.com",
       projectId: "agenda-crm-netlify",
     };
