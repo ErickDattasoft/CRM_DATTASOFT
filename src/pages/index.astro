@@ -2247,6 +2247,7 @@ try {
             <div class="dash-chart-title">🍩 Tickets por Estado</div>
             <div style="display:flex;align-items:center;justify-content:center;height:160px;">
               <canvas id="chart-estados" style="max-height:160px;max-width:160px;"></canvas>
+              <div id="chart-estados-vacio" class="dash-empty-mini" style="display:none;">Sin tickets aún</div>
             </div>
           </div>
           <!-- Licencias por vencer en 90 días -->
@@ -3718,19 +3719,19 @@ try {
         </div>
         <div>
           <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:3px;">🔗 Referido por</div>
-          <div id="det-tk-referido">—</div>
+          <input id="det-tk-referido" placeholder="—" style="width:100%; font-size:0.85rem; padding:5px 8px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-main);">
         </div>
         <div>
           <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:3px;">🙋 Solicitado por</div>
-          <div id="det-tk-solicitado">—</div>
+          <input id="det-tk-solicitado" placeholder="—" style="width:100%; font-size:0.85rem; padding:5px 8px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-main);">
         </div>
         <div>
           <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:3px;">📤 Canalizado a</div>
-          <div id="det-tk-canalizado">—</div>
+          <input id="det-tk-canalizado" placeholder="—" style="width:100%; font-size:0.85rem; padding:5px 8px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-main);">
         </div>
         <div>
           <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:3px;">✅ Realizado por</div>
-          <div id="det-tk-realizado">—</div>
+          <input id="det-tk-realizado" placeholder="—" style="width:100%; font-size:0.85rem; padding:5px 8px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-main);">
         </div>
       </div>
     </div>
@@ -5523,12 +5524,15 @@ verificarSesion();
 
     // --- Gráfica 2: Distribución por estado ---
     const canvasEst = document.getElementById("chart-estados") as HTMLCanvasElement;
+    const vacioEst = document.getElementById("chart-estados-vacio");
     if (canvasEst) {
       if (chartEstados) { chartEstados.destroy(); chartEstados = null; }
       const estados = ["Abierto","Pendiente","Resuelto","Cerrado"];
       const colores = ["rgba(248,113,113,0.8)","rgba(251,191,36,0.8)","rgba(52,211,153,0.8)","rgba(148,163,184,0.8)"];
       const dataEst = estados.map(e => tickets.filter(t => t.estado === e).length);
       if (dataEst.some(v => v > 0)) {
+        canvasEst.style.display = "";
+        if (vacioEst) vacioEst.style.display = "none";
         chartEstados = new Chart(canvasEst, {
           type: "doughnut",
           data: { labels: estados, datasets: [{ data: dataEst, backgroundColor: colores, borderWidth: 2, borderColor: "transparent" }] },
@@ -5536,7 +5540,8 @@ verificarSesion();
             plugins: { legend: { position: "right", labels: { color: document.body.classList.contains("light-mode") ? "#475569" : "#94a3b8", font: { size: 11 }, padding: 10 } } } }
         });
       } else {
-        canvasEst.parentElement.innerHTML = '<div class="dash-empty-mini" style="height:160px;display:flex;align-items:center;justify-content:center;">Sin tickets aún</div>';
+        canvasEst.style.display = "none";
+        if (vacioEst) vacioEst.style.display = "flex";
       }
     }
 
@@ -7506,10 +7511,10 @@ verificarSesion();
     document.getElementById("det-tk-grupo").textContent = t.grupo || "—";
     document.getElementById("det-tk-agente").textContent = t.agente || "—";
     document.getElementById("det-tk-sistema").textContent = (t.sistema && t.sistema !== "No aplica") ? t.sistema : "No aplica";
-    document.getElementById("det-tk-referido").textContent = t.referido || "—";
-    document.getElementById("det-tk-solicitado").textContent = t.solicitado || "—";
-    document.getElementById("det-tk-canalizado").textContent = t.canalizado || "—";
-    document.getElementById("det-tk-realizado").textContent = t.realizado || "—";
+    (document.getElementById("det-tk-referido") as HTMLInputElement).value = t.referido || "";
+    (document.getElementById("det-tk-solicitado") as HTMLInputElement).value = t.solicitado || "";
+    (document.getElementById("det-tk-canalizado") as HTMLInputElement).value = t.canalizado || "";
+    (document.getElementById("det-tk-realizado") as HTMLInputElement).value = t.realizado || "";
     document.getElementById("det-tk-descripcion").innerHTML = t.descripcion || "";
     const detNI = document.getElementById("det-tk-notas-internas");
     const detNISec = document.getElementById("det-tk-notas-internas-section");
@@ -7592,8 +7597,15 @@ verificarSesion();
     const nuevoEstado = document.getElementById("selectCambiarEstadoDetalle")?.value;
     const t = tickets[ticketDetalleIdx];
 
-    if (!txt && nuevoEstado === t.estado) {
-      alert("Escribe una nota o cambia el estado.");
+    const nuevoReferido = (document.getElementById("det-tk-referido") as HTMLInputElement)?.value.trim() || "";
+    const nuevoSolicitado = (document.getElementById("det-tk-solicitado") as HTMLInputElement)?.value.trim() || "";
+    const nuevoCanalizado = (document.getElementById("det-tk-canalizado") as HTMLInputElement)?.value.trim() || "";
+    const nuevoRealizado = (document.getElementById("det-tk-realizado") as HTMLInputElement)?.value.trim() || "";
+    const camposGestionCambiaron = nuevoReferido !== (t.referido || "") || nuevoSolicitado !== (t.solicitado || "")
+      || nuevoCanalizado !== (t.canalizado || "") || nuevoRealizado !== (t.realizado || "");
+
+    if (!txt && nuevoEstado === t.estado && !camposGestionCambiaron) {
+      alert("Escribe una nota, cambia el estado o modifica algún campo de Referido/Solicitado/Canalizado/Realizado.");
       return;
     }
 
@@ -7611,18 +7623,23 @@ verificarSesion();
       document.getElementById("det-tk-estado-badge").className = `badge badge-${nuevoEstado.toLowerCase()}`;
     }
 
+    t.referido = nuevoReferido;
+    t.solicitado = nuevoSolicitado;
+    t.canalizado = nuevoCanalizado;
+    t.realizado = nuevoRealizado;
+
     t.fechaActualizacion = new Date().toISOString();
     guardarLocal("crm_tickets", tickets);
     if (crmLocalOnly) {
-      toast("💬 Nota agregada (Local)");
+      toast("💬 Cambios guardados (Local)");
       renderNotasTicket(t);
       renderTickets();
       renderDashboard();
       return;
     }
-    mostrarEstado("💬 Posteando...");
+    mostrarEstado("💾 Guardando...");
     const ok = await guardarTickets(tickets);
-    if (ok) { toast("💬 Nota agregada"); ocultarEstado(); }
+    if (ok) { toast("💬 Cambios guardados"); ocultarEstado(); }
     else { mostrarEstado("⚠️ Guardado localmente (sin conexión)", 2000); }
     renderNotasTicket(t);
     renderTickets();
