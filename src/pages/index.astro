@@ -4374,6 +4374,31 @@ verificarSesion();
       .filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
   }
 
+  // Ningún dato de usuario (nombres, asuntos, descripciones, correos...) se escapaba antes de
+  // insertarse con innerHTML — cualquier ticket, contacto o registro público con un nombre tipo
+  // <img src=x onerror=...> ejecutaba ese script en la sesión de quien lo viera después.
+  function escapeHtml(s) {
+    return (s === null || s === undefined) ? "" : String(s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  // La descripción de un ticket sí se muestra como HTML real (viene del editor con
+  // negritas/listas, vía document.execCommand), así que no se puede escapar sin más o se
+  // perdería el formato — pero también puede venir tal cual de un textarea de texto plano en
+  // el portal público, sin ningún filtro. Se quitan scripts/iframes/atributos de evento
+  // (onerror, onclick...) y cualquier etiqueta fuera de lo que el editor realmente genera.
+  function sanitizeDescripcionHtml(html) {
+    let s = String(html || "");
+    s = s.replace(/<script[\s\S]*?<\/script>/gi, "");
+    s = s.replace(/<style[\s\S]*?<\/style>/gi, "");
+    s = s.replace(/<iframe[\s\S]*?<\/iframe>/gi, "");
+    s = s.replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+    s = s.replace(/\s(href|src)\s*=\s*("javascript:[^"]*"|'javascript:[^']*'|javascript:[^\s>]+)/gi, "");
+    s = s.replace(/<(?!\/?(b|strong|i|em|u|ul|ol|li|br|div|p|span|font)\b)[^>]*>/gi, "");
+    return s;
+  }
+
   // Los nombres de estado/prioridad de tickets son texto libre editable en Configuración.
   // Antes se armaba la clase CSS con solo .toLowerCase() — un estado como "En Revisión" o
   // "Espera Cliente" generaba "badge-en revisión" (espacio = dos clases distintas, ninguna
@@ -5181,9 +5206,9 @@ verificarSesion();
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td style="text-align:center; font-weight:700; color:var(--text-muted);">#${t.numero}</td>
-        <td><strong>${t.asunto || "—"}</strong></td>
-        <td>${t.empresa || "—"}</td>
-        <td style="text-align:center;"><span class="badge badge-${slugBadge(t.estado||"abierto")}">${t.estado||"—"}</span></td>
+        <td><strong>${escapeHtml(t.asunto) || "—"}</strong></td>
+        <td>${escapeHtml(t.empresa) || "—"}</td>
+        <td style="text-align:center;"><span class="badge badge-${slugBadge(t.estado||"abierto")}">${escapeHtml(t.estado) || "—"}</span></td>
         <td style="font-size:0.78rem; color:var(--text-light);">${t.fechaEliminado ? new Date(t.fechaEliminado).toLocaleDateString('es-MX') : "—"}</td>
         <td style="text-align:center;">
           <div style="display:inline-flex; gap:4px;">
@@ -5511,10 +5536,10 @@ verificarSesion();
       tr.style.cursor = "pointer";
       tr.innerHTML = `
         <td style="text-align:center; font-weight:700; color:var(--text-muted);">#${t.numero}</td>
-        <td><strong>${t.asunto}</strong></td>
-        <td>${t.empresa || "—"}</td>
-        <td style="text-align:center;"><span class="badge badge-${slugBadge(t.prioridad||"media")}">${t.prioridad}</span></td>
-        <td style="text-align:center;"><span class="badge badge-${slugBadge(t.estado||"abierto")}">${t.estado}</span></td>
+        <td><strong>${escapeHtml(t.asunto)}</strong></td>
+        <td>${escapeHtml(t.empresa) || "—"}</td>
+        <td style="text-align:center;"><span class="badge badge-${slugBadge(t.prioridad||"media")}">${escapeHtml(t.prioridad)}</span></td>
+        <td style="text-align:center;"><span class="badge badge-${slugBadge(t.estado||"abierto")}">${escapeHtml(t.estado)}</span></td>
         <td style="font-size:0.78rem; color:var(--text-light);">${t.fechaCreacion ? new Date(t.fechaCreacion).toLocaleDateString() : "—"}</td>
       `;
       tr.addEventListener("click", () => { navegarA("tickets"); });
@@ -6023,7 +6048,7 @@ verificarSesion();
       let extras = "";
       if (c.CAMPOS_EXTRAS) {
         Object.entries(c.CAMPOS_EXTRAS).forEach(([k, v]) => {
-          if (v) extras += `<span class="extra-badge">💻 ${k}: ${v}</span>`;
+          if (v) extras += `<span class="extra-badge">💻 ${escapeHtml(k)}: ${escapeHtml(v as string)}</span>`;
         });
       }
 
@@ -6084,7 +6109,7 @@ verificarSesion();
         <td style="${tdBase} max-width:0; overflow:hidden;">
           <div style="display:flex; align-items:center; gap:6px; overflow:hidden;">
             <span class="btn-fav" data-idx="${idx}" style="flex-shrink:0; font-size:1rem; cursor:pointer; color:${c.FAVORITO ? '#fbbf24' : '#64748b'};">${c.FAVORITO ? '⭐' : '☆'}</span>
-            <strong title="${c.EMPRESA}" style="color:#f1f5f9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; font-size:0.88rem;">${c.EMPRESA}</strong>
+            <strong title="${escapeHtml(c.EMPRESA)}" style="color:#f1f5f9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; font-size:0.88rem;">${escapeHtml(c.EMPRESA)}</strong>
             ${badgeLicencia}
           </div>
           ${extras ? `<div style="margin-top:3px;">${extras}</div>` : ''}
@@ -6101,9 +6126,9 @@ verificarSesion();
             const nSize  = esPrincipal ? '0.87rem' : '0.82rem';
             const subSize = esPrincipal ? '0.72rem' : '0.70rem';
             return `
-              <div style="font-weight:${esPrincipal?'700':'500'}; color:${esPrincipal?'#f1f5f9':'#cbd5e1'}; font-size:${nSize}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${nombre}</div>
-              ${correo ? `<div style="font-size:${subSize}; color:#7dd3fc; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:1px;">✉ ${correo}</div>` : ''}
-              ${tel    ? `<div style="font-size:${subSize}; color:#94a3b8; white-space:nowrap; margin-top:1px;">📱 ${tel}</div>` : ''}`;
+              <div style="font-weight:${esPrincipal?'700':'500'}; color:${esPrincipal?'#f1f5f9':'#cbd5e1'}; font-size:${nSize}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(nombre)}</div>
+              ${correo ? `<div style="font-size:${subSize}; color:#7dd3fc; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:1px;">✉ ${escapeHtml(correo)}</div>` : ''}
+              ${tel    ? `<div style="font-size:${subSize}; color:#94a3b8; white-space:nowrap; margin-top:1px;">📱 ${escapeHtml(tel)}</div>` : ''}`;
           };
           return `
         <td style="${tdBase} max-width:0; overflow:hidden;">${lineaContacto(c.CONTACTO || '', ci.correo || '', ci.telefono1 || '', true)}</td>
@@ -6168,9 +6193,9 @@ verificarSesion();
           }
 
           vHtml += `<div style="background:${bg}; border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:7px 10px; min-width:120px;">
-            <div style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:2px;">${s}</div>
-            <div style="font-size:0.82rem; font-weight:700; color:${txtColor};">${txt}</div>
-            ${subtxt ? `<div style="font-size:0.62rem; color:#64748b; margin-top:1px;">${subtxt}</div>` : ""}
+            <div style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:2px;">${escapeHtml(s)}</div>
+            <div style="font-size:0.82rem; font-weight:700; color:${txtColor};">${escapeHtml(txt)}</div>
+            ${subtxt ? `<div style="font-size:0.62rem; color:#64748b; margin-top:1px;">${escapeHtml(subtxt)}</div>` : ""}
             ${vencTag}
           </div>`;
         });
@@ -6859,15 +6884,15 @@ verificarSesion();
         : '';
       tr.innerHTML = `
         <td style="${tdStyle}">
-          <strong title="${c.nombre || ''}" style="color:var(--text-bright);">${c.nombre || "—"}</strong>
+          <strong title="${escapeHtml(c.nombre)}" style="color:var(--text-bright);">${escapeHtml(c.nombre) || "—"}</strong>
           ${rolBadge}
         </td>
-        <td style="${tdStyle}" title="${c.empresa || ''}">
-          ${c.empresa ? `<span style="font-size:0.8rem;font-weight:600;color:#f1f5f9;">${c.empresa}</span>` : '<span style="color:var(--text-muted);font-size:0.78rem;">Sin empresa</span>'}
+        <td style="${tdStyle}" title="${escapeHtml(c.empresa)}">
+          ${c.empresa ? `<span style="font-size:0.8rem;font-weight:600;color:#f1f5f9;">${escapeHtml(c.empresa)}</span>` : '<span style="color:var(--text-muted);font-size:0.78rem;">Sin empresa</span>'}
         </td>
-        <td style="${tdStyle} color:var(--brand-secondary); font-size:0.82rem;" title="${c.correo || ''}">${c.correo || "—"}</td>
-        <td style="white-space:nowrap; font-size:0.82rem;">${c.telefono1 || "—"}</td>
-        <td style="white-space:nowrap; font-size:0.82rem; color:#94a3b8;">${c.telefono2 || "—"}</td>
+        <td style="${tdStyle} color:var(--brand-secondary); font-size:0.82rem;" title="${escapeHtml(c.correo)}">${escapeHtml(c.correo) || "—"}</td>
+        <td style="white-space:nowrap; font-size:0.82rem;">${escapeHtml(c.telefono1) || "—"}</td>
+        <td style="white-space:nowrap; font-size:0.82rem; color:#94a3b8;">${escapeHtml(c.telefono2) || "—"}</td>
         <td style="text-align:center;">
           <div style="display:inline-flex; gap:3px;">
             ${c.telefono1 ? `<button class="btn btn-whatsapp btn-xs btn-ct-wsp" data-idx="${idx}" title="WhatsApp" style="padding:3px 5px;">💬</button>` : ''}
@@ -7321,18 +7346,18 @@ verificarSesion();
       }
       tr.innerHTML = `
         <td style="text-align:center; font-weight:700; color:var(--text-muted);">#${t.numero}</td>
-        <td><strong style="color:var(--text-bright);">${t.asunto}</strong></td>
+        <td><strong style="color:var(--text-bright);">${escapeHtml(t.asunto)}</strong></td>
         <td>
-          <span style="display:block; font-weight:600;">👤 ${t.contacto || "—"}</span>
-          <span style="display:block; font-size:0.72rem; color:var(--text-light);">🏢 ${t.empresa || "—"}</span>
+          <span style="display:block; font-weight:600;">👤 ${escapeHtml(t.contacto) || "—"}</span>
+          <span style="display:block; font-size:0.72rem; color:var(--text-light);">🏢 ${escapeHtml(t.empresa) || "—"}</span>
         </td>
         <td style="text-align:center;">
-          <span class="badge" style="background:rgba(99,102,241,0.12); color:#a5b4fc;">${t.tipo || "General"}</span>
-          ${t.sistema && t.sistema !== "No aplica" ? `<br><span style="font-size:0.68rem; color:var(--text-light);">💻 ${t.sistema}</span>` : ""}
+          <span class="badge" style="background:rgba(99,102,241,0.12); color:#a5b4fc;">${escapeHtml(t.tipo) || "General"}</span>
+          ${t.sistema && t.sistema !== "No aplica" ? `<br><span style="font-size:0.68rem; color:var(--text-light);">💻 ${escapeHtml(t.sistema)}</span>` : ""}
         </td>
-        <td style="text-align:center;"><span class="badge badge-${slugBadge(t.prioridad || "media")}">${t.prioridad}</span>${slaBadge}</td>
-        <td style="text-align:center;"><span class="badge badge-${slugBadge(t.estado || "abierto")}">${t.estado}</span></td>
-        <td style="font-size:0.8rem; color:var(--text-muted);">${t.agente || "—"}</td>
+        <td style="text-align:center;"><span class="badge badge-${slugBadge(t.prioridad || "media")}">${escapeHtml(t.prioridad)}</span>${slaBadge}</td>
+        <td style="text-align:center;"><span class="badge badge-${slugBadge(t.estado || "abierto")}">${escapeHtml(t.estado)}</span></td>
+        <td style="font-size:0.8rem; color:var(--text-muted);">${escapeHtml(t.agente) || "—"}</td>
         <td style="font-size:0.78rem; color:var(--text-light);">${t.fechaCreacion ? new Date(t.fechaCreacion).toLocaleDateString() : "—"}</td>
         <td style="text-align:center;">
           <div style="display:inline-flex; gap:4px;">
@@ -7525,7 +7550,7 @@ verificarSesion();
     document.getElementById("form-tk-correo-contacto").value = t.contactoCorreo || "";
     document.getElementById("form-tk-empresa").value = t.empresa || "";
     document.getElementById("form-tk-asunto").value = t.asunto;
-    document.getElementById("form-tk-descripcion").innerHTML = t.descripcion || "";
+    document.getElementById("form-tk-descripcion").innerHTML = sanitizeDescripcionHtml(t.descripcion);
     document.getElementById("form-tk-cc").value = t.cc || "";
     document.getElementById("form-tk-cco").value = t.cco || "";
     const fRef = document.getElementById("form-tk-referido"); if (fRef) fRef.value = t.referido || "";
@@ -7579,7 +7604,7 @@ verificarSesion();
     (document.getElementById("det-tk-solicitado") as HTMLInputElement).value = t.solicitado || "";
     (document.getElementById("det-tk-canalizado") as HTMLInputElement).value = t.canalizado || "";
     (document.getElementById("det-tk-realizado") as HTMLInputElement).value = t.realizado || "";
-    document.getElementById("det-tk-descripcion").innerHTML = t.descripcion || "";
+    document.getElementById("det-tk-descripcion").innerHTML = sanitizeDescripcionHtml(t.descripcion);
     const detNI = document.getElementById("det-tk-notas-internas");
     const detNISec = document.getElementById("det-tk-notas-internas-section");
     if (detNI && detNISec) {
@@ -7619,10 +7644,10 @@ verificarSesion();
       div.className = "note-item";
       div.innerHTML = `
         <div class="note-meta">
-          <strong>👤 ${n.autor || "Soporte"}</strong>
+          <strong>👤 ${escapeHtml(n.autor) || "Soporte"}</strong>
           <span>📅 ${new Date(n.fecha).toLocaleString()}</span>
         </div>
-        <div style="line-height:1.5; white-space:pre-wrap;">${n.texto}</div>
+        <div style="line-height:1.5; white-space:pre-wrap;">${escapeHtml(n.texto)}</div>
       `;
       cont.appendChild(div);
     });
@@ -9236,16 +9261,16 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       div.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
           <div style="flex:1; min-width:200px;">
-            <div style="font-weight:700; color:var(--text-bright); margin-bottom:4px;">${t.asunto || "Sin asunto"}</div>
+            <div style="font-weight:700; color:var(--text-bright); margin-bottom:4px;">${escapeHtml(t.asunto) || "Sin asunto"}</div>
             <div style="font-size:0.78rem; color:var(--text-muted);">
-              👤 ${t.contacto || "—"} · 🏢 ${t.empresa || "—"} · ✉️ ${t.contactoCorreo || "—"}
-              ${t.telefono ? ` · 📞 ${t.telefono}` : ""}
-              ${t.sistema ? ` · 💻 ${t.sistema}` : ""}
-              ${t.tipo ? ` · 🏷️ ${t.tipo}` : ""}
+              👤 ${escapeHtml(t.contacto) || "—"} · 🏢 ${escapeHtml(t.empresa) || "—"} · ✉️ ${escapeHtml(t.contactoCorreo) || "—"}
+              ${t.telefono ? ` · 📞 ${escapeHtml(t.telefono)}` : ""}
+              ${t.sistema ? ` · 💻 ${escapeHtml(t.sistema)}` : ""}
+              ${t.tipo ? ` · 🏷️ ${escapeHtml(t.tipo)}` : ""}
             </div>
-            <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">⚡ Prioridad: <strong>${t.prioridad || "Media"}</strong> · 📅 ${t.fechaCreacion ? new Date(t.fechaCreacion).toLocaleString('es-MX') : "—"}</div>
-            <div style="margin-top:8px; font-size:0.82rem; background:var(--bg-card); padding:10px 12px; border-radius:var(--radius-sm); border-left:3px solid var(--brand-warning); color:var(--text-main);">${(t.descripcion || "").replace(/\n/g,"<br>")}</div>
-            ${(t.adjuntos && t.adjuntos.length > 0) ? `<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">${t.adjuntos.map((a: any) => `<a href="${a.data}" target="_blank" title="${a.nombre}"><img src="${a.data}" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:1px solid var(--border-color); cursor:pointer;"></a>`).join("")}</div>` : ""}
+            <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">⚡ Prioridad: <strong>${escapeHtml(t.prioridad) || "Media"}</strong> · 📅 ${t.fechaCreacion ? new Date(t.fechaCreacion).toLocaleString('es-MX') : "—"}</div>
+            <div style="margin-top:8px; font-size:0.82rem; background:var(--bg-card); padding:10px 12px; border-radius:var(--radius-sm); border-left:3px solid var(--brand-warning); color:var(--text-main);">${escapeHtml(t.descripcion).replace(/\n/g,"<br>")}</div>
+            ${(t.adjuntos && t.adjuntos.length > 0) ? `<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">${t.adjuntos.map((a: any) => `<a href="${a.data}" target="_blank" title="${escapeHtml(a.nombre)}"><img src="${a.data}" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:1px solid var(--border-color); cursor:pointer;"></a>`).join("")}</div>` : ""}
           </div>
           <div style="display:flex; flex-direction:column; gap:6px; flex-shrink:0;">
             <button class="btn btn-success btn-xs btn-aceptar-pub" data-i="${i}" style="white-space:nowrap;">✅ Aceptar ticket</button>
@@ -9702,11 +9727,11 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         const listDiv = document.createElement("div");
         listDiv.innerHTML = `<div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:10px;">${inscritos.length} persona(s) registrada(s)</div>` +
           inscritos.map(i => `<div style="padding:10px 12px;background:var(--bg-input);border-radius:8px;margin-bottom:6px;">
-            <div style="font-weight:700;color:var(--text-bright);">👤 ${i.nombre}</div>
-            ${i.empresa ? `<div style="font-size:0.78rem;color:var(--text-muted);">🏢 ${i.empresa}</div>` : ""}
-            ${i.correo ? `<div style="font-size:0.78rem;color:var(--text-muted);">✉️ ${i.correo}</div>` : ""}
-            ${i.telefono ? `<div style="font-size:0.78rem;color:var(--text-muted);">📞 ${i.telefono}</div>` : ""}
-            ${i.fuente ? `<div style="font-size:0.72rem;color:var(--brand-primary);margin-top:4px;">📌 ${i.fuente}</div>` : ""}
+            <div style="font-weight:700;color:var(--text-bright);">👤 ${escapeHtml(i.nombre)}</div>
+            ${i.empresa ? `<div style="font-size:0.78rem;color:var(--text-muted);">🏢 ${escapeHtml(i.empresa)}</div>` : ""}
+            ${i.correo ? `<div style="font-size:0.78rem;color:var(--text-muted);">✉️ ${escapeHtml(i.correo)}</div>` : ""}
+            ${i.telefono ? `<div style="font-size:0.78rem;color:var(--text-muted);">📞 ${escapeHtml(i.telefono)}</div>` : ""}
+            ${i.fuente ? `<div style="font-size:0.72rem;color:var(--brand-primary);margin-top:4px;">📌 ${escapeHtml(i.fuente)}</div>` : ""}
           </div>`).join("");
         lista.appendChild(listDiv);
       }
