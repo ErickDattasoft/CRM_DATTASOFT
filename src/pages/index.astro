@@ -6535,6 +6535,19 @@ verificarSesion();
     }
   }
 
+  // Convierte el HTML del editor de descripción a HTML de correo preservando saltos de línea:
+  // .replace(/<[^>]*>/g,"") a secas borraba <div>/<p>/<br> sin dejar separador, pegando todo el texto.
+  function descripcionTicketAHtml(html) {
+    const texto = (html || "")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/(p|div|li|h[1-6]|tr)>/gi, "\n")
+      .replace(/<[^>]+>/g, "")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+    return texto.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
+  }
+
   async function enviarNotificacionTicket(t) {
     const mailTo = t.contactoCorreo || contactos.find(c => c.nombre === t.contacto)?.correo || "";
     const soporteEmails = parseEmailList(configTickets.correoSoporte);
@@ -6555,7 +6568,7 @@ verificarSesion();
         <tr><td style="padding:6px 12px; font-weight:bold; background:#f3f4f6;">Estado</td><td style="padding:6px 12px;">${t.estado || ""}</td></tr>
       </table>
       <h3 style="margin-top:16px; font-family:sans-serif;">Descripción</h3>
-      <div style="background:#f9fafb; padding:12px; border-radius:6px; font-family:sans-serif; white-space:pre-wrap;">${(t.descripcion || "").replace(/<[^>]*>/g, "")}</div>
+      <div style="background:#f9fafb; padding:12px; border-radius:6px; font-family:sans-serif;">${descripcionTicketAHtml(t.descripcion)}</div>
       <hr style="margin-top:24px; border:none; border-top:1px solid #e5e7eb;">
       <p style="font-size:12px; color:#6b7280; font-family:sans-serif;">DATTASOFT BY INFOXPERT — Sistema de Tickets</p>
     `;
