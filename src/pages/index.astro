@@ -6536,14 +6536,14 @@ verificarSesion();
     };
   }
 
-  async function enviarEmailConProveedor({ to, subject, html, text, replyTo = "", cc = "" }) {
+  async function enviarEmailConProveedor({ to, subject, html, text, replyTo = "", cc = "", bcc = "" }) {
     const cuerpo = html || `<pre style="font-family:sans-serif; white-space:pre-wrap;">${text || ""}</pre>`;
     const fromEmail = parseEmailList(document.getElementById("cfg-correo-soporte")?.value.trim() || configTickets.correoSoporte)[0] || "";
     try {
       const response = await fetch("/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to, subject, html: cuerpo, replyTo, cc, from: fromEmail }),
+        body: JSON.stringify({ to, subject, html: cuerpo, replyTo, cc, bcc, from: fromEmail }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || data.message || JSON.stringify(data));
@@ -6573,6 +6573,7 @@ verificarSesion();
     const mailTo = t.contactoCorreo || contactos.find(c => c.nombre === t.contacto)?.correo || "";
     const soporteEmails = parseEmailList(configTickets.correoSoporte);
     const ccTicket = parseEmailList(t.cc || "");
+    const bccTicket = parseEmailList(t.cco || "").filter(e => e !== mailTo).join(",");
     const mailSubject = `[Ticket #${t.numero}] ${t.asunto}`;
     const avisoSinContacto = mailTo ? "" : `
       <p style="background:#fef3c7; color:#92400e; padding:8px 12px; border-radius:6px; font-family:sans-serif; font-size:13px;">
@@ -6598,7 +6599,7 @@ verificarSesion();
     if (mailTo) {
       const mailReplyTo = soporteEmails[0] || "";
       const mailCC = [...new Set([...soporteEmails, ...ccTicket])].filter(e => e !== mailTo).join(",");
-      sent = await enviarEmailConProveedor({ to: mailTo, subject: mailSubject, html: htmlTicket, replyTo: mailReplyTo, cc: mailCC });
+      sent = await enviarEmailConProveedor({ to: mailTo, subject: mailSubject, html: htmlTicket, replyTo: mailReplyTo, cc: mailCC, bcc: bccTicket });
       if (sent?.ok) { toast(`✉️ Notificación enviada a ${mailTo}`); logBitacora(`✉️ Correo enviado a ${mailTo} — Ticket #${t.numero}`, "📧"); }
       else toast(`⚠️ No se pudo enviar: ${sent?.error || "error desconocido"}`, "error");
       return sent;
@@ -6611,7 +6612,7 @@ verificarSesion();
       return { ok: false };
     }
     toast("⚠️ El contacto no tiene correo registrado — se notificó solo a soporte", "warning");
-    sent = await enviarEmailConProveedor({ to: destinatarios, subject: mailSubject, html: htmlTicket, replyTo: soporteEmails[0] || "" });
+    sent = await enviarEmailConProveedor({ to: destinatarios, subject: mailSubject, html: htmlTicket, replyTo: soporteEmails[0] || "", bcc: bccTicket });
     if (sent?.ok) logBitacora(`✉️ Correo enviado a soporte (sin contacto) — Ticket #${t.numero}`, "📧");
     else toast(`⚠️ No se pudo notificar a soporte: ${sent?.error || "error desconocido"}`, "error");
     return sent;

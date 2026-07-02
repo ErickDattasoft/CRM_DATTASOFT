@@ -17,7 +17,7 @@ export const onRequestPost = async (context) => {
     });
   }
 
-  const { to, subject, html, replyTo, from, cc } = payload;
+  const { to, subject, html, replyTo, from, cc, bcc } = payload;
   if (!to || !subject || !html) {
     return new Response(JSON.stringify({ error: "Faltan campos: to, subject, html" }), {
       status: 400, headers: { "Content-Type": "application/json" },
@@ -45,6 +45,13 @@ export const onRequestPost = async (context) => {
       .filter(Boolean)
       .filter(e => !toList.some(t => t.email === e));
     if (ccList.length) body.cc = ccList.map(email => ({ email }));
+  }
+  if (bcc) {
+    const bccList = (Array.isArray(bcc) ? bcc : String(bcc).split(","))
+      .map(e => String(e).trim())
+      .filter(Boolean)
+      .filter(e => !toList.some(t => t.email === e));
+    if (bccList.length) body.bcc = bccList.map(email => ({ email }));
   }
 
   const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
