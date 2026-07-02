@@ -9681,6 +9681,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       if (!inscritos.length) {
         lista.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);">Aún no hay nadie inscrito.</div>`;
       } else {
+        const eventoExport = ev?.id || "";
         const btnExportIns = document.createElement("button");
         btnExportIns.className = "btn btn-success btn-sm";
         btnExportIns.style.cssText = "margin-bottom:12px;";
@@ -9708,7 +9709,6 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
             ${i.fuente ? `<div style="font-size:0.72rem;color:var(--brand-primary);margin-top:4px;">📌 ${i.fuente}</div>` : ""}
           </div>`).join("");
         lista.appendChild(listDiv);
-        const eventoExport = ev?.id || "";
       }
     } catch(e) {
       lista.innerHTML = `<div style="text-align:center;padding:24px;color:#f87171;">Error al cargar inscritos.</div>`;
