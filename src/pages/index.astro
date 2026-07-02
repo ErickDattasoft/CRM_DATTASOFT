@@ -2199,7 +2199,7 @@ try {
         <div id="banner-vencimientos" style="display:none; flex-direction:column; gap:10px; background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.25); border-radius:var(--radius-lg); padding:14px 18px;">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
             <div style="font-size:0.88rem; font-weight:700; color:#f87171;">⚠️ Licencias próximas a vencer</div>
-            <button class="btn btn-ghost btn-xs" onclick="document.getElementById('banner-vencimientos').style.display='none'" style="color:var(--text-muted); font-size:0.8rem;">✕ Descartar</button>
+            <button class="btn btn-ghost btn-xs" id="btn-descartar-alertas-venc" style="color:var(--text-muted); font-size:0.8rem;">✕ Descartar</button>
           </div>
           <div id="banner-vencimientos-lista" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
           <div style="font-size:0.72rem; color:var(--text-muted);">Revisa si el cliente ya renovó su licencia antes de contactarlo. Si ya está actualizado, actualiza la fecha de vencimiento en su ficha.</div>
@@ -11282,6 +11282,19 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   // ============================================================
   // F3: AVISO INTERNO DE VENCIMIENTO DE LICENCIAS (sin correo)
   // ============================================================
+  const ALERTAS_DESCARTADAS_KEY = "crm_alertas_vencimiento_descartadas";
+
+  function firmaAlertas(alertas: { empresa: string; sistema: string; fecha: string }[]) {
+    return alertas.map(a => `${a.empresa}|${a.sistema}|${a.fecha}`).sort().join(";");
+  }
+
+  function descartarAlertasVencimiento(firma: string) {
+    localStorage.setItem(ALERTAS_DESCARTADAS_KEY, JSON.stringify({ fecha: new Date().toISOString().slice(0, 10), firma }));
+    const banner = document.getElementById("banner-vencimientos");
+    if (banner) banner.style.display = "none";
+  }
+  (window as any).descartarAlertasVencimiento = descartarAlertasVencimiento;
+
   function verificarAlertasVencimiento() {
     const hoy = new Date(); hoy.setHours(0,0,0,0);
     const alertas: { empresa: string; sistema: string; dias: number; fecha: string }[] = [];
@@ -11302,6 +11315,19 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     if (!banner || !lista) return;
 
     if (!alertas.length) { banner.style.display = "none"; return; }
+
+    // Si el usuario ya descartó exactamente este mismo conjunto de alertas hoy, no lo repitas.
+    // Si cambió (nueva licencia entra en el rango, o una se renovó y desapareció), sí se vuelve a mostrar.
+    const firmaActual = firmaAlertas(alertas);
+    const descartado = JSON.parse(localStorage.getItem(ALERTAS_DESCARTADAS_KEY) || "null");
+    const hoyStr = new Date().toISOString().slice(0, 10);
+    if (descartado && descartado.fecha === hoyStr && descartado.firma === firmaActual) {
+      banner.style.display = "none";
+      return;
+    }
+
+    const btnDescartar = document.getElementById("btn-descartar-alertas-venc");
+    if (btnDescartar) btnDescartar.onclick = () => descartarAlertasVencimiento(firmaActual);
 
     lista.innerHTML = alertas.map(a => {
       const color = a.dias <= 5 ? "#f87171" : a.dias <= 15 ? "#fbbf24" : "#a5b4fc";
