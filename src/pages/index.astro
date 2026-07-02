@@ -3720,6 +3720,18 @@ try {
           <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:3px;">🔗 Referido por</div>
           <div id="det-tk-referido">—</div>
         </div>
+        <div>
+          <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:3px;">🙋 Solicitado por</div>
+          <div id="det-tk-solicitado">—</div>
+        </div>
+        <div>
+          <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:3px;">📤 Canalizado a</div>
+          <div id="det-tk-canalizado">—</div>
+        </div>
+        <div>
+          <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:3px;">✅ Realizado por</div>
+          <div id="det-tk-realizado">—</div>
+        </div>
       </div>
     </div>
     <div style="border-top:1px solid var(--border-color); padding-top:14px; flex:1; min-height:80px;">
@@ -7495,6 +7507,9 @@ verificarSesion();
     document.getElementById("det-tk-agente").textContent = t.agente || "—";
     document.getElementById("det-tk-sistema").textContent = (t.sistema && t.sistema !== "No aplica") ? t.sistema : "No aplica";
     document.getElementById("det-tk-referido").textContent = t.referido || "—";
+    document.getElementById("det-tk-solicitado").textContent = t.solicitado || "—";
+    document.getElementById("det-tk-canalizado").textContent = t.canalizado || "—";
+    document.getElementById("det-tk-realizado").textContent = t.realizado || "—";
     document.getElementById("det-tk-descripcion").innerHTML = t.descripcion || "";
     const detNI = document.getElementById("det-tk-notas-internas");
     const detNISec = document.getElementById("det-tk-notas-internas-section");
