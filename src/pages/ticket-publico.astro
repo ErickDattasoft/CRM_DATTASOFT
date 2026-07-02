@@ -328,6 +328,15 @@
     const FIREBASE_PROJECT = "agenda-crm-netlify";
     const FIREBASE_API_KEY = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk0pMA9t_APJlLPku_EWco_OMM3Q";
 
+    // Página pública sin login — lo que se escriba aquí se manda tal cual por correo (al
+    // cliente y a soporte). Sin escapar, un nombre/asunto/descripción tipo <img src=x
+    // onerror=...> ejecutaba ese script al abrir el correo en un cliente de correo con HTML.
+    function escapeHtml(s: string) {
+      return (s === null || s === undefined) ? "" : String(s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+
     // ── Auth anónima + Logo ───────────────────────────────────────
     let anonToken: string | null = null;
 
@@ -562,8 +571,8 @@
           .split(/[,;]/)
           .map(e => e.trim())
           .filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
-        const sistemaRow = sistema ? `<tr><td style="padding:6px 0;font-weight:600;color:#64748b;width:120px;">Sistema</td><td style="padding:6px 0;">${sistema}</td></tr>` : "";
-        const telefonoRow = telefono ? `<tr><td style="padding:6px 0;font-weight:600;color:#64748b;">Teléfono</td><td style="padding:6px 0;">${telefono}</td></tr>` : "";
+        const sistemaRow = sistema ? `<tr><td style="padding:6px 0;font-weight:600;color:#64748b;width:120px;">Sistema</td><td style="padding:6px 0;">${escapeHtml(sistema)}</td></tr>` : "";
+        const telefonoRow = telefono ? `<tr><td style="padding:6px 0;font-weight:600;color:#64748b;">Teléfono</td><td style="padding:6px 0;">${escapeHtml(telefono)}</td></tr>` : "";
         fetch("/send-email", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -577,16 +586,16 @@
               <div style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;padding:20px;border-radius:0 0 8px 8px;">
                 <table style="width:100%;border-collapse:collapse;">
                   <tr><td style="padding:6px 0;font-weight:600;color:#64748b;width:120px;">Folio</td><td style="padding:6px 0;font-weight:800;color:#6366f1;">${folio}</td></tr>
-                  <tr><td style="padding:6px 0;font-weight:600;color:#64748b;">Empresa</td><td style="padding:6px 0;">${empresa}</td></tr>
-                  <tr><td style="padding:6px 0;font-weight:600;color:#64748b;">Contacto</td><td style="padding:6px 0;">${nombre}</td></tr>
-                  <tr><td style="padding:6px 0;font-weight:600;color:#64748b;">Correo</td><td style="padding:6px 0;">${correo}</td></tr>
+                  <tr><td style="padding:6px 0;font-weight:600;color:#64748b;">Empresa</td><td style="padding:6px 0;">${escapeHtml(empresa)}</td></tr>
+                  <tr><td style="padding:6px 0;font-weight:600;color:#64748b;">Contacto</td><td style="padding:6px 0;">${escapeHtml(nombre)}</td></tr>
+                  <tr><td style="padding:6px 0;font-weight:600;color:#64748b;">Correo</td><td style="padding:6px 0;">${escapeHtml(correo)}</td></tr>
                   ${telefonoRow}${sistemaRow}
-                  <tr><td style="padding:6px 0;font-weight:600;color:#64748b;">Prioridad</td><td style="padding:6px 0;">${prioridad}</td></tr>
-                  <tr><td style="padding:6px 0;font-weight:600;color:#64748b;">Asunto</td><td style="padding:6px 0;">${asunto}</td></tr>
+                  <tr><td style="padding:6px 0;font-weight:600;color:#64748b;">Prioridad</td><td style="padding:6px 0;">${escapeHtml(prioridad)}</td></tr>
+                  <tr><td style="padding:6px 0;font-weight:600;color:#64748b;">Asunto</td><td style="padding:6px 0;">${escapeHtml(asunto)}</td></tr>
                 </table>
                 <div style="margin-top:14px;padding:12px;background:#fff;border:1px solid #e2e8f0;border-radius:6px;">
                   <div style="font-size:0.75rem;font-weight:700;color:#64748b;margin-bottom:6px;">DESCRIPCIÓN</div>
-                  <div style="white-space:pre-wrap;color:#1e293b;font-size:0.9rem;">${descripcion}</div>
+                  <div style="white-space:pre-wrap;color:#1e293b;font-size:0.9rem;">${escapeHtml(descripcion)}</div>
                 </div>
               </div>
             </div>`
@@ -605,14 +614,14 @@
                 <h2 style="color:#fff;margin:0;font-size:1rem;">✅ Hemos recibido tu solicitud</h2>
               </div>
               <div style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;padding:24px;border-radius:0 0 8px 8px;">
-                <p style="margin:0 0 16px;">Hola <strong>${nombre}</strong>, gracias por contactarnos. Tu solicitud fue registrada con éxito.</p>
+                <p style="margin:0 0 16px;">Hola <strong>${escapeHtml(nombre)}</strong>, gracias por contactarnos. Tu solicitud fue registrada con éxito.</p>
                 <div style="background:#fff;border:2px solid #6366f1;border-radius:8px;padding:16px;text-align:center;margin:0 0 16px;">
                   <div style="font-size:0.72rem;color:#64748b;letter-spacing:1px;margin-bottom:4px;">FOLIO DE SEGUIMIENTO</div>
                   <div style="font-size:1.5rem;font-weight:800;color:#6366f1;letter-spacing:2px;">${folio}</div>
                 </div>
-                <p style="color:#475569;margin:0 0 8px;">Nuestro equipo revisará tu caso y se pondrá en contacto contigo a la brevedad al correo <strong>${correo}</strong>.</p>
+                <p style="color:#475569;margin:0 0 8px;">Nuestro equipo revisará tu caso y se pondrá en contacto contigo a la brevedad al correo <strong>${escapeHtml(correo)}</strong>.</p>
                 <div style="border-top:1px solid #e2e8f0;margin-top:16px;padding-top:12px;font-size:0.82rem;color:#64748b;">
-                  <strong>Asunto:</strong> ${asunto}
+                  <strong>Asunto:</strong> ${escapeHtml(asunto)}
                 </div>
               </div>
               <div style="text-align:center;margin-top:10px;font-size:0.7rem;color:#94a3b8;">DATTASOFT BY INFOXPERT · Soporte Técnico</div>
