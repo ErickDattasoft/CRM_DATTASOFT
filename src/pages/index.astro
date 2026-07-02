@@ -5082,6 +5082,14 @@ verificarSesion();
     initKB();
   }, { once: false });
 
+  // Aviso centralizado cuando un guardado a Firestore falla — varias funciones guardarX()
+  // devuelven solo `false`/`undefined` y no todos los call sites revisan el resultado, así que
+  // sin esto el usuario podía ver "guardado" en pantalla aunque el escrito real fallara.
+  document.addEventListener("crm:write-error", (e: Event) => {
+    const { operacion, mensaje } = (e as CustomEvent).detail || {};
+    toast(`⚠️ No se pudo guardar "${operacion}" en Firebase — ${mensaje || "sin conexión"}`, "error");
+  });
+
   function renderBitacora() {
     const cont = document.getElementById("bitacora-list");
     if (!cont) return;

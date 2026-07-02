@@ -17,6 +17,20 @@ export const firebaseEnabled = Boolean(
 // JSON round-trip los elimina de objetos y los convierte a null en arrays.
 const limpiar = (data) => JSON.parse(JSON.stringify(data ?? null));
 
+// Muchas funciones guardarX() devuelven simplemente `false` en error, y varios call sites en
+// index.astro nunca revisan ese valor de retorno — el usuario veía "guardado" aunque Firestore
+// hubiera rechazado el escrito (ej. documento de 1MB lleno). En vez de perseguir cada call site,
+// se dispara un evento global aquí mismo: index.astro escucha una sola vez y muestra un aviso
+// sin importar si quien llamó revisó el resultado o no.
+function avisarErrorGuardado(operacion, error) {
+  console.error(`Error al guardar (${operacion}):`, error);
+  if (typeof document !== "undefined") {
+    document.dispatchEvent(new CustomEvent("crm:write-error", {
+      detail: { operacion, mensaje: error?.code || error?.message || String(error) }
+    }));
+  }
+}
+
 const app  = firebaseEnabled ? initializeApp(firebaseConfig) : null;
 const db   = firebaseEnabled ? getFirestore(app) : null;
 const auth = firebaseEnabled ? getAuth(app) : null;
@@ -87,7 +101,7 @@ export async function guardarClientes(clientes) {
     await setDoc(docRef, { clientes: limpiar(clientes) }, { merge: true });
     return true;
   } catch (error) {
-    console.error("Error al guardar clientes en Firestore:", error);
+    avisarErrorGuardado("clientes", error);
     return { error: error?.code || error?.message || String(error) };
   }
 }
@@ -101,7 +115,7 @@ export async function guardarConfiguracion(versionesMercado, cartasTecnicas) {
     await setDoc(docRef, { versionesMercado, cartasTecnicas }, { merge: true });
     return { ok: true };
   } catch (error) {
-    console.error("Error al guardar configuración en Firestore:", error);
+    avisarErrorGuardado("configuración de versiones", error);
     return { ok: false, msg: error?.message || error?.code || String(error) };
   }
 }
@@ -115,7 +129,7 @@ export async function guardarPlantilla(plantillaMensaje) {
     await setDoc(docRef, { plantillaMensaje }, { merge: true });
     return true;
   } catch (error) {
-    console.error("Error al guardar la plantilla en Firestore:", error);
+    avisarErrorGuardado("plantilla de mensaje", error);
     return false;
   }
 }
@@ -129,7 +143,7 @@ export async function guardarTickets(tickets) {
     await setDoc(docRef, { tickets: limpiar(tickets) }, { merge: true });
     return true;
   } catch (error) {
-    console.error("Error al guardar tickets en Firestore:", error);
+    avisarErrorGuardado("tickets", error);
     return false;
   }
 }
@@ -143,7 +157,7 @@ export async function guardarContactos(contactos) {
     await setDoc(docRef, { contactos: limpiar(contactos) }, { merge: true });
     return true;
   } catch (error) {
-    console.error("Error al guardar contactos en Firestore:", error);
+    avisarErrorGuardado("contactos", error);
     return false;
   }
 }
@@ -157,7 +171,7 @@ export async function guardarConfigTickets(configTickets) {
     await setDoc(docRef, { configTickets }, { merge: true });
     return true;
   } catch (error) {
-    console.error("Error al guardar configuración de tickets en Firestore:", error);
+    avisarErrorGuardado("configuración de tickets", error);
     return false;
   }
 }
@@ -185,7 +199,7 @@ export async function guardarUsuarios(usuarios) {
     await setDoc(docRef, { usuarios }, { merge: true });
     return true;
   } catch (error) {
-    console.error("Error al guardar usuarios:", error);
+    avisarErrorGuardado("usuarios", error);
     return false;
   }
 }
@@ -199,7 +213,7 @@ export async function guardarEventosFB(eventos) {
     await setDoc(docRef, { eventos }, { merge: true });
     return true;
   } catch (error) {
-    console.error("Error al guardar eventos en Firestore:", error);
+    avisarErrorGuardado("eventos", error);
     return false;
   }
 }
@@ -213,7 +227,7 @@ export async function guardarPapelera(papelera) {
     await setDoc(docRef, { papelera }, { merge: true });
     return true;
   } catch (error) {
-    console.error("Error al guardar papelera en Firestore:", error);
+    avisarErrorGuardado("papelera", error);
     return false;
   }
 }
@@ -227,7 +241,7 @@ export async function guardarAcercaDe(acercaDe) {
     await setDoc(docRef, { acercaDe }, { merge: true });
     return true;
   } catch (error) {
-    console.error("Error al guardar Acerca De en Firestore:", error);
+    avisarErrorGuardado("Acerca De", error);
     return false;
   }
 }
@@ -241,7 +255,7 @@ export async function guardarConfigCorreo(configCorreo) {
     await setDoc(docRef, { configCorreo }, { merge: true });
     return true;
   } catch (error) {
-    console.error("Error al guardar configuración de correo en Firestore:", error);
+    avisarErrorGuardado("configuración de correo", error);
     return false;
   }
 }
@@ -255,7 +269,7 @@ export async function guardarBitacora(bitacora) {
     await setDoc(docRef, { bitacora }, { merge: true });
     return true;
   } catch (error) {
-    console.error("Error al guardar bitácora en Firestore:", error);
+    avisarErrorGuardado("bitácora", error);
     return false;
   }
 }
@@ -327,7 +341,7 @@ export async function guardarLogo(logoBase64) {
     await setDoc(docRef, { logoEmpresa: logoBase64 }, { merge: true });
     return true;
   } catch (error) {
-    console.error("Error al guardar logo:", error);
+    avisarErrorGuardado("logo", error);
     return false;
   }
 }
@@ -350,7 +364,7 @@ export async function guardarInteracciones(interacciones) {
     await setDoc(doc(db, "agenda", "datos"), { interacciones: limpiar(interacciones) }, { merge: true });
     return true;
   } catch (error) {
-    console.error("Error al guardar interacciones:", error);
+    avisarErrorGuardado("interacciones", error);
     return false;
   }
 }
@@ -360,7 +374,7 @@ export async function guardarTareas(tareas) {
     await setDoc(doc(db, "agenda", "datos"), { tareas: limpiar(tareas) }, { merge: true });
     return true;
   } catch (error) {
-    console.error("Error al guardar tareas:", error);
+    avisarErrorGuardado("tareas", error);
     return false;
   }
 }
@@ -370,7 +384,7 @@ export async function guardarFiltrosGuardados(filtrosGuardados) {
     await setDoc(doc(db, "agenda", "datos"), { filtrosGuardados: limpiar(filtrosGuardados) }, { merge: true });
     return true;
   } catch (error) {
-    console.error("Error al guardar filtros guardados:", error);
+    avisarErrorGuardado("filtros guardados", error);
     return false;
   }
 }
@@ -380,7 +394,7 @@ export async function guardarAlertasVencimiento(alertasVencimiento) {
     await setDoc(doc(db, "agenda", "datos"), { alertasVencimiento }, { merge: true });
     return true;
   } catch (error) {
-    console.error("Error al guardar alertas de vencimiento:", error);
+    avisarErrorGuardado("alertas de vencimiento", error);
     return false;
   }
 }
