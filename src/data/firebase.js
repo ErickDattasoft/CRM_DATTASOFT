@@ -399,6 +399,22 @@ export async function guardarAlertasVencimiento(alertasVencimiento) {
   }
 }
 
+/**
+ * Documento aparte y reducido (agenda/publico) con SOLO lo que las páginas públicas sin login
+ * (registro-evento.astro, ticket-publico.astro) necesitan mostrar: logo, nombre de empresa,
+ * correo de soporte y los datos públicos de eventos. Antes esas páginas leían agenda/datos
+ * completo (clientes, tickets con notas internas, todo) solo para sacar 3 campos.
+ */
+export async function guardarConfigPublica(datos) {
+  try {
+    await setDoc(doc(db, "agenda", "publico"), limpiar(datos), { merge: false });
+    return true;
+  } catch (error) {
+    avisarErrorGuardado("configuración pública", error);
+    return false;
+  }
+}
+
 export async function guardarInscripcionEvento(eventoId, registro) {
   try {
     const colRef = collection(db, "inscripciones_evento");

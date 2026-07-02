@@ -4110,7 +4110,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento } from "../data/firebase.js";
+import { firebaseEnabled, authListo, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica } from "../data/firebase.js";
 
 // ── Modal confirmación (reemplaza confirm() — funciona en móvil) ──
 function confirmar(msg: string, icon = "⚠️"): Promise<boolean> {
@@ -4412,6 +4412,26 @@ verificarSesion();
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "");
+  }
+
+  // Documento público reducido (agenda/publico) para que las páginas sin login
+  // (registro-evento.astro, ticket-publico.astro) dejen de leer agenda/datos completo
+  // (clientes, tickets con notas internas, todo) solo para sacar logo/nombre/correo/eventos.
+  // Se llama después de guardar logo/acercaDe/correoSoporte/eventos, y una vez al cargar la
+  // app, para que el documento público nunca se quede desactualizado.
+  async function sincronizarConfigPublica() {
+    if (crmLocalOnly || !firebaseEnabled) return;
+    const eventosPublicos = (eventos || []).map((e: any) => ({
+      id: e.id, nombre: e.nombre || "", fecha: e.fecha || "", hora: e.hora || "",
+      sistema: e.sistema || "", notas: e.notas || ""
+    }));
+    await guardarConfigPublica({
+      logoEmpresa: localStorage.getItem("crm_logo") || "",
+      nombreEmpresa: acercaDe?.nombre || "",
+      correoSoporte: configTickets?.correoSoporte || "",
+      tipos: configTickets?.tipos || [],
+      eventos: eventosPublicos
+    });
   }
 
   function safeParseLocal(key, fallback) {
@@ -5016,6 +5036,7 @@ verificarSesion();
           initStickyHeaders();
           checkLicenciasPorVencer();
           aplicarPermisosNavegacion();
+          sincronizarConfigPublica();
 
         } else {
           // ── ACTUALIZACIÓN REMOTA (otro dispositivo guardó algo) ───────
@@ -5194,7 +5215,7 @@ verificarSesion();
       fecha: document.getElementById("acerca-edit-fecha").value.trim() || "Junio 2025",
       notas: document.getElementById("acerca-edit-notas").value.trim()
     };
-    if (firebaseEnabled) guardarAcercaDe(acercaDe).catch(() => {});
+    if (firebaseEnabled) { guardarAcercaDe(acercaDe).catch(() => {}); sincronizarConfigPublica(); }
     cargarDatosAcercaDe();
     document.getElementById("acerca-de-vista").style.display = "flex";
     document.getElementById("acerca-de-form").style.display = "none";
@@ -7970,7 +7991,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     }
     mostrarEstado("💾 Guardando configuración...");
     const ok = await guardarConfigTickets(configTickets);
-    if (ok) { toast("💾 Configuración guardada"); ocultarEstado(); }
+    if (ok) { toast("💾 Configuración guardada"); ocultarEstado(); sincronizarConfigPublica(); }
     else { guardarLocal("crm_config_tickets", configTickets); mostrarEstado("⚠️ Guardado localmente", 3000); }
   });
 
@@ -7983,7 +8004,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       return;
     }
     const ok = await guardarConfigTickets(configTickets);
-    if (ok) toast("💾 Correo de soporte guardado");
+    if (ok) { toast("💾 Correo de soporte guardado"); sincronizarConfigPublica(); }
     else { guardarLocal("crm_config_tickets", configTickets); toast("⚠️ Sin conexión — guardado solo localmente", "warning"); }
   });
 
@@ -9371,7 +9392,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
   function guardarEventos() {
     localStorage.setItem("crm_eventos", JSON.stringify(eventos));
-    if (!crmLocalOnly && firebaseEnabled) guardarEventosFB(eventos);
+    if (!crmLocalOnly && firebaseEnabled) { guardarEventosFB(eventos); sincronizarConfigPublica(); }
   }
 
   function getEventoActivo() { return eventos.find(e => e.id === eventoActivoId) || null; }
@@ -11355,6 +11376,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           localStorage.setItem("crm_logo", base64);
           logoCargar();
           toast("✅ Logo guardado y sincronizado", "success");
+          sincronizarConfigPublica();
         } else {
           toast("❌ Error al guardar logo en Firestore — intenta de nuevo", "error");
         }
@@ -11376,6 +11398,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     localStorage.removeItem("crm_logo");
     logoCargar();
     toast("Logo eliminado");
+    sincronizarConfigPublica();
   });
 
   // Lightbox logo — clic en logo (sidebar o topbar) abre vista grande

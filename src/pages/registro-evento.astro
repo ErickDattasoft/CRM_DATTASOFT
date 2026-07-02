@@ -293,11 +293,15 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
       const appDiv = document.getElementById("app");
       const formCard = document.getElementById("form-card");
 
-      // Cargar datos de empresa (logo, nombre, correo admin)
+      // Cargar datos públicos (logo, nombre, correo admin, eventos) desde un documento aparte
+      // y reducido (agenda/publico) en vez de agenda/datos completo — ese documento grande
+      // trae también clientes y tickets con notas internas, que esta página nunca debería
+      // poder leer solo para mostrar un logo.
       let correoAdmin = "erick.casas@dattasoft.mx"; // fallback si aún no se guardó Configuración → Correo de soporte
       let nombreEmpresaCRM = "DATTASOFT";
+      let eventosPublicos = [];
       try {
-        const snap = await getDoc(doc(db, "agenda", "datos"));
+        const snap = await getDoc(doc(db, "agenda", "publico"));
         if (snap.exists()) {
           const d = snap.data();
           if (d.logoEmpresa) {
@@ -306,12 +310,13 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
             img.style.display = "block";
             document.getElementById("logo-fallback").style.display = "none";
           }
-          if (d.acercaDe?.nombre) {
-            nombreEmpresaCRM = d.acercaDe.nombre;
+          if (d.nombreEmpresa) {
+            nombreEmpresaCRM = d.nombreEmpresa;
             document.getElementById("empresa-nombre").textContent = nombreEmpresaCRM;
             document.title = `Registro — ${nombreEmpresaCRM}`;
           }
-          correoAdmin = d.configTickets?.correoSoporte || "erick.casas@dattasoft.mx";
+          correoAdmin = d.correoSoporte || "erick.casas@dattasoft.mx";
+          eventosPublicos = d.eventos || [];
         }
       } catch(e) {}
 
@@ -323,15 +328,8 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
         return;
       }
 
-      // Buscar evento
-      let evento = null;
-      try {
-        const snap = await getDoc(doc(db, "agenda", "datos"));
-        if (snap.exists()) {
-          const evts = snap.data().eventos || [];
-          evento = evts.find(e => e.id === eventoId);
-        }
-      } catch(e) { console.error(e); }
+      // Buscar evento (ya viene en el mismo documento público cargado arriba)
+      const evento = eventosPublicos.find(e => e.id === eventoId) || null;
 
       if (!evento) {
         showNotFound("Evento no encontrado", "El evento que buscas ya no está disponible o el link es incorrecto.");

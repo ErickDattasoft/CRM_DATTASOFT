@@ -360,14 +360,17 @@
       try {
         const token = await getAnonToken();
         if (!token) return;
+        // agenda/publico: documento aparte y reducido con solo lo que esta página necesita —
+        // antes leía agenda/datos completo (clientes, tickets con notas internas, todo) solo
+        // para sacar el logo, el correo de soporte y la lista de tipos.
         const resp = await fetch(
-          `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/agenda/datos`,
+          `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/agenda/publico`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         if (!resp.ok) return;
         const data = await resp.json();
-        correoSoporteAdmin = data?.fields?.configTickets?.mapValue?.fields?.correoSoporte?.stringValue || "";
-        const tiposValues = data?.fields?.configTickets?.mapValue?.fields?.tipos?.arrayValue?.values || [];
+        correoSoporteAdmin = data?.fields?.correoSoporte?.stringValue || "";
+        const tiposValues = data?.fields?.tipos?.arrayValue?.values || [];
         const tipos = tiposValues.map((v: any) => v.stringValue).filter(Boolean);
         const selTipo = document.getElementById("pub-tipo") as HTMLSelectElement | null;
         if (selTipo && tipos.length > 0) {
