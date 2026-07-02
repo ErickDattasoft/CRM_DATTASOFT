@@ -7517,7 +7517,13 @@ verificarSesion();
       const enviarCorreo = document.getElementById("chk-enviar-correo")?.checked;
       if (enviarCorreo) await enviarNotificacionTicket(nuevoTicket);
     } else {
-      const t = tickets[parseInt(idx)];
+      const t = tickets.find(tk => tk.numero === parseInt(idx));
+      if (!t) {
+        toast("⚠️ Este ticket ya no existe (fue eliminado en otro dispositivo)", "error");
+        cerrarFormTicket();
+        renderTickets();
+        return;
+      }
       const adjuntosExistentes = t.adjuntos || [];
       Object.assign(t, { asunto, empresa, contacto, contactoCorreo, tipo, sistema, estado, prioridad, grupo, agente,
         descripcion, notasInternas, cc, cco, referido, solicitado, canalizado, realizado,
@@ -7548,7 +7554,9 @@ verificarSesion();
     const t = tickets[idx];
     cerrarFormTicket();
     document.getElementById("form-tk-titulo").textContent = "✏️ Editar Ticket";
-    editTkIdx.value = idx;
+    // Se guarda el folio (t.numero), no la posición en el arreglo — ver comentario junto a
+    // ticketDetalleNumero más abajo para la misma razón.
+    editTkIdx.value = String(t.numero);
     document.getElementById("form-tk-contacto").value = t.contacto || "";
     document.getElementById("form-tk-correo-contacto").value = t.contactoCorreo || "";
     document.getElementById("form-tk-empresa").value = t.empresa || "";
@@ -7588,13 +7596,17 @@ verificarSesion();
   }
 
   // Ticket Detail Modal
-  let ticketDetalleIdx = null;
+  // Se guarda el folio (t.numero), no la posición en el arreglo: si mientras el modal está
+  // abierto otro dispositivo crea/edita/mueve tickets, tickets[idx] podría ya no ser el mismo
+  // ticket que se está viendo — buscar por folio es estable sin importar el orden del arreglo.
+  let ticketDetalleNumero: number | null = null;
+  function ticketPorNumero(numero: number | null) { return tickets.find(t => t.numero === numero) || null; }
   const modalDetalle = document.getElementById("modal-detalle-ticket");
 
   function abrirDetalleTicket(e) {
     const idx = parseInt(e.target.closest("button").dataset.idx);
-    ticketDetalleIdx = idx;
     const t = tickets[idx];
+    ticketDetalleNumero = t.numero;
 
     document.getElementById("det-tk-num").textContent = `Folio #${t.numero}`;
     document.getElementById("det-tk-asunto").textContent = t.asunto;
@@ -7659,7 +7671,7 @@ verificarSesion();
 
   function cerrarDetalleTicket() {
     if (modalDetalle) modalDetalle.style.display = "none";
-    ticketDetalleIdx = null;
+    ticketDetalleNumero = null;
     document.getElementById("txtNuevaNotaTicket").value = "";
   }
 
@@ -7669,13 +7681,14 @@ verificarSesion();
   });
 
   document.getElementById("btnReenviarCorreoTicket")?.addEventListener("click", async (e) => {
-    if (ticketDetalleIdx === null) return;
+    if (ticketDetalleNumero === null) return;
+    const t = ticketPorNumero(ticketDetalleNumero);
+    if (!t) { toast("⚠️ Este ticket ya no existe (fue eliminado)", "error"); cerrarDetalleTicket(); return; }
     const btn = e.currentTarget as HTMLButtonElement;
     btn.disabled = true;
     const textoOriginal = btn.textContent;
     btn.textContent = "Enviando...";
     try {
-      const t = tickets[ticketDetalleIdx];
       await enviarNotificacionTicket(t);
     } finally {
       btn.disabled = false;
@@ -7684,10 +7697,11 @@ verificarSesion();
   });
 
   document.getElementById("btnAgregarNotaTicket")?.addEventListener("click", async () => {
-    if (ticketDetalleIdx === null) return;
+    if (ticketDetalleNumero === null) return;
+    const t = ticketPorNumero(ticketDetalleNumero);
+    if (!t) { toast("⚠️ Este ticket ya no existe (fue eliminado)", "error"); cerrarDetalleTicket(); return; }
     const txt = document.getElementById("txtNuevaNotaTicket").value.trim();
     const nuevoEstado = document.getElementById("selectCambiarEstadoDetalle")?.value;
-    const t = tickets[ticketDetalleIdx];
 
     const nuevoReferido = (document.getElementById("det-tk-referido") as HTMLInputElement)?.value.trim() || "";
     const nuevoSolicitado = (document.getElementById("det-tk-solicitado") as HTMLInputElement)?.value.trim() || "";
