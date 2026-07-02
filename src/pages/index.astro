@@ -8699,7 +8699,10 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const reader = new FileReader();
     reader.onload = e => {
       try {
-        const data = JSON.parse(e.target.result);
+        const raw = JSON.parse(e.target.result);
+        // "Backup Completo" (descargarBackupCompleto) anida todo bajo .datos; "Exportar JSON"
+        // (btnExportarJSON) lo deja plano. Se aceptan ambos formatos.
+        const data = raw.datos || raw;
         jsonImportData = data;
         const mode = document.getElementById("json-import-mode")?.value || "full";
         const info = document.getElementById("import-json-info");
@@ -8708,6 +8711,18 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         if (mode === "full" || mode === "empresas") resumen += `• Empresas: <strong>${(data.clientes||[]).length}</strong><br>`;
         if (mode === "full" || mode === "contactos") resumen += `• Contactos: <strong>${(data.contactos||[]).length}</strong><br>`;
         if (mode === "full" || mode === "tickets") resumen += `• Tickets: <strong>${(data.tickets||[]).length}</strong><br>`;
+        if (mode === "full") {
+          if (Array.isArray(data.usuarios) && data.usuarios.length) resumen += `• Usuarios: <strong>${data.usuarios.length}</strong><br>`;
+          if (Array.isArray(data.eventos) && data.eventos.length) resumen += `• Eventos: <strong>${data.eventos.length}</strong><br>`;
+          if (Array.isArray(data.knowledge_base) && data.knowledge_base.length) resumen += `• Base de Conocimiento: <strong>${data.knowledge_base.length}</strong><br>`;
+          if (Array.isArray(data.interacciones) && data.interacciones.length) resumen += `• Interacciones: <strong>${data.interacciones.length}</strong><br>`;
+          if (Array.isArray(data.tareas) && data.tareas.length) resumen += `• Tareas: <strong>${data.tareas.length}</strong><br>`;
+          if (Array.isArray(data.filtrosGuardados) && data.filtrosGuardados.length) resumen += `• Filtros guardados: <strong>${data.filtrosGuardados.length}</strong><br>`;
+          if (data.configTickets) resumen += `• Configuración de tickets<br>`;
+          if (data.configCorreo) resumen += `• Configuración de correo<br>`;
+          if (data.acercaDe) resumen += `• Acerca de<br>`;
+          if (data.logoEmpresa) resumen += `• Logo de empresa<br>`;
+        }
         if (!resumen) resumen = "No se encontraron datos para el modo seleccionado.";
         if (info) { info.innerHTML = `<strong>📄 ${file.name}</strong><br>${resumen}`; info.classList.remove("hidden"); }
         if (actions) actions.style.display = "flex";
@@ -8741,6 +8756,100 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       tickets.push(...nuevos);
       msg += `✅ ${nuevos.length} tickets importados. `;
       if (crmLocalOnly) guardarLocal("crm_tickets", tickets); else await guardarTickets(tickets);
+    }
+
+    // Resto del "Backup Completo" — solo en modo CRM Completo. Todo es aditivo (nunca se
+    // sobreescribe ni se borra lo que ya existe) salvo los campos de configuración/objeto
+    // único, que sí se restauran tal cual vengan en el backup (es el propósito de restaurar).
+    if (mode === "full") {
+      if (Array.isArray(jsonImportData.usuarios) && jsonImportData.usuarios.length) {
+        const usuariosActuales = safeParseLocal("crm_usuarios", []);
+        const nuevosUsuarios = jsonImportData.usuarios.filter(u => !usuariosActuales.find((x: any) => x.nombre === u.nombre));
+        if (nuevosUsuarios.length) {
+          const usuariosFinal = [...usuariosActuales, ...nuevosUsuarios];
+          saveUsuariosLocal(usuariosFinal);
+          if (!crmLocalOnly) await guardarUsuarios(usuariosFinal);
+          msg += `✅ ${nuevosUsuarios.length} usuarios importados. `;
+        }
+      }
+      if (Array.isArray(jsonImportData.eventos) && jsonImportData.eventos.length) {
+        const nuevosEventos = jsonImportData.eventos.filter((e: any) => !eventos.find((x: any) => x.id === e.id));
+        if (nuevosEventos.length) {
+          eventos.push(...nuevosEventos);
+          if (crmLocalOnly) guardarLocal("crm_eventos", eventos); else await guardarEventosFB(eventos);
+          msg += `✅ ${nuevosEventos.length} eventos importados. `;
+        }
+      }
+      if (Array.isArray(jsonImportData.interacciones) && jsonImportData.interacciones.length) {
+        const nuevasInt = jsonImportData.interacciones.filter((i: any) => !interacciones.find((x: any) => x.id === i.id));
+        if (nuevasInt.length) {
+          interacciones.push(...nuevasInt);
+          if (!crmLocalOnly) await guardarInteracciones(interacciones);
+          msg += `✅ ${nuevasInt.length} interacciones importadas. `;
+        }
+      }
+      if (Array.isArray(jsonImportData.tareas) && jsonImportData.tareas.length) {
+        const nuevasTareas = jsonImportData.tareas.filter((t: any) => !tareas.find((x: any) => x.id === t.id));
+        if (nuevasTareas.length) {
+          tareas.push(...nuevasTareas);
+          if (!crmLocalOnly) await guardarTareas(tareas);
+          msg += `✅ ${nuevasTareas.length} tareas importadas. `;
+        }
+      }
+      if (Array.isArray(jsonImportData.filtrosGuardados) && jsonImportData.filtrosGuardados.length) {
+        const nuevosFiltros = jsonImportData.filtrosGuardados.filter((f: any) => !filtrosGuardados.find((x: any) => x.nombre === f.nombre));
+        if (nuevosFiltros.length) {
+          filtrosGuardados.push(...nuevosFiltros);
+          if (!crmLocalOnly) await guardarFiltrosGuardados(filtrosGuardados);
+          msg += `✅ ${nuevosFiltros.length} filtros importados. `;
+        }
+      }
+      if (Array.isArray(jsonImportData.knowledge_base) && jsonImportData.knowledge_base.length && !crmLocalOnly) {
+        let nKB = 0;
+        for (const doc of jsonImportData.knowledge_base) {
+          const { id, _fbId, created_at, updated_at, content_updated_at, ...docData } = doc;
+          const yaExiste = kbDocs.some((x: any) => x.titulo === doc.titulo && x.sourcePath === doc.sourcePath);
+          if (!yaExiste) { await crearDocKB(docData); nKB++; }
+        }
+        if (nKB) msg += `✅ ${nKB} documentos de KB importados. `;
+      }
+      if (jsonImportData.configTickets) {
+        configTickets = { ...configTickets, ...jsonImportData.configTickets };
+        if (crmLocalOnly) guardarLocal("crm_config_tickets", configTickets); else await guardarConfigTickets(configTickets);
+        msg += `✅ Configuración de tickets restaurada. `;
+      }
+      if (jsonImportData.configCorreo) {
+        configCorreo = jsonImportData.configCorreo;
+        if (!crmLocalOnly) await guardarConfigCorreo(configCorreo);
+        msg += `✅ Configuración de correo restaurada. `;
+      }
+      if (jsonImportData.acercaDe) {
+        acercaDe = jsonImportData.acercaDe;
+        if (!crmLocalOnly) await guardarAcercaDe(acercaDe);
+        msg += `✅ "Acerca de" restaurado. `;
+      }
+      if (jsonImportData.alertasVencimiento) {
+        alertasVencimiento = jsonImportData.alertasVencimiento;
+        if (!crmLocalOnly) await guardarAlertasVencimiento(alertasVencimiento);
+      }
+      if (jsonImportData.logoEmpresa) {
+        localStorage.setItem("crm_logo", jsonImportData.logoEmpresa);
+        if (!crmLocalOnly) await guardarLogo(jsonImportData.logoEmpresa);
+        logoCargar();
+        msg += `✅ Logo restaurado. `;
+      }
+      if (jsonImportData.versionesMercado && Object.values(jsonImportData.versionesMercado).some((v: any) => v)) {
+        versionesMercado = { ...versionesMercado, ...jsonImportData.versionesMercado };
+        if (!crmLocalOnly) await guardarConfiguracion(versionesMercado, cartasTecnicas);
+      }
+      if (jsonImportData.cartasTecnicas && Object.values(jsonImportData.cartasTecnicas).some((v: any) => v)) {
+        cartasTecnicas = { ...cartasTecnicas, ...jsonImportData.cartasTecnicas };
+        if (!crmLocalOnly) await guardarConfiguracion(versionesMercado, cartasTecnicas);
+      }
+      if (jsonImportData.plantillaMensaje) {
+        plantillaMensaje = jsonImportData.plantillaMensaje;
+        if (!crmLocalOnly) await guardarPlantilla(plantillaMensaje);
+      }
     }
 
     toast(msg || "Sin cambios realizados.");
