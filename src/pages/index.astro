@@ -4902,14 +4902,25 @@ verificarSesion();
               }
             }
 
-            // Carga inicial de bitácora: fusionar Firebase + entradas locales aún no confirmadas
+            // Carga inicial de bitácora: fusionar Firebase + entradas locales aún no confirmadas.
+            // Mismo límite de 60 días que aplica logBitacora() en cada escritura — si no, un
+            // documento viejo (de antes de que existiera el límite, o restaurado de un backup)
+            // se queda creciendo indefinidamente hasta que alguien loguee algo nuevo.
             if (datos.bitacora && datos.bitacora.length > 0) {
               const fechasFB = new Set(datos.bitacora.map(e => e.fecha));
               const localExtras = bitacoraLog.filter(e => !fechasFB.has(e.fecha));
-              bitacoraLog = [...localExtras, ...datos.bitacora].sort(
-                (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
-              );
+              const limite60Carga = new Date();
+              limite60Carga.setDate(limite60Carga.getDate() - 60);
+              const fusionSinFiltrar = [...localExtras, ...datos.bitacora];
+              bitacoraLog = fusionSinFiltrar
+                .filter(e => new Date(e.fecha) >= limite60Carga)
+                .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
               guardarLocal("crm_bitacora", bitacoraLog);
+              // Si el filtro recortó algo (documento viejo con entradas de +60 días), reflejarlo
+              // también en Firestore para que el documento compartido no siga creciendo de más.
+              if (bitacoraLog.length < fusionSinFiltrar.length && firebaseEnabled && !crmLocalOnly) {
+                guardarBitacora(bitacoraLog).catch(err => console.error("[Bitácora] Error al recortar en Firebase:", err));
+              }
             }
             // Respaldo en localStorage (caché para offline) — solo si hay datos reales
             if (clientes.length > 0) guardarLocal("crm_clientes", clientes);
