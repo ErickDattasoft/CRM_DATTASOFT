@@ -5275,9 +5275,16 @@ verificarSesion();
   tkAttachInput?.addEventListener("change", () => { if (tkAttachInput.files.length) procesarAdjuntos(Array.from(tkAttachInput.files)); });
 
   function procesarAdjuntos(files) {
-    const allowed = ["image/png", "image/jpeg", "image/jpg", "application/pdf", "text/xml", "application/xml"];
+    // Antes: "MIME permitido O termina en .xml" dejaba pasar CUALQUIER archivo con solo
+    // renombrarlo a *.xml (el MIME real no importaba). Ahora exige extensión Y MIME consistentes.
+    const permitidos = {
+      png: ["image/png"], jpg: ["image/jpeg", "image/jpg"], jpeg: ["image/jpeg", "image/jpg"],
+      pdf: ["application/pdf"], xml: ["text/xml", "application/xml", ""],
+    };
     files.forEach(f => {
-      if (!allowed.includes(f.type) && !f.name.endsWith(".xml")) { toast(`⚠️ Tipo no permitido: ${f.name}`, "error"); return; }
+      const ext = (f.name.split(".").pop() || "").toLowerCase();
+      const mimesValidos = permitidos[ext];
+      if (!mimesValidos || !mimesValidos.includes(f.type)) { toast(`⚠️ Tipo no permitido: ${f.name}`, "error"); return; }
       if (f.size > 5 * 1024 * 1024) { toast(`⚠️ ${f.name} supera 5MB`, "error"); return; }
       const reader = new FileReader();
       reader.onload = ev => {
