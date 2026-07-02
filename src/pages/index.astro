@@ -33,7 +33,7 @@ try {
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>DATTASOFT BY INFOXPERT CRM — Panel de Control</title>
   <meta name="description" content="CRM Técnico para gestión de empresas, versiones de sistemas CONTPAQi y soporte técnico.">
   <meta name="theme-color" content="#6366f1">
@@ -259,7 +259,7 @@ try {
 
     /* Top bar */
     .topbar {
-      padding: 16px 30px;
+      padding: calc(16px + env(safe-area-inset-top)) 30px 16px;
       border-bottom: 1px solid var(--border-color);
       display: flex;
       justify-content: space-between;
@@ -1128,16 +1128,23 @@ try {
     }
 
     /* ===== TOAST ===== */
-    .toast {
+    #toast-container {
       position: fixed;
       bottom: 24px;
       right: 24px;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: flex-end;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .toast {
       padding: 12px 24px;
       border-radius: var(--radius-md);
       font-weight: 600;
       font-size: 0.85rem;
       color: white;
-      z-index: 99999;
       animation: toastIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
       box-shadow: var(--shadow-xl);
     }
@@ -1156,7 +1163,7 @@ try {
       align-items: center;
       gap: 10px;
       position: fixed;
-      top: 20px;
+      top: calc(20px + env(safe-area-inset-top));
       right: 20px;
       background: rgba(15, 17, 23, 0.95);
       border: 1px solid var(--border-color);
@@ -1413,6 +1420,7 @@ try {
         width: 260px !important;
         min-width: 260px !important;
         overflow: hidden !important;
+        padding-top: env(safe-area-inset-top);
       }
       .sidebar.mobile-open {
         transform: translateX(0);
@@ -1436,7 +1444,7 @@ try {
       .main-content { width: 100%; }
 
       /* Topbar más compacto */
-      .topbar { padding: 12px 16px; }
+      .topbar { padding: calc(12px + env(safe-area-inset-top)) 16px 12px; }
       .topbar-actions .btn { display: none; }
 
       /* Content scroll con padding menor */
@@ -2731,9 +2739,12 @@ try {
 
         <div class="card">
           <div class="card-title">📧 Correo de Soporte</div>
-          <div class="form-group" style="max-width:400px; margin-bottom:16px;">
+          <div class="form-group" style="max-width:460px; margin-bottom:16px;">
             <label>Correo(s) que reciben notificaciones de tickets</label>
-            <input id="cfg-correo-soporte" type="email" multiple value="erick.casas@dattasoft.mx">
+            <div style="display:flex; gap:8px; align-items:flex-start;">
+              <input id="cfg-correo-soporte" type="email" multiple value="erick.casas@dattasoft.mx" style="flex:1;">
+              <button id="btn-guardar-correo-soporte" class="btn btn-primary btn-sm" style="white-space:nowrap;">💾 Guardar</button>
+            </div>
             <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">Cuando un cliente crea un ticket desde el portal público, la notificación llega a este o estos correos (sepáralos con coma, ej. <code>erick.casas@dattasoft.mx, soporte@dattasoft.mx</code>). El primer correo de la lista también se usa como remitente en confirmaciones al cliente.</span>
           </div>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; padding:12px 14px; background:rgba(99,102,241,0.06); border-radius:8px; border:1px solid rgba(99,102,241,0.15);">
@@ -4323,11 +4334,17 @@ verificarSesion();
   }
 
   function toast(msg, type = "success") {
+    let container = document.getElementById("toast-container");
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "toast-container";
+      document.body.appendChild(container);
+    }
     const tiposValidos = ["success", "error", "warning", "info"];
     const el = document.createElement("div");
     el.className = `toast toast-${tiposValidos.includes(type) ? type : "info"}`;
     el.textContent = msg;
-    document.body.appendChild(el);
+    container.appendChild(el);
     setTimeout(() => el.remove(), 2500);
   }
 
@@ -6514,12 +6531,15 @@ verificarSesion();
 
   async function enviarNotificacionTicket(t) {
     const mailTo = t.contactoCorreo || contactos.find(c => c.nombre === t.contacto)?.correo || "";
-    if (!mailTo) { toast("⚠️ El contacto no tiene correo registrado", "warning"); return { ok: false }; }
     const soporteEmails = parseEmailList(configTickets.correoSoporte);
-    const mailReplyTo = soporteEmails[0] || "";
-    const mailCC = [...new Set([...soporteEmails, ...parseEmailList(t.cc || "")])].filter(e => e !== mailTo).join(",");
+    const ccTicket = parseEmailList(t.cc || "");
     const mailSubject = `[Ticket #${t.numero}] ${t.asunto}`;
+    const avisoSinContacto = mailTo ? "" : `
+      <p style="background:#fef3c7; color:#92400e; padding:8px 12px; border-radius:6px; font-family:sans-serif; font-size:13px;">
+        ⚠️ El contacto no tiene correo registrado — este ticket no se notificó al cliente.
+      </p>`;
     const htmlTicket = `
+      ${avisoSinContacto}
       <h2 style="color:#4f46e5; font-family:sans-serif;">[Ticket #${t.numero}] ${t.asunto}</h2>
       <table style="border-collapse:collapse; width:100%; font-family:sans-serif; font-size:14px;">
         <tr><td style="padding:6px 12px; font-weight:bold; background:#f3f4f6; width:130px;">Empresa</td><td style="padding:6px 12px;">${t.empresa || ""}</td></tr>
@@ -6533,9 +6553,27 @@ verificarSesion();
       <hr style="margin-top:24px; border:none; border-top:1px solid #e5e7eb;">
       <p style="font-size:12px; color:#6b7280; font-family:sans-serif;">DATTASOFT BY INFOXPERT — Sistema de Tickets</p>
     `;
-    const sent = await enviarEmailConProveedor({ to: mailTo, subject: mailSubject, html: htmlTicket, replyTo: mailReplyTo, cc: mailCC });
-    if (sent?.ok) { toast(`✉️ Notificación enviada a ${mailTo}`); logBitacora(`✉️ Correo enviado a ${mailTo} — Ticket #${t.numero}`, "📧"); }
-    else toast(`⚠️ No se pudo enviar: ${sent?.error || "error desconocido"}`, "error");
+
+    let sent;
+    if (mailTo) {
+      const mailReplyTo = soporteEmails[0] || "";
+      const mailCC = [...new Set([...soporteEmails, ...ccTicket])].filter(e => e !== mailTo).join(",");
+      sent = await enviarEmailConProveedor({ to: mailTo, subject: mailSubject, html: htmlTicket, replyTo: mailReplyTo, cc: mailCC });
+      if (sent?.ok) { toast(`✉️ Notificación enviada a ${mailTo}`); logBitacora(`✉️ Correo enviado a ${mailTo} — Ticket #${t.numero}`, "📧"); }
+      else toast(`⚠️ No se pudo enviar: ${sent?.error || "error desconocido"}`, "error");
+      return sent;
+    }
+
+    // Sin correo de contacto: notificar de todos modos a soporte/CC, no abortar en silencio.
+    const destinatarios = [...new Set([...soporteEmails, ...ccTicket])];
+    if (!destinatarios.length) {
+      toast("⚠️ El contacto no tiene correo y no hay correo de soporte configurado — no se pudo notificar a nadie", "warning");
+      return { ok: false };
+    }
+    toast("⚠️ El contacto no tiene correo registrado — se notificó solo a soporte", "warning");
+    sent = await enviarEmailConProveedor({ to: destinatarios, subject: mailSubject, html: htmlTicket, replyTo: soporteEmails[0] || "" });
+    if (sent?.ok) logBitacora(`✉️ Correo enviado a soporte (sin contacto) — Ticket #${t.numero}`, "📧");
+    else toast(`⚠️ No se pudo notificar a soporte: ${sent?.error || "error desconocido"}`, "error");
     return sent;
   }
 
@@ -7462,10 +7500,15 @@ verificarSesion();
     cont.scrollTop = cont.scrollHeight;
   }
 
-  document.getElementById("btnCerrarDetalle")?.addEventListener("click", () => {
+  function cerrarDetalleTicket() {
     if (modalDetalle) modalDetalle.style.display = "none";
     ticketDetalleIdx = null;
     document.getElementById("txtNuevaNotaTicket").value = "";
+  }
+
+  document.getElementById("btnCerrarDetalle")?.addEventListener("click", cerrarDetalleTicket);
+  modalDetalle?.addEventListener("click", (e) => {
+    if (e.target === modalDetalle) cerrarDetalleTicket();
   });
 
   document.getElementById("btnReenviarCorreoTicket")?.addEventListener("click", async (e) => {
@@ -7738,6 +7781,19 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const ok = await guardarConfigTickets(configTickets);
     if (ok) { toast("💾 Configuración guardada"); ocultarEstado(); }
     else { guardarLocal("crm_config_tickets", configTickets); mostrarEstado("⚠️ Guardado localmente", 3000); }
+  });
+
+  document.getElementById("btn-guardar-correo-soporte")?.addEventListener("click", async () => {
+    configTickets.correoSoporte = document.getElementById("cfg-correo-soporte").value.trim();
+    updateMailProviderHelp();
+    if (crmLocalOnly) {
+      guardarLocal("crm_config_tickets", configTickets);
+      toast("💾 Correo de soporte guardado (Local)");
+      return;
+    }
+    const ok = await guardarConfigTickets(configTickets);
+    if (ok) toast("💾 Correo de soporte guardado");
+    else { guardarLocal("crm_config_tickets", configTickets); toast("⚠️ Sin conexión — guardado solo localmente", "warning"); }
   });
 
   // SLA config load
@@ -8632,7 +8688,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
   async function descargarBackupCompleto() {
     const backup = {
-      version: "2.0",
+      version: "2.1",
       app: "CRM DATTASOFT",
       fecha: new Date().toISOString(),
       datos: {
@@ -8643,12 +8699,18 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         cartasTecnicas,
         plantillaMensaje,
         configTickets,
+        configCorreo,
         bitacora: bitacoraLog,
         usuarios: safeParseLocal("crm_usuarios", []),
         knowledge_base: kbDocs.length ? kbDocs : safeParseLocal("crm_kb", []),
         papelera,
         acercaDe,
-        eventos
+        eventos,
+        interacciones,
+        tareas,
+        filtrosGuardados,
+        alertasVencimiento,
+        logoEmpresa: localStorage.getItem("crm_logo") || ""
       }
     };
     const json = JSON.stringify(backup, null, 2);
