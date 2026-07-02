@@ -276,6 +276,16 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
     const params  = new URLSearchParams(location.search);
     const eventoId = params.get("id");
 
+    // Página pública sin login — cualquier visitante puede escribir cualquier cosa en el
+    // formulario. Sin esto, un nombre/empresa tipo <img src=x onerror=...> se insertaba tal
+    // cual en el correo de confirmación y en el correo de aviso al admin.
+    function escapeHtml(s) {
+      return (s === null || s === undefined) ? "" : String(s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+    const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+
     async function main() {
       try { await signInAnonymously(auth); } catch(e) { console.warn("Auth:", e); }
 
@@ -391,8 +401,10 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
       document.getElementById("form-registro").addEventListener("submit", async (e) => {
         e.preventDefault();
         const nombre = document.getElementById("r-nombre").value.trim();
-        const correo = document.getElementById("r-correo").value.trim();
+        // minúsculas para que "Foo@x.com" y "foo@X.com" no generen dos inscripciones distintas
+        const correo = document.getElementById("r-correo").value.trim().toLowerCase();
         if (!nombre || !correo) return;
+        if (!isValidEmail(correo)) { alert("Ingresa un correo electrónico válido."); return; }
 
         const btn = document.getElementById("btn-submit");
         btn.disabled = true;
@@ -411,7 +423,7 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
               <div class="state-box state-success">
                 <span class="state-icon">ℹ️</span>
                 <div class="state-title">Ya estás registrado</div>
-                <div class="state-subtitle">Tu correo <strong>${correo}</strong> ya fue registrado para este evento. ¡Te esperamos!</div>
+                <div class="state-subtitle">Tu correo <strong>${escapeHtml(correo)}</strong> ya fue registrado para este evento. ¡Te esperamos!</div>
               </div>`;
             return;
           }
@@ -445,7 +457,7 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
     <h1 style="color:#fff;font-size:1.4rem;font-weight:800;margin:0;">¡Registro confirmado!</h1>
   </div>
   <div style="padding:28px 32px;background:#141827;color:#cbd5e1;">
-    <p style="font-size:1rem;margin-bottom:20px;">Hola <strong style="color:#a5b4fc;">${nombre}</strong>, quedaste registrado para:</p>
+    <p style="font-size:1rem;margin-bottom:20px;">Hola <strong style="color:#a5b4fc;">${escapeHtml(nombre)}</strong>, quedaste registrado para:</p>
     <div style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:12px;padding:20px 24px;margin-bottom:24px;">
       <div style="font-size:1.15rem;font-weight:800;color:#e2e8f0;margin-bottom:10px;">${evento.nombre || ""}</div>
       ${fechaLarga ? `<div style="color:#94a3b8;font-size:0.9rem;">📅 ${fechaLarga}${horaStr}</div>` : ""}
@@ -467,11 +479,11 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
   <h2 style="color:#1e293b;border-bottom:2px solid #6366f1;padding-bottom:8px;">🔔 Nuevo registro en evento</h2>
   <p style="color:#475569;margin-bottom:16px;"><strong>${evento.nombre || eventoId}</strong>${fechaLarga ? " — " + fechaLarga : ""}</p>
   <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
-    <tr style="background:#f8fafc;"><td style="padding:10px 14px;font-weight:600;border-bottom:1px solid #e2e8f0;color:#334155;width:36%;">Nombre</td><td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;">${nombre}</td></tr>
-    ${empresaReg ? `<tr><td style="padding:10px 14px;font-weight:600;border-bottom:1px solid #e2e8f0;color:#334155;">Empresa</td><td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;">${empresaReg}</td></tr>` : ""}
-    <tr style="background:#f8fafc;"><td style="padding:10px 14px;font-weight:600;border-bottom:1px solid #e2e8f0;color:#334155;">Correo</td><td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;"><a href="mailto:${correo}" style="color:#6366f1;">${correo}</a></td></tr>
-    ${telefono ? `<tr><td style="padding:10px 14px;font-weight:600;border-bottom:1px solid #e2e8f0;color:#334155;">Teléfono</td><td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;">${telefono}</td></tr>` : ""}
-    ${fuente ? `<tr style="background:#f8fafc;"><td style="padding:10px 14px;font-weight:600;color:#334155;">Fuente</td><td style="padding:10px 14px;">${fuente}</td></tr>` : ""}
+    <tr style="background:#f8fafc;"><td style="padding:10px 14px;font-weight:600;border-bottom:1px solid #e2e8f0;color:#334155;width:36%;">Nombre</td><td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;">${escapeHtml(nombre)}</td></tr>
+    ${empresaReg ? `<tr><td style="padding:10px 14px;font-weight:600;border-bottom:1px solid #e2e8f0;color:#334155;">Empresa</td><td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;">${escapeHtml(empresaReg)}</td></tr>` : ""}
+    <tr style="background:#f8fafc;"><td style="padding:10px 14px;font-weight:600;border-bottom:1px solid #e2e8f0;color:#334155;">Correo</td><td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;"><a href="mailto:${escapeHtml(correo)}" style="color:#6366f1;">${escapeHtml(correo)}</a></td></tr>
+    ${telefono ? `<tr><td style="padding:10px 14px;font-weight:600;border-bottom:1px solid #e2e8f0;color:#334155;">Teléfono</td><td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;">${escapeHtml(telefono)}</td></tr>` : ""}
+    ${fuente ? `<tr style="background:#f8fafc;"><td style="padding:10px 14px;font-weight:600;color:#334155;">Fuente</td><td style="padding:10px 14px;">${escapeHtml(fuente)}</td></tr>` : ""}
   </table>
   <p style="margin-top:20px;font-size:0.78rem;color:#94a3b8;">Puedes ver todos los inscritos en CRM → Eventos → 👥 Inscritos.</p>
 </div>`;
