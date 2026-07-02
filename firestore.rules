@@ -1,16 +1,78 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Portal público: cualquier visitante puede crear tickets (sin login).
-    // No pueden leer, editar ni borrar — solo enviar.
-    match /tickets_publicos/{docId} {
-      allow create: if true;
-      allow read, update, delete: if request.auth != null;
+
+    // ⚠️ Este archivo es la fuente de verdad en el repo, pero NO se despliega solo — no hay
+    // Firebase CLI configurado en este proyecto. Para que estas reglas queden activas de
+    // verdad hay que copiarlas manualmente en Firebase Console → Firestore Database → Reglas.
+
+    // "Staff aprobado": sesión real de Firebase (no anónima) Y con un documento en
+    // staff_aprobado que un admin creó al aprobar su acceso (ver otorgarAccesoStaff() en
+    // firebase.js). Antes de este cierre, cualquier sesión anónima contaba como válida —
+    // cualquiera que abriera cualquier página del sitio podía leer/escribir todo.
+    function esStaffAprobado() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider != 'anonymous'
+        && exists(/databases/$(database)/documents/staff_aprobado/$(request.auth.token.email));
     }
 
-    // El resto del CRM requiere autenticación (anónima o real).
+    // Portal público de tickets: cualquier visitante puede crear (sin login).
+    // Solo staff aprobado puede leer/editar/borrar — antes cualquier sesión anónima
+    // (incluida la de otro visitante cualquiera) podía leer el buzón completo de tickets.
+    match /tickets_publicos/{docId} {
+      allow create: if true;
+      allow read, update, delete: if esStaffAprobado();
+    }
+
+    // Registro público a eventos: cualquiera puede crear, y el formulario público necesita
+    // poder LEER para el chequeo de "¿ya me registré con este correo?" antes de guardar.
+    // Nota (trade-off consciente): esto deja la lista de inscritos (nombre/correo/teléfono)
+    // visible a quien la consulte directo — es menos sensible que el resto de los datos del
+    // CRM (nada interno ahí), y restringirlo del todo rompería el formulario público sin
+    // rediseñarlo primero.
+    match /inscripciones_evento/{docId} {
+      allow create: if true;
+      allow read: if true;
+      allow update, delete: if esStaffAprobado();
+    }
+
+    // Documento público reducido — logo, nombre de empresa, correo de soporte, tipos de
+    // ticket y datos públicos de eventos. Nada de clientes/tickets/usuarios ahí.
+    match /agenda/publico {
+      allow read: if true;
+      allow write: if esStaffAprobado();
+    }
+
+    // Solicitudes de acceso ("Solicita acceso" en el login): cualquiera con sesión (incluso
+    // recién creada, antes de ser aprobada) puede registrar la suya — si esto requiriera ya
+    // ser staff aprobado, nadie podría pedir el acceso que le falta. Solo staff aprobado puede
+    // verlas o gestionarlas (aprobar/rechazar).
+    match /solicitudes_acceso/{docId} {
+      allow create: if request.auth != null;
+      allow read, delete: if esStaffAprobado();
+    }
+
+    // Quién ya está aprobado. Cualquier staff aprobado puede otorgar/quitar acceso a otro
+    // (no está restringido solo a admins de la app — es una decisión consciente para no
+    // depender de Cloud Functions; se puede endurecer más adelante si hace falta).
+    match /staff_aprobado/{email} {
+      allow read, write: if esStaffAprobado();
+    }
+
+    // El documento principal del CRM: clientes, tickets (con notas internas), usuarios
+    // (con hashes de contraseña), configuración, bitácora, todo. Antes: cualquier sesión
+    // anónima (cualquiera en internet) podía leer/escribir esto completo.
+    match /agenda/datos {
+      allow read, write: if esStaffAprobado();
+    }
+
+    match /knowledge_base/{docId} {
+      allow read, write: if esStaffAprobado();
+    }
+
+    // Cualquier otra cosa no contemplada arriba: por defecto, requiere staff aprobado.
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if esStaffAprobado();
     }
   }
 }

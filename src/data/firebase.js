@@ -59,9 +59,13 @@ if (auth) {
 /**
  * Suscribe al documento principal del CRM con onSnapshot para sync en tiempo real.
  * callback(datos, hasPendingWrites) — llama inmediatamente con el estado actual y cada vez que cambie.
+ * onError(error) opcional — antes un error de permisos (ej. reglas de Firestore rechazando una
+ * sesión anónima) solo se registraba en la consola del navegador, sin avisarle nada al usuario;
+ * la app tardaba 7s en mostrar un mensaje genérico de "error de conexión" que no explicaba que
+ * hacía falta iniciar sesión con la cuenta segura.
  * Retorna la función de unsuscribe para limpiar el listener.
  */
-export function suscribirCRM(callback) {
+export function suscribirCRM(callback, onError) {
   if (!firebaseEnabled) return () => {};
   const docRef = doc(db, "agenda", "datos");
   return onSnapshot(
@@ -70,7 +74,10 @@ export function suscribirCRM(callback) {
       docSnap.exists() ? docSnap.data() : null,
       docSnap.metadata.hasPendingWrites
     ),
-    (error) => console.error("[CRM] Error en listener Firebase:", error)
+    (error) => {
+      console.error("[CRM] Error en listener Firebase:", error);
+      if (onError) onError(error);
+    }
   );
 }
 
@@ -429,6 +436,10 @@ export async function guardarConfigPublica(datos) {
 export async function activarCuentaSegura(email, password, permanecer = true) {
   try {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
+    // Es para alguien que YA es miembro legítimo del CRM (se autoactivó, o un admin la creó
+    // por él) — se le otorga acceso real de una vez, a diferencia de solicitarAcceso() para
+    // gente nueva, que se queda pendiente de aprobación.
+    await otorgarAccesoStaff(email);
     if (!permanecer) {
       await signOut(auth);
       await signInAnonymously(auth);
@@ -453,6 +464,9 @@ export async function activarCuentaSegura(email, password, permanecer = true) {
 export async function iniciarSesionSegura(email, password) {
   try {
     const cred = await signInWithEmailAndPassword(auth, email, password);
+    // Respaldo: si por lo que sea a esta cuenta le faltaba el documento de acceso (ej. se activó
+    // antes de que existiera este sistema), se rellena solo en el primer login exitoso.
+    await otorgarAccesoStaff(email);
     return { ok: true, uid: cred.user.uid };
   } catch (error) {
     console.error("Error al iniciar sesión segura:", error);
@@ -461,6 +475,105 @@ export async function iniciarSesionSegura(email, password) {
     else if (error?.code === "auth/user-not-found") mensaje = "No hay ninguna cuenta segura con ese correo.";
     else if (error?.code === "auth/too-many-requests") mensaje = "Demasiados intentos — espera un momento y vuelve a intentar.";
     return { ok: false, error: error?.code || "error", mensaje };
+  }
+}
+
+/**
+ * Lectura del documento público reducido (agenda/publico) — se usa, entre otras cosas, para
+ * saber a qué correo mandar el aviso de una solicitud de acceso nueva desde la pantalla de
+ * login, donde todavía no hay sesión de CRM ni datos cargados.
+ */
+export async function cargarConfigPublica() {
+  try {
+    const snap = await getDoc(doc(db, "agenda", "publico"));
+    return snap.exists() ? snap.data() : null;
+  } catch (error) {
+    console.error("Error al cargar configuración pública:", error);
+    return null;
+  }
+}
+
+/**
+ * Documento cuya sola existencia (staff_aprobado/{correo}) es lo que las reglas de Firestore
+ * exigirán, junto con sesión real (no anónima), para leer/escribir los datos del CRM. Separado
+ * de "tener cuenta segura": una solicitud de acceso nueva SÍ tiene cuenta real de Firebase
+ * (correo+contraseña) pero NO este documento hasta que un admin la apruebe — así el rechazo/
+ * pendiente es un candado real de datos, no solo una pantalla que se puede saltar.
+ */
+export async function otorgarAccesoStaff(correo) {
+  try {
+    await setDoc(doc(db, "staff_aprobado", correo.toLowerCase()), { fecha: serverTimestamp() });
+    return true;
+  } catch (error) {
+    avisarErrorGuardado("acceso de staff", error);
+    return false;
+  }
+}
+
+export async function quitarAccesoStaff(correo) {
+  try {
+    await deleteDoc(doc(db, "staff_aprobado", correo.toLowerCase()));
+    return true;
+  } catch (error) {
+    avisarErrorGuardado("acceso de staff (quitar)", error);
+    return false;
+  }
+}
+
+/**
+ * Alguien nuevo (nunca antes en el CRM) pide acceso desde la pantalla de login. Crea su cuenta
+ * real de Firebase pero NO le da acceso a los datos (no toca staff_aprobado) — queda pendiente
+ * hasta que un admin la apruebe desde Configuración → Usuarios.
+ */
+export async function solicitarAcceso(email, password) {
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    return { ok: true, uid: cred.user.uid };
+  } catch (error) {
+    console.error("Error al solicitar acceso:", error);
+    let mensaje = error?.message || String(error);
+    if (error?.code === "auth/email-already-in-use") mensaje = "Ya existe una cuenta con ese correo.";
+    else if (error?.code === "auth/weak-password") mensaje = "La contraseña debe tener al menos 6 caracteres.";
+    else if (error?.code === "auth/invalid-email") mensaje = "Correo inválido.";
+    else if (error?.code === "auth/operation-not-allowed") mensaje = "El registro no está habilitado todavía — avísale a un administrador.";
+    return { ok: false, error: error?.code || "error", mensaje };
+  }
+}
+
+/**
+ * Colección aparte (no un campo dentro de agenda/datos) — mismo patrón que tickets_publicos:
+ * cualquiera con sesión (real o anónima) puede crear una solicitud, pero solo se puede LEER con
+ * acceso de staff. Si viviera dentro de agenda/datos, alguien pidiendo acceso por primera vez no
+ * podría ni siquiera guardar su propia solicitud una vez cerradas las reglas (necesitaría acceso
+ * que todavía no tiene, para pedir el acceso que le falta).
+ */
+export async function crearSolicitudAcceso(nombre, correo) {
+  try {
+    await addDoc(collection(db, "solicitudes_acceso"), { nombre, correo, fecha: serverTimestamp() });
+    return true;
+  } catch (error) {
+    console.error("Error al crear solicitud de acceso:", error);
+    return false;
+  }
+}
+
+export async function obtenerSolicitudesAcceso() {
+  try {
+    const snap = await getDocs(collection(db, "solicitudes_acceso"));
+    return snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+  } catch (error) {
+    console.error("Error al obtener solicitudes de acceso:", error);
+    return [];
+  }
+}
+
+export async function eliminarSolicitudAcceso(id) {
+  try {
+    await deleteDoc(doc(db, "solicitudes_acceso", id));
+    return true;
+  } catch (error) {
+    console.error("Error al eliminar solicitud de acceso:", error);
+    return false;
   }
 }
 

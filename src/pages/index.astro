@@ -1554,26 +1554,27 @@ try {
     letter-spacing: 0.1em;
   }
   #login-pass-input:focus { border-color: #6366f1; }
-  #login-securo-correo, #login-securo-pass {
+  #login-securo-correo, #login-securo-pass, #login-sol-nombre, #login-sol-correo, #login-sol-pass1, #login-sol-pass2 {
     width: 100%; background: #1e2231; border: 1px solid rgba(255,255,255,0.1);
     border-radius: 10px; padding: 12px 16px; color: #e2e8f0; font-size: 0.95rem;
     font-family: inherit; outline: none; margin-bottom: 10px; text-align: center;
   }
-  #login-securo-correo:focus, #login-securo-pass:focus { border-color: #6366f1; }
-  #login-error, #login-securo-error { font-size: 0.8rem; color: #f87171; min-height: 20px; margin-bottom: 8px; }
-  #login-btn, #login-securo-btn {
+  #login-securo-correo:focus, #login-securo-pass:focus,
+  #login-sol-nombre:focus, #login-sol-correo:focus, #login-sol-pass1:focus, #login-sol-pass2:focus { border-color: #6366f1; }
+  #login-error, #login-securo-error, #login-sol-error { font-size: 0.8rem; color: #f87171; min-height: 20px; margin-bottom: 8px; }
+  #login-btn, #login-securo-btn, #login-sol-btn {
     width: 100%; background: #6366f1; color: #fff; border: none; border-radius: 10px;
     padding: 12px; font-size: 0.95rem; font-weight: 700; cursor: pointer; font-family: inherit;
     transition: background 0.2s, transform 0.1s;
   }
-  #login-btn:hover, #login-securo-btn:hover { background: #4f46e5; transform: translateY(-1px); }
-  #login-btn:active, #login-securo-btn:active { transform: translateY(0); }
-  #login-back-btn, #login-securo-back-btn {
+  #login-btn:hover, #login-securo-btn:hover, #login-sol-btn:hover { background: #4f46e5; transform: translateY(-1px); }
+  #login-btn:active, #login-securo-btn:active, #login-sol-btn:active { transform: translateY(0); }
+  #login-back-btn, #login-securo-back-btn, #login-sol-back-btn {
     background: rgba(255,255,255,0.06); color: #8b95a8; border: 1px solid rgba(255,255,255,0.1);
     border-radius: 10px; padding: 11px 16px; font-size: 0.88rem; font-weight: 600;
     cursor: pointer; font-family: inherit; transition: all 0.2s; white-space: nowrap;
   }
-  #login-back-btn:hover, #login-securo-back-btn:hover { background: rgba(255,255,255,0.1); }
+  #login-back-btn:hover, #login-securo-back-btn:hover, #login-sol-back-btn:hover { background: rgba(255,255,255,0.1); }
   #login-user-grid {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; margin-bottom: 4px;
   }
@@ -2040,8 +2041,9 @@ try {
     <div id="login-step-user">
       <div class="login-sub">Selecciona tu usuario</div>
       <div id="login-user-grid"></div>
-      <div style="text-align:center; margin-top:14px;">
+      <div style="text-align:center; margin-top:14px; display:flex; flex-direction:column; gap:6px;">
         <a href="#" id="link-login-securo" style="font-size:0.78rem; color:#818cf8; text-decoration:none;">🔒 ¿Ya tienes cuenta segura? Inicia sesión aquí</a>
+        <a href="#" id="link-login-solicitar" style="font-size:0.78rem; color:#818cf8; text-decoration:none;">🆕 ¿Nuevo aquí? Solicita acceso</a>
       </div>
     </div>
     <!-- Paso 2: contraseña -->
@@ -2063,6 +2065,20 @@ try {
       <div style="display:flex; gap:8px; margin-top:4px;">
         <button id="login-securo-back-btn">← Volver</button>
         <button id="login-securo-btn" style="flex:1;">Ingresar →</button>
+      </div>
+    </div>
+    <!-- Paso 4: solicitar acceso (persona nueva, nunca antes en el CRM) -->
+    <div id="login-step-solicitar" style="display:none;">
+      <div class="login-sub">Solicita acceso al CRM</div>
+      <input id="login-sol-nombre" type="text" placeholder="Tu nombre" autocomplete="name" style="margin-bottom:8px;">
+      <input id="login-sol-correo" type="email" placeholder="Correo" autocomplete="username" style="margin-bottom:8px;">
+      <input id="login-sol-pass1" type="password" placeholder="Elige una contraseña" autocomplete="new-password" style="margin-bottom:8px;">
+      <input id="login-sol-pass2" type="password" placeholder="Confirma la contraseña" autocomplete="new-password">
+      <div id="login-sol-error"></div>
+      <div style="font-size:0.72rem; color:#8b95a8; text-align:center; margin:4px 0 8px;">Un administrador debe aprobar tu acceso antes de que puedas ver los datos del CRM.</div>
+      <div style="display:flex; gap:8px; margin-top:4px;">
+        <button id="login-sol-back-btn">← Volver</button>
+        <button id="login-sol-btn" style="flex:1;">Solicitar acceso →</button>
       </div>
     </div>
   </div>
@@ -2922,6 +2938,14 @@ try {
           </div>
         </div>
 
+        <div class="card" id="cfg-solicitudes-panel" style="margin-top:20px; display:none;">
+          <div class="card-title">📥 Solicitudes de acceso pendientes</div>
+          <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">
+            Personas que pidieron acceso desde la pantalla de login. No pueden ver ni tocar nada del CRM hasta que apruebes.
+          </p>
+          <div id="cfg-solicitudes-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+
         <div class="card" id="cfg-usuarios-panel" style="margin-top:20px;">
           <div class="card-title">👥 Usuarios del sistema</div>
           <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">
@@ -2932,6 +2956,7 @@ try {
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="btn btn-ghost btn-sm" id="btnAgregarUsuario">➕ Agregar usuario</button>
             <button class="btn btn-secondary btn-sm" id="btnCambiarMiPass">🔐 Cambiar mi contraseña</button>
+            <button class="btn btn-ghost btn-sm" id="btnSincronizarAccesos" title="Preparación para cerrar las reglas de Firestore — un solo uso, antes del cierre final">🔄 Sincronizar accesos</button>
           </div>
         </div>
       </div>
@@ -4175,7 +4200,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, iniciarSesionSegura } from "../data/firebase.js";
+import { firebaseEnabled, authListo, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica } from "../data/firebase.js";
 
 // ── Modal confirmación (reemplaza confirm() — funciona en móvil) ──
 function confirmar(msg: string, icon = "⚠️"): Promise<boolean> {
@@ -4280,6 +4305,17 @@ async function initLoginUI() {
       selectedUser = (usuariosFrescos.length ? usuariosFrescos : activos).find(u => u.id === btn.dataset.id) || null;
       if (!selectedUser) return;
       document.getElementById("login-step-user")!.style.display = "none";
+      // Usuarios aprobados por el flujo de "Solicitar acceso" nunca tuvieron una contraseña del
+      // login viejo (passHash vacío) — mandarlos directo al login seguro, prellenado con su
+      // correo, en vez de un campo de contraseña que jamás podría funcionar para ellos.
+      if (!selectedUser.passHash && selectedUser.authEmail) {
+        document.getElementById("login-step-securo")!.style.display = "block";
+        const correoInp = document.getElementById("login-securo-correo") as HTMLInputElement;
+        if (correoInp) correoInp.value = selectedUser.authEmail;
+        const passInp = document.getElementById("login-securo-pass") as HTMLInputElement;
+        if (passInp) { passInp.value = ""; passInp.focus(); }
+        return;
+      }
       document.getElementById("login-step-pass")!.style.display = "block";
       document.getElementById("login-selected-name")!.textContent = `👤 ${selectedUser.nombre}`;
       const inp = document.getElementById("login-pass-input") as HTMLInputElement;
@@ -4409,6 +4445,81 @@ document.getElementById("login-securo-pass")?.addEventListener("keydown", e => {
   if ((e as KeyboardEvent).key === "Enter") intentarLoginSeguro();
 });
 
+// ── Solicitar acceso: persona nueva, nunca antes en el CRM ──
+document.getElementById("link-login-solicitar")?.addEventListener("click", (e) => {
+  e.preventDefault();
+  document.getElementById("login-step-user")!.style.display = "none";
+  document.getElementById("login-step-solicitar")!.style.display = "block";
+  const errEl = document.getElementById("login-sol-error");
+  if (errEl) errEl.textContent = "";
+  document.getElementById("login-sol-nombre")?.focus();
+});
+document.getElementById("login-sol-back-btn")?.addEventListener("click", () => {
+  document.getElementById("login-step-solicitar")!.style.display = "none";
+  document.getElementById("login-step-user")!.style.display = "block";
+  const errEl = document.getElementById("login-sol-error");
+  if (errEl) errEl.textContent = "";
+});
+
+async function intentarSolicitarAcceso() {
+  const nombreInp = document.getElementById("login-sol-nombre") as HTMLInputElement;
+  const correoInp = document.getElementById("login-sol-correo") as HTMLInputElement;
+  const pass1Inp = document.getElementById("login-sol-pass1") as HTMLInputElement;
+  const pass2Inp = document.getElementById("login-sol-pass2") as HTMLInputElement;
+  const errEl = document.getElementById("login-sol-error");
+  const nombre = nombreInp?.value.trim();
+  const correo = correoInp?.value.trim().toLowerCase();
+  const pass1 = pass1Inp?.value;
+  const pass2 = pass2Inp?.value;
+
+  if (errEl) errEl.textContent = "";
+  if (!nombre) { if (errEl) errEl.textContent = "Ingresa tu nombre."; return; }
+  if (!correo || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) { if (errEl) errEl.textContent = "Ingresa un correo válido."; return; }
+  if (pass1.length < 6) { if (errEl) errEl.textContent = "La contraseña debe tener al menos 6 caracteres."; return; }
+  if (pass1 !== pass2) { if (errEl) errEl.textContent = "Las contraseñas no coinciden."; return; }
+
+  const btn = document.getElementById("login-sol-btn") as HTMLButtonElement;
+  btn.disabled = true; btn.textContent = "Enviando...";
+  const res = await solicitarAcceso(correo, pass1);
+  btn.disabled = false; btn.textContent = "Solicitar acceso →";
+
+  if (!res.ok) {
+    if (errEl) errEl.textContent = res.mensaje || "No se pudo enviar la solicitud.";
+    return;
+  }
+
+  // Guardar la solicitud pendiente en su propia colección (no en agenda/datos): quien recién
+  // pide acceso todavía no tiene permiso de leer/escribir ahí — necesitaría el acceso que
+  // justo está pidiendo.
+  try {
+    await crearSolicitudAcceso(nombre, correo);
+  } catch (e) { console.error("[Solicitud de acceso] No se pudo guardar:", e); }
+
+  // Avisar a soporte por correo — se usa el documento público porque en este punto no hay
+  // sesión de CRM ni configTickets cargado en memoria.
+  try {
+    const pub = await cargarConfigPublica();
+    const destino = pub?.correoSoporte;
+    if (destino) {
+      await fetch("/send-email", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: destino,
+          subject: `🆕 Solicitud de acceso al CRM — ${nombre}`,
+          html: `<div style="font-family:sans-serif;"><p><strong>${nombre}</strong> (${correo}) solicitó acceso al CRM.</p><p>Entra a Configuración → Usuarios → Solicitudes pendientes para aprobar o rechazar.</p></div>`
+        })
+      });
+    }
+  } catch (e) { console.error("[Solicitud de acceso] No se pudo enviar el correo de aviso:", e); }
+
+  document.getElementById("login-step-solicitar")!.innerHTML = `
+    <div class="login-sub" style="line-height:1.6;">✅ Solicitud enviada.<br><br>Un administrador debe aprobarla antes de que puedas entrar. Te avisan cuando esté lista.</div>
+    <button id="login-sol-listo-btn" style="width:100%; margin-top:10px;">Entendido</button>
+  `;
+  document.getElementById("login-sol-listo-btn")?.addEventListener("click", () => location.reload());
+}
+document.getElementById("login-sol-btn")?.addEventListener("click", intentarSolicitarAcceso);
+
 verificarSesion();
 // ──────────────────────────────────────────────────────────────
 
@@ -4454,6 +4565,7 @@ verificarSesion();
   let tareas = [];
   let filtrosGuardados = [];
   let alertasVencimiento = {};
+  let solicitudesAcceso: any[] = [];
 
   let drawerEmpresaActual = null;
 
@@ -5195,6 +5307,24 @@ verificarSesion();
           mostrarEstado("⚠️ Error de conexión a Firebase. Reintentando en la próxima carga.", 4000);
           cargarDesdeLocalStorage();
         }
+      }
+    }, (error) => {
+      // Antes esto solo se veía en la consola del navegador — quien entrara con una sesión sin
+      // permiso (ej. anónima, después de apretar las reglas de Firestore) se quedaba viendo la
+      // app rota o vacía sin ninguna explicación. Ahora se le manda directo al login seguro.
+      if (error?.code === "permission-denied") {
+        primeraCargaFB = false;
+        clearTimeout(timeoutInicial);
+        ocultarEstado();
+        document.getElementById("login-overlay")?.classList.remove("hidden");
+        const stepUser = document.getElementById("login-step-user");
+        const stepPass = document.getElementById("login-step-pass");
+        const stepSeguro = document.getElementById("login-step-securo");
+        if (stepUser) stepUser.style.display = "none";
+        if (stepPass) stepPass.style.display = "none";
+        if (stepSeguro) stepSeguro.style.display = "block";
+        const errEl = document.getElementById("login-securo-error");
+        if (errEl) errEl.textContent = "Tu sesión no tiene permiso para ver los datos del CRM — inicia sesión con tu cuenta segura.";
       }
     });
   }
@@ -8267,12 +8397,66 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     else toast("⚠️ Error al guardar SLA", "error");
   });
 
+  async function renderSolicitudesAccesoPanel() {
+    const uActual = getUsuarioActual();
+    const panel = document.getElementById("cfg-solicitudes-panel");
+    if (!panel) return;
+    if (!uActual || uActual.rol !== "admin") { panel.style.display = "none"; return; }
+    const cont = document.getElementById("cfg-solicitudes-list");
+    if (!cont) return;
+    const solicitudes = await obtenerSolicitudesAcceso();
+    if (!solicitudes.length) { panel.style.display = "none"; return; }
+    panel.style.display = "";
+    cont.innerHTML = solicitudes.map((s: any) => `
+      <div style="display:flex; align-items:center; gap:10px; background:rgba(99,102,241,0.06); border:1px solid rgba(99,102,241,0.2); border-radius:var(--radius-md); padding:10px 14px;">
+        <div style="flex:1; min-width:0;">
+          <div style="font-weight:700; color:var(--text-bright); font-size:0.88rem;">${escapeHtml(s.nombre)}</div>
+          <div style="font-size:0.75rem; color:var(--text-muted);">${escapeHtml(s.correo)}</div>
+        </div>
+        <button class="btn btn-success btn-xs btn-aprobar-solicitud" data-id="${s._id}" data-nombre="${escapeHtml(s.nombre)}" data-correo="${escapeHtml(s.correo)}" style="white-space:nowrap;">✅ Aprobar</button>
+        <button class="btn btn-danger btn-xs btn-rechazar-solicitud" data-id="${s._id}" data-nombre="${escapeHtml(s.nombre)}" style="white-space:nowrap;">❌ Rechazar</button>
+      </div>`).join("");
+
+    cont.querySelectorAll<HTMLButtonElement>(".btn-aprobar-solicitud").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const { id, nombre, correo } = btn.dataset as any;
+        if (!await confirmar(`¿Aprobar el acceso de "${nombre}" (${correo})?`, "✅")) return;
+        const usuariosAct = getUsuarios();
+        if (usuariosAct.some((u: any) => u.nombre.toLowerCase() === nombre.toLowerCase())) {
+          toast(`⚠️ Ya existe un usuario llamado "${nombre}" — cámbiale el nombre antes de aprobar, o edítalo manualmente.`, "error");
+          return;
+        }
+        const esAdmin = await confirmar(`¿Le das permisos de administrador a "${nombre}"? (Cancelar = usuario normal)`, "🛡️");
+        usuariosAct.push({ id: `u${Date.now()}`, nombre, rol: esAdmin ? "admin" : "normal", passHash: "", activo: true, authEmail: correo });
+        saveUsuariosLocal(usuariosAct);
+        await guardarUsuarios(usuariosAct);
+        await otorgarAccesoStaff(correo);
+        await eliminarSolicitudAcceso(id);
+        toast(`✅ "${nombre}" aprobado — ya puede entrar con su cuenta segura`);
+        logBitacora(`Solicitud de acceso aprobada: ${nombre} (${correo})`, "✅");
+        renderSolicitudesAccesoPanel();
+        renderUsuariosPanel();
+      });
+    });
+    cont.querySelectorAll<HTMLButtonElement>(".btn-rechazar-solicitud").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const { id, nombre } = btn.dataset as any;
+        if (!await confirmar(`¿Rechazar la solicitud de "${nombre}"?`, "❌")) return;
+        await eliminarSolicitudAcceso(id);
+        toast(`🗑️ Solicitud de "${nombre}" rechazada`);
+        logBitacora(`Solicitud de acceso rechazada: ${nombre}`, "❌");
+        renderSolicitudesAccesoPanel();
+      });
+    });
+  }
+
   function renderUsuariosPanel() {
     const uActual = getUsuarioActual();
     const panel = document.getElementById("cfg-usuarios-panel");
     if (!panel) return;
     if (!uActual || uActual.rol !== "admin") { panel.style.display = "none"; return; }
     panel.style.display = "";
+    renderSolicitudesAccesoPanel();
     const usuarios = getUsuarios();
     const cont = document.getElementById("cfg-usuarios-list");
     if (!cont) return;
@@ -8383,6 +8567,23 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     if (!crmLocalOnly) guardarUsuarios(usuarios).catch(() => {});
     toast("🔐 Tu contraseña fue actualizada");
     logBitacora("Contraseña propia actualizada", "🔐");
+  });
+
+  // Preparación de un solo uso para el cierre final de las reglas de Firestore: hoy activar/
+  // iniciar sesión con cuenta segura ya otorga acceso automáticamente, pero eso no alcanzó a
+  // los usuarios que activaron su cuenta ANTES de que existiera este sistema — este botón
+  // rellena el acceso de todos los que ya tienen cuenta segura, sin que cada quien tenga que
+  // volver a iniciar sesión para que se registre solo.
+  document.getElementById("btnSincronizarAccesos")?.addEventListener("click", async () => {
+    const usuariosConCuenta = getUsuarios().filter((u: any) => u.authEmail);
+    if (!usuariosConCuenta.length) { toast("⚠️ Ningún usuario tiene cuenta segura todavía", "warning"); return; }
+    if (!await confirmar(`¿Sincronizar acceso para ${usuariosConCuenta.length} usuario(s) con cuenta segura? Es el paso previo antes de cerrar las reglas de Firestore.`, "🔄")) return;
+    let ok = 0;
+    for (const u of usuariosConCuenta) {
+      if (await otorgarAccesoStaff(u.authEmail)) ok++;
+    }
+    toast(`🔄 Acceso sincronizado para ${ok}/${usuariosConCuenta.length} usuario(s)`);
+    logBitacora(`Sincronización de accesos ejecutada (${ok}/${usuariosConCuenta.length})`, "🔄");
   });
 
   // ============================================================
