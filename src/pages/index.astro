@@ -4735,7 +4735,7 @@ verificarSesion();
   function hayFormularioActivo() {
     const formsInline = ["formulario-empresa", "formulario-contacto", "formulario-ticket", "formulario-evento"];
     if (formsInline.some(id => { const el = document.getElementById(id); return el && !el.classList.contains("hidden"); })) return true;
-    const modalesForm = ["modal-empresa-rapida", "modal-acerca-de"];
+    const modalesForm = ["modal-empresa-rapida", "modal-acerca-de", "modal-xls-summary"];
     return modalesForm.some(id => { const m = document.getElementById(id); return m && m.style.display !== "none" && m.style.display !== ""; });
   }
 
@@ -8203,6 +8203,12 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
             }
           });
 
+          // Respaldo de los datos reales antes de pisarlos con la vista previa — si el usuario
+          // cancela, se restauran. Antes, cancelar dejaba la vista previa del Excel viva en
+          // memoria, y cualquier guardado no relacionado posterior la subía a Firebase sin querer.
+          const clientesAntesImportXls = clientes;
+          const contactosAntesImportXls = contactos;
+
           // Vista previa: cargar en memoria sin tocar localStorage ni Firebase aún
           clientes = normalizeImportedClientes(clientesArr || []);
           contactos = normalizeImportedContactos ? normalizeImportedContactos(contactosArr || []) : (contactosArr || []);
@@ -8385,11 +8391,15 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
             modal.style.display = 'flex';
 
             // Setup modal buttons
-            document.getElementById('btnCerrarXlsSummary2').onclick = () => {
+            const cancelarImportXls = () => {
               modal.style.display = 'none';
+              clientes = clientesAntesImportXls;
+              contactos = contactosAntesImportXls;
+              renderEmpresas();
+              renderContactos();
             };
-
-            document.getElementById('btnCerrarXlsSummary').onclick = () => { modal.style.display = 'none'; };
+            document.getElementById('btnCerrarXlsSummary2').onclick = cancelarImportXls;
+            document.getElementById('btnCerrarXlsSummary').onclick = cancelarImportXls;
 
             document.getElementById('btnXlsDescargarRespaldo').onclick = () => {
               const backup = { clientes, contactos, ts: new Date().toISOString() };
