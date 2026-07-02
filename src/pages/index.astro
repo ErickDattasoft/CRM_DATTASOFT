@@ -4793,7 +4793,10 @@ verificarSesion();
     // Si el usuario está en la sección de configuración y aún no ha guardado, preservar
     // los cambios en memoria para no pisar ediciones en progreso (prioridades, estados, etc.)
     if (datos.configTickets && !preservarConfig) configTickets = { ...configTickets, ...datos.configTickets };
-    if (datos.usuarios && datos.usuarios.length > 0) saveUsuariosLocal(datos.usuarios);
+    // Mismo cuidado que configTickets: si un admin está en el panel de Usuarios (a punto de
+    // resetear una contraseña o cambiar un rol), una actualización remota de otro dispositivo
+    // no debe pisar la lista en memoria a media edición.
+    if (datos.usuarios && datos.usuarios.length > 0 && !preservarConfig) saveUsuariosLocal(datos.usuarios);
     // Merge eventos: Firebase es fuente de verdad sólo cuando tiene datos.
     // Si Firebase tiene menos eventos que la memoria local (race condition entre
     // guardarEventosFB y otra escritura), mezclamos para no perder eventos recientes.
