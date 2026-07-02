@@ -1935,7 +1935,7 @@ try {
   tr.sla-vencido td { background:rgba(239,68,68,0.05) !important; }
 
   /* --- Dashboard charts grid --- */
-  .dash-charts-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px; }
+  .dash-charts-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px; align-items:start; }
   @media(max-width:800px){ .dash-charts-grid { grid-template-columns:1fr; } }
   .dash-chart-card { background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:18px; }
   .dash-chart-title { font-size:0.82rem; font-weight:700; color:var(--text-bright); margin-bottom:14px; display:flex; align-items:center; gap:6px; }
@@ -2245,8 +2245,8 @@ try {
           <!-- Distribución por estado -->
           <div class="dash-chart-card">
             <div class="dash-chart-title">🍩 Tickets por Estado</div>
-            <div style="display:flex;align-items:center;justify-content:center;height:160px;">
-              <canvas id="chart-estados" style="max-height:160px;max-width:160px;"></canvas>
+            <div style="display:flex;align-items:center;justify-content:center;height:200px;">
+              <canvas id="chart-estados" style="max-height:200px;max-width:280px;"></canvas>
               <div id="chart-estados-vacio" class="dash-empty-mini" style="display:none;">Sin tickets aún</div>
             </div>
           </div>
