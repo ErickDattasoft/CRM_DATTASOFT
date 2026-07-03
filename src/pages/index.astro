@@ -4692,6 +4692,24 @@ verificarSesion();
   // Ningún dato de usuario (nombres, asuntos, descripciones, correos...) se escapaba antes de
   // insertarse con innerHTML — cualquier ticket, contacto o registro público con un nombre tipo
   // <img src=x onerror=...> ejecutaba ese script en la sesión de quien lo viera después.
+  // "new Date().toISOString()" da la fecha en UTC — en México (UTC-6), cualquier hora después
+  // de las 18:00 ya cayó en el día siguiente en UTC, así que usarlo para "hoy" hace que un
+  // formulario abierto en la noche precargue la fecha de mañana. hoyLocalStr() calcula el
+  // día calendario correcto según la zona horaria del navegador.
+  function hoyLocalStr() {
+    const d = new Date();
+    const offsetMs = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - offsetMs).toISOString().split("T")[0];
+  }
+  // Un string "YYYY-MM-DD" (sin hora) se interpreta como medianoche UTC por el motor de JS —
+  // convertirlo de vuelta a fecha local puede mover el día mostrado. Forzar T00:00:00 hace
+  // que se interprete en la zona horaria local, evitando el corrimiento. Los timestamps
+  // completos (con hora/zona, ej. los de actividad de tickets) no necesitan este ajuste.
+  function parseFechaLocal(fecha) {
+    if (typeof fecha === "string" && /^\d{4}-\d{2}-\d{2}$/.test(fecha)) return new Date(fecha + "T00:00:00");
+    return new Date(fecha);
+  }
+
   function escapeHtml(s) {
     return (s === null || s === undefined) ? "" : String(s)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -6310,7 +6328,7 @@ verificarSesion();
     document.getElementById("drawer-overlay").classList.add("open");
     document.getElementById("drawer-empresa").classList.add("open");
     cambiarTabDrawer(tab);
-    document.getElementById("int-fecha").value = new Date().toISOString().split("T")[0];
+    document.getElementById("int-fecha").value = hoyLocalStr();
   }
 
   function cerrarDrawer() {
@@ -6365,7 +6383,7 @@ verificarSesion();
     tl.innerHTML = todos.map(it => {
       const tipoCssMap: Record<string,string> = { Nota:"nota", Llamada:"llamada", Correo:"correo", "Reunión":"reunion", Ticket:"ticket" };
       const tipoCls = tipoCssMap[it.tipo] || "nota";
-      const fecha = it.fecha ? new Date(it.fecha).toLocaleDateString("es-MX", { day:"2-digit", month:"short", year:"numeric" }) : "";
+      const fecha = it.fecha ? parseFechaLocal(it.fecha).toLocaleDateString("es-MX", { day:"2-digit", month:"short", year:"numeric" }) : "";
       return `<div class="timeline-item">
         <div class="timeline-dot timeline-dot-${tipoCls}"></div>
         <div class="timeline-content">
@@ -6513,7 +6531,7 @@ verificarSesion();
   // Modal nueva tarea desde Dashboard
   document.getElementById("btnNuevaTareaDash")?.addEventListener("click", () => {
     document.getElementById("modal-nueva-tarea").style.display = "flex";
-    document.getElementById("modal-tarea-fecha").value = new Date().toISOString().split("T")[0];
+    document.getElementById("modal-tarea-fecha").value = hoyLocalStr();
   });
   document.getElementById("btnCerrarModalTarea")?.addEventListener("click", () => {
     document.getElementById("modal-nueva-tarea").style.display = "none";
