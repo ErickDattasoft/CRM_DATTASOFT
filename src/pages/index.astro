@@ -3527,6 +3527,7 @@ try {
               <tr><td><span class="btn-demo btn-demo-primary">📋 Hist.</span></td><td><strong>Historial:</strong> Abre un panel lateral con todas las interacciones registradas para esta empresa (notas, llamadas, correos, reuniones y tickets). Cada ticket trae un botón "Ver ticket →" que abre su detalle completo.</td></tr>
               <tr><td><span class="btn-demo btn-demo-success">📌 Tar.</span></td><td><strong>Tareas:</strong> Abre el panel lateral con las tareas pendientes asignadas a esta empresa.</td></tr>
               <tr><td>📅 Desde/Hasta</td><td><strong>Filtro de fechas:</strong> Arriba del Historial y las Tareas, filtra ambos listados por rango de fechas (fecha de la interacción/ticket, o fecha de vencimiento de la tarea). El rango elegido se mantiene aunque cambies de empresa, hasta que lo borres con ✕.</td></tr>
+              <tr><td>🎫 Tipo</td><td><strong>Filtro por tipo (solo Historial):</strong> Selector "Todos los tipos / Notas / Llamadas / Correos / Reuniones / Tickets" arriba del Historial. Al elegir "Tickets" se muestra solo la lista de tickets de esa empresa en el rango de fechas, con un resumen de cuántos hay y cómo está su estado actual (ej. "5 tickets — 2 Abierto · 3 Resuelto").</td></tr>
             </table>
 
             <div class="manual-subtitulo">Colores en las celdas de versión</div>
@@ -4005,7 +4006,15 @@ try {
     <div class="drawer-tab active" data-drawer-tab="historial">📋 Historial</div>
     <div class="drawer-tab" data-drawer-tab="tareas">📌 Tareas</div>
   </div>
-  <div style="display:flex; gap:6px; align-items:center; padding:10px 20px 0;">
+  <div style="display:flex; gap:6px; align-items:center; padding:10px 20px 0; flex-wrap:wrap;">
+    <select id="hist-filtro-tipo" title="Tipo" style="font-size:0.78rem; padding:6px 8px; display:none;">
+      <option value="">Todos los tipos</option>
+      <option value="Nota">📝 Notas</option>
+      <option value="Llamada">📞 Llamadas</option>
+      <option value="Correo">✉️ Correos</option>
+      <option value="Reunión">🤝 Reuniones</option>
+      <option value="Ticket">🎫 Tickets</option>
+    </select>
     <input type="date" id="hist-filtro-desde" title="Desde" style="font-size:0.78rem; padding:6px 8px; flex:1; min-width:0;">
     <span style="color:var(--text-muted); font-size:0.75rem;">a</span>
     <input type="date" id="hist-filtro-hasta" title="Hasta" style="font-size:0.78rem; padding:6px 8px; flex:1; min-width:0;">
@@ -4027,6 +4036,7 @@ try {
       <textarea id="int-texto" rows="3" placeholder="Describe la interacción..." style="font-size:0.82rem; resize:vertical; margin-bottom:8px;"></textarea>
       <button class="btn btn-primary btn-sm btn-block" id="btnGuardarInteraccion">💾 Guardar</button>
     </div>
+    <div id="hist-tickets-resumen" style="display:none; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:10px; font-size:0.78rem;"></div>
     <div class="timeline" id="drawer-historial-timeline">
       <div class="timeline-empty">Sin interacciones registradas.</div>
     </div>
@@ -6342,40 +6352,55 @@ verificarSesion();
     document.querySelectorAll(".drawer-tab").forEach(t => t.classList.toggle("active", t.dataset.drawerTab === tab));
     document.getElementById("drawer-panel-historial").style.display = tab === "historial" ? "" : "none";
     document.getElementById("drawer-panel-tareas").style.display = tab === "tareas" ? "" : "none";
+    const selTipo = document.getElementById("hist-filtro-tipo") as HTMLSelectElement;
+    if (selTipo) selTipo.style.display = tab === "historial" ? "" : "none";
     if (tab === "historial") renderDrawerHistorial();
     else renderDrawerTareas();
   }
 
   function renderDrawerHistorial() {
     const tl = document.getElementById("drawer-historial-timeline");
+    const resumenBox = document.getElementById("hist-tickets-resumen");
     if (!tl || drawerEmpresaActual === null) return;
     const empresa = clientes[drawerEmpresaActual]?.EMPRESA || "";
-    const ints = interacciones.filter(i => i.empresa === empresa).sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
-    // Agregar tickets como interacciones automáticas: una entrada por cada evento de
-    // actividad del ticket (creación, cambio de estado, reasignación, etc.), no solo una
-    // línea fija a la fecha de creación — así se ve lo que realmente pasó y cuándo.
-    const ticketsEmp = [];
-    tickets.filter(t => t.empresa === empresa).forEach(t => {
-      const eventos = (t.actividad && t.actividad.length)
-        ? t.actividad
-        : [{ fecha: t.fechaCreacion, usuario: t.agente || "Sistema", texto: "Ticket creado" }];
-      eventos.forEach((a, i) => {
-        ticketsEmp.push({
-          id: `tk_${t.numero}_${i}`, numero: t.numero, tipo: "Ticket",
-          texto: `#${t.numero} ${t.asunto} — ${a.texto}`,
-          fecha: a.fecha, usuario: a.usuario || "Sistema", _auto: true
-        });
-      });
-    });
+    const ints = interacciones.filter(i => i.empresa === empresa);
+    // Una línea por ticket (no por cada evento de actividad) — fechada a su creación, con
+    // el estado ACTUAL. El detalle evento por evento (quién cambió qué y cuándo) vive en la
+    // sección "Actividad del ticket" dentro del detalle de cada ticket; aquí se busca poder
+    // contestar "cuántos tickets se hicieron en este rango y cómo están".
+    const ticketsEmp = tickets.filter(t => t.empresa === empresa).map(t => ({
+      id: "tk_" + t.numero, numero: t.numero, tipo: "Ticket",
+      texto: `#${t.numero} ${t.asunto} — Estado: ${t.estado}`,
+      fecha: t.fechaCreacion, usuario: t.agente || "Sistema", _auto: true
+    }));
     let todos = [...ints, ...ticketsEmp].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
     const desde = (document.getElementById("hist-filtro-desde") as HTMLInputElement)?.value || "";
     const hasta = (document.getElementById("hist-filtro-hasta") as HTMLInputElement)?.value || "";
+    const filtroTipo = (document.getElementById("hist-filtro-tipo") as HTMLSelectElement)?.value || "";
     if (desde) todos = todos.filter(it => it.fecha && it.fecha.slice(0, 10) >= desde);
     if (hasta) todos = todos.filter(it => it.fecha && it.fecha.slice(0, 10) <= hasta);
+    if (filtroTipo) todos = todos.filter(it => it.tipo === filtroTipo);
+
+    if (resumenBox) {
+      if (filtroTipo === "Ticket" && todos.length) {
+        const conteo: Record<string, number> = {};
+        todos.forEach(it => {
+          const tk = tickets.find(x => x.numero === it.numero);
+          const est = tk?.estado || "—";
+          conteo[est] = (conteo[est] || 0) + 1;
+        });
+        const partes = Object.entries(conteo).map(([est, n]) => `<strong>${n}</strong> ${escapeHtml(est)}`).join(" · ");
+        resumenBox.innerHTML = `🎫 <strong>${todos.length}</strong> ticket${todos.length === 1 ? "" : "s"} en este rango — ${partes}`;
+        resumenBox.style.display = "block";
+      } else {
+        resumenBox.style.display = "none";
+      }
+    }
+
     if (!todos.length) {
-      const sinResultados = desde || hasta;
+      const sinResultados = desde || hasta || filtroTipo;
       tl.innerHTML = sinResultados
-        ? '<div class="timeline-empty">Sin resultados en ese rango de fechas.</div>'
+        ? '<div class="timeline-empty">Sin resultados con ese filtro.</div>'
         : '<div class="timeline-empty">Sin interacciones registradas.<br><span style="font-size:0.75rem;">Usa el formulario de arriba para agregar una nota, llamada o reunión.</span></div>';
       return;
     }
@@ -6477,9 +6502,11 @@ verificarSesion();
   }
   document.getElementById("hist-filtro-desde")?.addEventListener("change", renderDrawerTabActual);
   document.getElementById("hist-filtro-hasta")?.addEventListener("change", renderDrawerTabActual);
+  document.getElementById("hist-filtro-tipo")?.addEventListener("change", renderDrawerHistorial);
   document.getElementById("btnLimpiarFiltroHistorial")?.addEventListener("click", () => {
     (document.getElementById("hist-filtro-desde") as HTMLInputElement).value = "";
     (document.getElementById("hist-filtro-hasta") as HTMLInputElement).value = "";
+    (document.getElementById("hist-filtro-tipo") as HTMLSelectElement).value = "";
     renderDrawerTabActual();
   });
 
