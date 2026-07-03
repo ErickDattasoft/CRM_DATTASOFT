@@ -6333,11 +6333,22 @@ verificarSesion();
     if (!tl || drawerEmpresaActual === null) return;
     const empresa = clientes[drawerEmpresaActual]?.EMPRESA || "";
     const ints = interacciones.filter(i => i.empresa === empresa).sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
-    // Agregar tickets como interacciones automáticas
-    const ticketsEmp = tickets.filter(t => t.empresa === empresa).map(t => ({
-      id: "tk_" + t.numero, numero: t.numero, tipo: "Ticket", texto: `Ticket #${t.numero}: ${t.asunto} (${t.estado})`,
-      fecha: t.fechaCreacion, usuario: t.agente || "Sistema", _auto: true
-    }));
+    // Agregar tickets como interacciones automáticas: una entrada por cada evento de
+    // actividad del ticket (creación, cambio de estado, reasignación, etc.), no solo una
+    // línea fija a la fecha de creación — así se ve lo que realmente pasó y cuándo.
+    const ticketsEmp = [];
+    tickets.filter(t => t.empresa === empresa).forEach(t => {
+      const eventos = (t.actividad && t.actividad.length)
+        ? t.actividad
+        : [{ fecha: t.fechaCreacion, usuario: t.agente || "Sistema", texto: "Ticket creado" }];
+      eventos.forEach((a, i) => {
+        ticketsEmp.push({
+          id: `tk_${t.numero}_${i}`, numero: t.numero, tipo: "Ticket",
+          texto: `#${t.numero} ${t.asunto} — ${a.texto}`,
+          fecha: a.fecha, usuario: a.usuario || "Sistema", _auto: true
+        });
+      });
+    });
     let todos = [...ints, ...ticketsEmp].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
     const desde = (document.getElementById("hist-filtro-desde") as HTMLInputElement)?.value || "";
     const hasta = (document.getElementById("hist-filtro-hasta") as HTMLInputElement)?.value || "";
@@ -8316,14 +8327,19 @@ verificarSesion();
       const u = getUsuarioActual();
       t.notas.push({ autor: u?.nombre || "Soporte", fecha: new Date().toISOString(), texto: txt });
       document.getElementById("txtNuevaNotaTicket").value = "";
+      logBitacora(`Nota agregada al ticket #${t.numero}`, "💬");
     }
 
     if (nuevoEstado && nuevoEstado !== t.estado) {
-      registrarActividadTicket(t, `Estado cambiado: "${t.estado}" → "${nuevoEstado}"`);
+      const estadoAnterior = t.estado;
+      registrarActividadTicket(t, `Estado cambiado: "${estadoAnterior}" → "${nuevoEstado}"`);
+      logBitacora(`Ticket #${t.numero} cambió de estado: "${estadoAnterior}" → "${nuevoEstado}"`, "🔄");
       t.estado = nuevoEstado;
       document.getElementById("det-tk-estado-badge").textContent = nuevoEstado;
       document.getElementById("det-tk-estado-badge").className = `badge badge-${slugBadge(nuevoEstado)}`;
     }
+
+    if (camposGestionCambiaron) logBitacora(`Ticket #${t.numero}: datos de gestión actualizados (Referido/Solicitado/Canalizado/Realizado)`, "✏️");
 
     t.referido = nuevoReferido;
     t.solicitado = nuevoSolicitado;
