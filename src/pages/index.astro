@@ -3609,6 +3609,9 @@ try {
             <div class="manual-paso"><div class="manual-paso-num">2</div><div class="manual-paso-txt">Llenar: empresa, contacto, asunto, descripción, tipo y prioridad.</div></div>
             <div class="manual-paso"><div class="manual-paso-num">3</div><div class="manual-paso-txt">Asignar a un agente del equipo (Erick, Arturo, Gelmi, Gaby) y guardar.</div></div>
 
+            <div class="manual-subtitulo">Ticket del portal público de un cliente nuevo (sin empresa/contacto registrados)</div>
+            <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;margin-bottom:8px;">Si al revisar los tickets del portal público (🌐) la empresa o el contacto que puso el cliente no existen todavía en el CRM, aparece un botón "🏢 Agregar empresa..." o "👤 Agregar contacto...". <strong>No crea nada solo</strong> — abre el formulario normal de Nueva Empresa o Nuevo Contacto ya prellenado con lo que puso el cliente (nombre, correo, teléfono), para que lo revises, completes (RFC, etc.) o corrijas antes de darle Guardar.</p>
+
             <div class="manual-subtitulo">Estados de un ticket</div>
             <table class="manual-tabla">
               <tr><th>Estado</th><th>Significado</th></tr>
@@ -10002,6 +10005,38 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     _ticketsPubPrevCount = ticketsPublicos.length;
   }
 
+  // Abre el formulario real de "Nueva Empresa" (o "Nuevo Contacto") precargado con los datos
+  // del ticket público, pero SIN guardar nada — el usuario revisa/edita/completa (RFC, etc.)
+  // y guarda con el botón normal del formulario. No se crea nada de forma silenciosa.
+  function abrirNuevaEmpresaDesdeTicketPub(tp) {
+    const modal = document.getElementById("modal-tickets-pub");
+    if (modal) modal.style.display = "none";
+    navegarA("empresas");
+    (document.getElementById("btnNuevoEmpresa") as HTMLButtonElement)?.click();
+    (document.getElementById("form-empresa") as HTMLInputElement).value = tp.empresa || "";
+    if (tp.contacto) {
+      formContactosTemp.push({ nombre: tp.contacto, telefono1: tp.telefono || "", correo: tp.contactoCorreo || "", telefono2: "", empresa: "" });
+      renderFormContactos();
+    }
+    const titulo = document.getElementById("form-emp-titulo");
+    if (titulo) titulo.textContent = "➕ Registrar Empresa (datos del ticket del portal — revisa antes de guardar)";
+    document.getElementById("formulario-empresa")?.scrollIntoView({ behavior: "smooth" });
+  }
+
+  function abrirNuevoContactoDesdeTicketPub(tp) {
+    const modal = document.getElementById("modal-tickets-pub");
+    if (modal) modal.style.display = "none";
+    navegarA("contactos");
+    (document.getElementById("btnNuevoContacto") as HTMLButtonElement)?.click();
+    (document.getElementById("form-ct-nombre") as HTMLInputElement).value = tp.contacto || "";
+    (document.getElementById("form-ct-correo") as HTMLInputElement).value = tp.contactoCorreo || "";
+    (document.getElementById("form-ct-tel1") as HTMLInputElement).value = tp.telefono || "";
+    setEmpresaContacto(tp.empresa || "");
+    const titulo = document.getElementById("form-ct-titulo");
+    if (titulo) titulo.textContent = "➕ Agregar Contacto (datos del ticket del portal — revisa antes de guardar)";
+    document.getElementById("formulario-contacto")?.scrollIntoView({ behavior: "smooth" });
+  }
+
   function renderTicketsPub() {
     const cont = document.getElementById("lista-tickets-pub");
     if (!cont) return;
@@ -10013,6 +10048,20 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     ticketsPublicos.forEach((t, i) => {
       const div = document.createElement("div");
       div.style.cssText = "background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:14px 16px;";
+      // ¿La empresa/contacto del ticket ya existen en la base de datos? Si no, se ofrece un
+      // botón que abre el formulario correspondiente PRELLENADO con los datos del ticket —
+      // sin guardar nada solo — para que se pueda revisar/editar/completar (RFC, etc.) antes
+      // de darle al botón real de Guardar del formulario.
+      const empExistente = t.empresa ? clientes.find((c: any) => (c.EMPRESA || "").toLowerCase() === t.empresa.toLowerCase()) : null;
+      const ctExistente = (t.contacto && (empExistente || t.empresa))
+        ? contactos.find((c: any) => (c.nombre || "").toLowerCase() === t.contacto.toLowerCase() && (c.empresa || "").toLowerCase() === (t.empresa || "").toLowerCase())
+        : null;
+      let bloqueAltaCliente = "";
+      if (!empExistente && t.empresa) {
+        bloqueAltaCliente = `<button type="button" class="btn btn-ghost btn-xs btn-alta-empresa-pub" data-i="${i}" style="margin-top:8px;">🏢 Agregar empresa${t.contacto ? " y contacto" : ""} a la base de datos…</button>`;
+      } else if (!ctExistente && t.contacto && t.empresa) {
+        bloqueAltaCliente = `<button type="button" class="btn btn-ghost btn-xs btn-alta-contacto-pub" data-i="${i}" style="margin-top:8px;">👤 Agregar contacto a ${escapeHtml(t.empresa)}…</button>`;
+      }
       div.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
           <div style="flex:1; min-width:200px;">
@@ -10026,6 +10075,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
             <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">⚡ Prioridad: <strong>${escapeHtml(t.prioridad) || "Media"}</strong> · 📅 ${t.fechaCreacion ? new Date(t.fechaCreacion).toLocaleString('es-MX') : "—"}</div>
             <div style="margin-top:8px; font-size:0.82rem; background:var(--bg-card); padding:10px 12px; border-radius:var(--radius-sm); border-left:3px solid var(--brand-warning); color:var(--text-main);">${escapeHtml(t.descripcion).replace(/\n/g,"<br>")}</div>
             ${(t.adjuntos && t.adjuntos.length > 0) ? `<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">${t.adjuntos.map((a: any) => `<a href="${a.data}" target="_blank" title="${escapeHtml(a.nombre)}"><img src="${a.data}" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:1px solid var(--border-color); cursor:pointer;"></a>`).join("")}</div>` : ""}
+            ${bloqueAltaCliente}
           </div>
           <div style="display:flex; flex-direction:column; gap:6px; flex-shrink:0;">
             <button class="btn btn-success btn-xs btn-aceptar-pub" data-i="${i}" style="white-space:nowrap;">✅ Aceptar ticket</button>
@@ -10057,6 +10107,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         };
         tickets.push(nuevoTicketPub);
         registrarActividadTicket(nuevoTicketPub, `Ticket aceptado desde el portal público (folio original: ${tp.folioPub || "—"})`);
+
         guardarLocal("crm_tickets", tickets);
         if (!crmLocalOnly) await guardarTickets(tickets);
         if (tp._fbId) await eliminarTicketPublico(tp._fbId).catch(() => {});
@@ -10078,6 +10129,14 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         toast("🗑️ Ticket rechazado");
         await cargarYMostrarTicketsPub();
         renderTicketsPub();
+      });
+      div.querySelector(".btn-alta-empresa-pub")?.addEventListener("click", (e) => {
+        const idx = parseInt((e.target as HTMLElement).dataset.i);
+        abrirNuevaEmpresaDesdeTicketPub(ticketsPublicos[idx]);
+      });
+      div.querySelector(".btn-alta-contacto-pub")?.addEventListener("click", (e) => {
+        const idx = parseInt((e.target as HTMLElement).dataset.i);
+        abrirNuevoContactoDesdeTicketPub(ticketsPublicos[idx]);
       });
       cont.appendChild(div);
     });
