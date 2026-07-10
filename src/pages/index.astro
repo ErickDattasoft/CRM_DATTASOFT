@@ -8086,7 +8086,7 @@ verificarSesion();
       if (!configTickets.sistemas.some(s => s.toLowerCase() === sistema.toLowerCase())) {
         configTickets.sistemas.push(sistema);
         if (crmLocalOnly) guardarLocal("crm_config_tickets", configTickets);
-        else guardarConfigTickets(configTickets).catch(() => {});
+        else guardarConfigTickets({ sistemas: configTickets.sistemas }).catch(() => {});
       }
     }
 
@@ -8557,7 +8557,15 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       return;
     }
     mostrarEstado("💾 Guardando configuración...");
-    const ok = await guardarConfigTickets(configTickets);
+    const ok = await guardarConfigTickets({
+      tipos: configTickets.tipos,
+      estados: configTickets.estados,
+      prioridades: configTickets.prioridades,
+      grupos: configTickets.grupos,
+      agentes: configTickets.agentes,
+      sistemas: configTickets.sistemas,
+      correoSoporte: configTickets.correoSoporte
+    });
     if (ok) { toast("💾 Configuración guardada"); ocultarEstado(); sincronizarConfigPublica(); }
     else { guardarLocal("crm_config_tickets", configTickets); mostrarEstado("⚠️ Guardado localmente", 3000); }
   });
@@ -8570,7 +8578,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       toast("💾 Correo de soporte guardado (Local)");
       return;
     }
-    const ok = await guardarConfigTickets(configTickets);
+    const ok = await guardarConfigTickets({ correoSoporte: configTickets.correoSoporte });
     if (ok) { toast("💾 Correo de soporte guardado"); sincronizarConfigPublica(); }
     else { guardarLocal("crm_config_tickets", configTickets); toast("⚠️ Sin conexión — guardado solo localmente", "warning"); }
   });
@@ -8591,7 +8599,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       Media:   parseInt((document.getElementById("sla-media")   as HTMLInputElement).value) || 24,
       Baja:    parseInt((document.getElementById("sla-baja")    as HTMLInputElement).value) || 72,
     };
-    const ok = await guardarConfigTickets(configTickets);
+    const ok = await guardarConfigTickets({ sla: configTickets.sla });
     if (ok) { toast("⏱️ SLA guardado"); renderTickets(); }
     else toast("⚠️ Error al guardar SLA", "error");
   });

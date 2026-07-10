@@ -182,11 +182,19 @@ export async function guardarContactos(contactos) {
 
 /**
  * Guarda la configuración de campos de tickets (tipos, estados, grupos, agentes, etc.) en Firestore.
+ * Escribe cada campo recibido como una ruta anidada ("configTickets.estados", "configTickets.sla", ...)
+ * para que un guardado parcial (ej. solo SLA) nunca pise otros campos (ej. estados) que otra
+ * sesión haya modificado mientras tanto — antes se mandaba el objeto configTickets completo,
+ * lo que provocaba que guardados de una sesión con datos desactualizados borraran cambios recientes.
  */
 export async function guardarConfigTickets(configTickets) {
   try {
     const docRef = doc(db, "agenda", "datos");
-    await setDoc(docRef, { configTickets }, { merge: true });
+    const data = {};
+    for (const [key, value] of Object.entries(configTickets)) {
+      data[`configTickets.${key}`] = value;
+    }
+    await updateDoc(docRef, data);
     return true;
   } catch (error) {
     avisarErrorGuardado("configuración de tickets", error);
