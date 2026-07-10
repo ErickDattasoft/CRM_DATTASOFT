@@ -1,4 +1,4 @@
-const CACHE = 'crm-dattasoft-v2';
+const CACHE = 'crm-dattasoft-v3';
 const STATIC = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -20,7 +20,7 @@ self.addEventListener('fetch', e => {
   // Solo cachear assets del mismo origen, no Firebase/APIs externas
   if (!e.request.url.startsWith(self.location.origin)) return;
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: 'reload' })
       .then(res => {
         const clone = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, clone));

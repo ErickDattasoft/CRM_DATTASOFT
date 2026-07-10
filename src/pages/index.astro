@@ -3846,9 +3846,9 @@ try {
       <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:6px;">📝 Descripción</div>
       <div id="det-tk-descripcion" style="font-size:0.88rem; line-height:1.6; background:var(--bg-input); padding:14px; border-radius:var(--radius-md); border:1px solid var(--border-color); overflow-y:auto; max-height:180px;"></div>
     </div>
-    <div id="det-tk-notas-internas-section" style="border-top:1px solid rgba(245,158,11,0.3); padding-top:12px; display:none; background:rgba(245,158,11,0.04); border-radius:6px; padding:12px 14px; margin-top:2px;">
-      <div style="font-size:0.72rem; color:#f59e0b; text-transform:uppercase; font-weight:700; margin-bottom:6px;">🔒 Notas Internas</div>
-      <div id="det-tk-notas-internas" style="font-size:0.85rem; line-height:1.6; white-space:pre-wrap; color:var(--text-main);"></div>
+    <div id="det-tk-notas-internas-section" style="border-top:1px solid rgba(245,158,11,0.3); padding-top:12px; background:rgba(245,158,11,0.04); border-radius:6px; padding:12px 14px; margin-top:2px;">
+      <div style="font-size:0.72rem; color:#f59e0b; text-transform:uppercase; font-weight:700; margin-bottom:6px;">🔒 Notas Internas <span style="font-weight:400; text-transform:none; color:var(--text-muted);">(uso interno — NO se envía al cliente)</span></div>
+      <textarea id="det-tk-notas-internas" rows="3" placeholder="Ej: Factura A-001, pendiente autorización..." style="font-size:0.85rem;"></textarea>
     </div>
     <div id="det-tk-adjuntos-section" style="border-top:1px solid var(--border-color); padding-top:12px; display:none;">
       <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:8px;">📎 Adjuntos</div>
@@ -8274,12 +8274,8 @@ verificarSesion();
     (document.getElementById("det-tk-canalizado") as HTMLInputElement).value = t.canalizado || "";
     (document.getElementById("det-tk-realizado") as HTMLInputElement).value = t.realizado || "";
     document.getElementById("det-tk-descripcion").innerHTML = sanitizeDescripcionHtml(t.descripcion);
-    const detNI = document.getElementById("det-tk-notas-internas");
-    const detNISec = document.getElementById("det-tk-notas-internas-section");
-    if (detNI && detNISec) {
-      if (t.notasInternas) { detNI.textContent = t.notasInternas; detNISec.style.display = "block"; }
-      else { detNI.textContent = ""; detNISec.style.display = "none"; }
-    }
+    const detNI = document.getElementById("det-tk-notas-internas") as HTMLTextAreaElement;
+    if (detNI) detNI.value = t.notasInternas || "";
     renderAdjuntosDetalle(t);
 
     const bPrior = document.getElementById("det-tk-prioridad-badge");
@@ -8365,8 +8361,11 @@ verificarSesion();
     const camposGestionCambiaron = nuevoReferido !== (t.referido || "") || nuevoSolicitado !== (t.solicitado || "")
       || nuevoCanalizado !== (t.canalizado || "") || nuevoRealizado !== (t.realizado || "");
 
-    if (!txt && nuevoEstado === t.estado && !camposGestionCambiaron) {
-      alert("Escribe una nota, cambia el estado o modifica algún campo de Referido/Solicitado/Canalizado/Realizado.");
+    const nuevoNotasInternas = (document.getElementById("det-tk-notas-internas") as HTMLTextAreaElement)?.value.trim() || "";
+    const notasInternasCambiaron = nuevoNotasInternas !== (t.notasInternas || "");
+
+    if (!txt && nuevoEstado === t.estado && !camposGestionCambiaron && !notasInternasCambiaron) {
+      alert("Escribe una nota, cambia el estado o modifica algún campo de Referido/Solicitado/Canalizado/Realizado/Notas Internas.");
       return;
     }
 
@@ -8388,11 +8387,13 @@ verificarSesion();
     }
 
     if (camposGestionCambiaron) logBitacora(`Ticket #${t.numero}: datos de gestión actualizados (Referido/Solicitado/Canalizado/Realizado)`, "✏️");
+    if (notasInternasCambiaron) logBitacora(`Ticket #${t.numero}: notas internas actualizadas`, "🔒");
 
     t.referido = nuevoReferido;
     t.solicitado = nuevoSolicitado;
     t.canalizado = nuevoCanalizado;
     t.realizado = nuevoRealizado;
+    t.notasInternas = nuevoNotasInternas;
 
     t.fechaActualizacion = new Date().toISOString();
     guardarLocal("crm_tickets", tickets);
