@@ -921,31 +921,6 @@ try {
       box-shadow: none;
     }
 
-    /* ===== NOTES TIMELINE ===== */
-    .notes-timeline {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      max-height: 280px;
-      overflow-y: auto;
-      padding-right: 4px;
-    }
-    .note-item {
-      background: var(--bg-input);
-      border: 1px solid var(--border-color);
-      padding: 12px 14px;
-      border-radius: var(--radius-md);
-      font-size: 0.83rem;
-    }
-    .note-meta {
-      display: flex;
-      justify-content: space-between;
-      color: var(--text-light);
-      font-size: 0.72rem;
-      margin-bottom: 6px;
-    }
-    .note-meta strong { color: var(--text-muted); }
-
     /* ===== RICH TEXT TOOLBAR ===== */
     .rte-toolbar {
       display: flex;
@@ -3861,17 +3836,12 @@ try {
       </details>
     </div>
     <div style="border-top:1px solid var(--border-color); padding-top:14px;">
-      <h4 style="font-size:0.88rem; color:var(--brand-primary-hover); font-family:var(--font-heading); margin-bottom:8px;">💬 Bitácora de Soporte</h4>
-      <div class="notes-timeline" id="det-tk-notas"></div>
-      <div style="margin-top:14px; display:flex; flex-direction:column; gap:8px;">
-        <textarea id="txtNuevaNotaTicket" rows="2" placeholder="Agregar nota..." style="font-size:0.82rem;"></textarea>
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div style="display:flex; gap:6px; align-items:center;">
-            <label style="font-size:0.72rem; font-weight:700; color:var(--text-muted);">Cambiar Estado:</label>
-            <select id="selectCambiarEstadoDetalle" style="padding:5px 10px; font-size:0.75rem;"></select>
-          </div>
-          <button class="btn btn-primary btn-sm" id="btnAgregarNotaTicket">💾 Guardar cambios</button>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; gap:6px; align-items:center;">
+          <label style="font-size:0.72rem; font-weight:700; color:var(--text-muted);">Cambiar Estado:</label>
+          <select id="selectCambiarEstadoDetalle" style="padding:5px 10px; font-size:0.75rem;"></select>
         </div>
+        <button class="btn btn-primary btn-sm" id="btnAgregarNotaTicket">💾 Guardar cambios</button>
       </div>
     </div>
   </div>
@@ -8290,40 +8260,14 @@ verificarSesion();
     bTipo.textContent = t.tipo || "General";
 
     populateSelectOptions("selectCambiarEstadoDetalle", configTickets.estados, t.estado);
-    renderNotasTicket(t);
     renderActividadTicket(t);
 
     if (modalDetalle) modalDetalle.style.display = "flex";
   }
 
-  function renderNotasTicket(t) {
-    const cont = document.getElementById("det-tk-notas");
-    if (!cont) return;
-    cont.innerHTML = "";
-    const notas = t.notas || [];
-    if (notas.length === 0) {
-      cont.innerHTML = '<div style="text-align:center; color:var(--text-light); font-size:0.8rem; padding:14px;">Sin notas de seguimiento.</div>';
-      return;
-    }
-    notas.forEach(n => {
-      const div = document.createElement("div");
-      div.className = "note-item";
-      div.innerHTML = `
-        <div class="note-meta">
-          <strong>👤 ${escapeHtml(n.autor) || "Soporte"}</strong>
-          <span>📅 ${new Date(n.fecha).toLocaleString()}</span>
-        </div>
-        <div style="line-height:1.5; white-space:pre-wrap;">${escapeHtml(n.texto)}</div>
-      `;
-      cont.appendChild(div);
-    });
-    cont.scrollTop = cont.scrollHeight;
-  }
-
   function cerrarDetalleTicket() {
     if (modalDetalle) modalDetalle.style.display = "none";
     ticketDetalleNumero = null;
-    document.getElementById("txtNuevaNotaTicket").value = "";
   }
 
   document.getElementById("btnCerrarDetalle")?.addEventListener("click", cerrarDetalleTicket);
@@ -8351,7 +8295,6 @@ verificarSesion();
     if (ticketDetalleNumero === null) return;
     const t = ticketPorNumero(ticketDetalleNumero);
     if (!t) { toast("⚠️ Este ticket ya no existe (fue eliminado)", "error"); cerrarDetalleTicket(); return; }
-    const txt = document.getElementById("txtNuevaNotaTicket").value.trim();
     const nuevoEstado = document.getElementById("selectCambiarEstadoDetalle")?.value;
 
     const nuevoReferido = (document.getElementById("det-tk-referido") as HTMLInputElement)?.value.trim() || "";
@@ -8364,17 +8307,9 @@ verificarSesion();
     const nuevoNotasInternas = (document.getElementById("det-tk-notas-internas") as HTMLTextAreaElement)?.value.trim() || "";
     const notasInternasCambiaron = nuevoNotasInternas !== (t.notasInternas || "");
 
-    if (!txt && nuevoEstado === t.estado && !camposGestionCambiaron && !notasInternasCambiaron) {
-      alert("Escribe una nota, cambia el estado o modifica algún campo de Referido/Solicitado/Canalizado/Realizado/Notas Internas.");
+    if (nuevoEstado === t.estado && !camposGestionCambiaron && !notasInternasCambiaron) {
+      alert("Cambia el estado o modifica algún campo de Referido/Solicitado/Canalizado/Realizado/Notas Internas.");
       return;
-    }
-
-    if (txt) {
-      if (!t.notas) t.notas = [];
-      const u = getUsuarioActual();
-      t.notas.push({ autor: u?.nombre || "Soporte", fecha: new Date().toISOString(), texto: txt });
-      document.getElementById("txtNuevaNotaTicket").value = "";
-      logBitacora(`Nota agregada al ticket #${t.numero}`, "💬");
     }
 
     if (nuevoEstado && nuevoEstado !== t.estado) {
@@ -8399,7 +8334,6 @@ verificarSesion();
     guardarLocal("crm_tickets", tickets);
     if (crmLocalOnly) {
       toast("💬 Cambios guardados (Local)");
-      renderNotasTicket(t);
       renderActividadTicket(t);
       renderTickets();
       renderDashboard();
@@ -8409,7 +8343,6 @@ verificarSesion();
     const ok = await guardarTickets(tickets);
     if (ok) { toast("💬 Cambios guardados"); ocultarEstado(); }
     else { mostrarEstado("⚠️ Guardado localmente (sin conexión)", 2000); }
-    renderNotasTicket(t);
     renderActividadTicket(t);
     renderTickets();
     renderDashboard();
@@ -10101,7 +10034,6 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           descripcion: (tp.descripcion || "").replace(/\n/g, "<br>"),
           referido: "Portal Público", solicitado: "", canalizado: "", realizado: "",
           adjuntos: tp.adjuntos || [],
-          notas: [{ autor: "Sistema", fecha: new Date().toISOString(), texto: `Ticket importado del portal público. Folio original: ${tp.folioPub || "—"}` }],
           actividad: [],
           fechaCreacion: tp.fechaCreacion || new Date().toISOString(),
           fechaActualizacion: new Date().toISOString()
