@@ -10,9 +10,14 @@ service cloud.firestore {
     // staff_aprobado que un admin creó al aprobar su acceso (ver otorgarAccesoStaff() en
     // firebase.js). Antes de este cierre, cualquier sesión anónima contaba como válida —
     // cualquiera que abriera cualquier página del sitio podía leer/escribir todo.
+    //
+    // request.time < timestamp.date(2099,1,1) es una guarda de cordura (no un candado real):
+    // evita que un token con expiración manipulada/corrupta cuele una sesión "eterna". No
+    // reemplaza a esStaffAprobado(), que sigue siendo el candado principal.
     function esStaffAprobado() {
       return request.auth != null
         && request.auth.token.firebase.sign_in_provider != 'anonymous'
+        && request.time < timestamp.date(2099, 1, 1)
         && exists(/databases/$(database)/documents/staff_aprobado/$(request.auth.token.email));
     }
 

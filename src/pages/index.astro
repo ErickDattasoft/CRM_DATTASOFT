@@ -1543,6 +1543,22 @@ try {
   #login-securo-correo:focus, #login-securo-pass:focus,
   #login-sol-nombre:focus, #login-sol-correo:focus, #login-sol-pass1:focus, #login-sol-pass2:focus { border-color: #6366f1; }
   #login-error, #login-securo-error, #login-sol-error { font-size: 0.8rem; color: #f87171; min-height: 20px; margin-bottom: 8px; }
+  .login-pass-wrap { position: relative; }
+  .login-pass-wrap input { padding-right: 40px !important; }
+  .login-pass-eye {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer; font-size: 1rem; padding: 6px; line-height: 1;
+    color: #8b95a8; opacity: 0.85;
+  }
+  .login-pass-eye:hover { opacity: 1; }
+  .login-capslock-warning {
+    display: none; font-size: 0.75rem; color: #fbbf24; margin: -4px 0 8px; text-align: center;
+  }
+  .login-capslock-warning.visible { display: block; }
+  .login-lockout-warning {
+    display: none; font-size: 0.78rem; color: #f87171; margin: -2px 0 8px; text-align: center; font-weight: 600;
+  }
+  .login-lockout-warning.visible { display: block; }
   #login-btn, #login-securo-btn, #login-sol-btn {
     width: 100%; background: #6366f1; color: #fff; border: none; border-radius: 10px;
     padding: 12px; font-size: 0.95rem; font-weight: 700; cursor: pointer; font-family: inherit;
@@ -2030,7 +2046,12 @@ try {
     <!-- Paso 2: contraseña -->
     <div id="login-step-pass" style="display:none;">
       <div id="login-selected-name"></div>
-      <input id="login-pass-input" type="password" placeholder="Contraseña" autocomplete="current-password">
+      <div class="login-pass-wrap">
+        <input id="login-pass-input" type="password" placeholder="Contraseña" autocomplete="current-password">
+        <button type="button" id="login-pass-toggle" class="login-pass-eye" aria-label="Mostrar contraseña">👁️</button>
+      </div>
+      <div id="login-capslock-warning" class="login-capslock-warning">⚠️ Mayúsculas activadas (Caps Lock)</div>
+      <div id="login-lockout-warning" class="login-lockout-warning"></div>
       <div id="login-error"></div>
       <div style="display:flex; gap:8px; margin-top:4px;">
         <button id="login-back-btn">← Cambiar</button>
@@ -2041,7 +2062,11 @@ try {
     <div id="login-step-securo" style="display:none;">
       <div class="login-sub">Inicia sesión con tu cuenta segura</div>
       <input id="login-securo-correo" type="email" placeholder="Correo" autocomplete="username" style="margin-bottom:8px;">
-      <input id="login-securo-pass" type="password" placeholder="Contraseña" autocomplete="current-password">
+      <div class="login-pass-wrap">
+        <input id="login-securo-pass" type="password" placeholder="Contraseña" autocomplete="current-password">
+        <button type="button" id="login-securo-pass-toggle" class="login-pass-eye" aria-label="Mostrar contraseña">👁️</button>
+      </div>
+      <div id="login-securo-capslock-warning" class="login-capslock-warning">⚠️ Mayúsculas activadas (Caps Lock)</div>
       <div id="login-securo-error"></div>
       <div style="display:flex; gap:8px; margin-top:4px;">
         <button id="login-securo-back-btn">← Volver</button>
@@ -2611,6 +2636,7 @@ try {
             <select id="selectFiltroAgente" style="max-width:140px;">
               <option value="">🧑‍💼 Agente</option>
             </select>
+            <button class="btn btn-ghost btn-sm" id="btnFiltroAgenda" title="Ver solo tickets con fecha programada, ordenados por fecha/hora">📅 Agenda</button>
           </div>
           <div class="controls-right">
             <button class="btn btn-ghost btn-sm" id="btnVerPapelera" title="Papelera de reciclaje">🗑️ Papelera <span id="badge-papelera" class="nav-badge" style="display:none;">0</span></button>
@@ -2699,6 +2725,22 @@ try {
           <div class="form-group" style="margin-top:10px;">
             <label style="color:#f59e0b;">🔒 Notas Internas <span style="font-size:0.72rem; font-weight:400; color:var(--text-muted); text-transform:none;">(uso interno: factura, pendientes, detalles — NO se envía al cliente)</span></label>
             <textarea id="form-tk-notas-internas" rows="3" placeholder="Ej: Factura A-001, pendiente autorización, contactar el lunes..." style="font-size:0.83rem; border-color:rgba(245,158,11,0.3); background:rgba(245,158,11,0.04); resize:vertical;"></textarea>
+          </div>
+          <!-- Programar atención -->
+          <div style="border-top:1px dashed rgba(255,255,255,0.06); margin-top:14px; padding-top:12px;">
+            <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px;">📅 Programar atención (opcional)</div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:12px;">
+              <div class="form-group"><label>Fecha programada</label><input type="date" id="form-tk-fecha-programada"></div>
+              <div class="form-group" id="form-tk-hora-programada-wrap" style="display:none;"><label>Hora programada</label><input type="time" id="form-tk-hora-programada" value="09:00"></div>
+              <div class="form-group"><label>Agente asignado</label><select id="form-tk-agente-asignado"></select></div>
+            </div>
+            <div id="form-tk-recordatorio-wrap" style="display:none; margin-top:10px;">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.83rem;">
+                <input type="checkbox" id="chk-recordatorio-wsp"> Enviar recordatorio WhatsApp 30 min antes a:
+              </label>
+              <div id="form-tk-recordatorio-destinatarios" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; margin-left:26px;"></div>
+              <div id="form-tk-recordatorio-aviso" style="display:none; font-size:0.75rem; color:#fbbf24; margin-top:6px; margin-left:26px;"></div>
+            </div>
           </div>
           <!-- Adjuntos -->
           <div class="form-group" style="margin-top:10px;">
@@ -2945,6 +2987,40 @@ try {
             <button class="btn btn-ghost btn-sm" id="btnAgregarUsuario">➕ Agregar usuario</button>
             <button class="btn btn-secondary btn-sm" id="btnCambiarMiPass">🔐 Cambiar mi contraseña</button>
             <button class="btn btn-ghost btn-sm" id="btnSincronizarAccesos" title="Preparación para cerrar las reglas de Firestore — un solo uso, antes del cierre final">🔄 Sincronizar accesos</button>
+          </div>
+        </div>
+
+        <div class="card" id="cfg-n8n-panel" style="margin-top:20px;">
+          <div class="card-title">🤖 Automatizaciones (n8n)</div>
+
+          <!-- Bloque A: Conexión -->
+          <div style="margin-bottom:22px;">
+            <div style="font-weight:700; font-size:0.85rem; margin-bottom:8px;">🔌 Conexión</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+              <input id="n8n-webhook-url" type="text" placeholder="https://tu-instancia.n8n.cloud/webhook/xxxxxx" style="flex:1; min-width:240px;">
+              <button class="btn btn-secondary btn-sm" id="btnGuardarN8nUrl">💾 Guardar</button>
+              <button class="btn btn-ghost btn-sm" id="btnProbarN8n">🔌 Probar conexión</button>
+            </div>
+            <span id="n8n-test-result" style="font-size:0.8rem; display:none; margin-top:6px;"></span>
+          </div>
+
+          <!-- Bloque B: Destinatarios WhatsApp -->
+          <div style="margin-bottom:22px;">
+            <div style="font-weight:700; font-size:0.85rem; margin-bottom:8px;">📱 Destinatarios WhatsApp</div>
+            <div id="n8n-destinatarios-aviso" style="display:none; font-size:0.78rem; color:#fbbf24; margin-bottom:8px;"></div>
+            <div id="n8n-destinatarios-list" style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px;"></div>
+            <button type="button" class="btn btn-ghost btn-sm" id="btnAgregarDestinatarioN8n">➕ Agregar destinatario manualmente</button>
+            <p style="font-size:0.72rem; color:var(--text-muted); margin-top:10px; line-height:1.5;">
+              Para obtener tu API Key de WhatsApp gratis: desde el WhatsApp del número a registrar, envía el mensaje exacto
+              <strong>"I allow callmebot to send me messages"</strong> al número <strong>+34 644 80 93 26</strong>.
+              Recibirás tu API Key por WhatsApp en minutos.
+            </p>
+          </div>
+
+          <!-- Bloque C: Reglas de notificación -->
+          <div>
+            <div style="font-weight:700; font-size:0.85rem; margin-bottom:8px;">🔔 Reglas de notificación</div>
+            <div id="n8n-reglas-tabla" style="display:flex; flex-direction:column; gap:16px;"></div>
           </div>
         </div>
       </div>
@@ -3447,6 +3523,7 @@ try {
             <a href="#man-tareas">📌 Tareas</a>
             <a href="#man-filtros">🔖 Filtros</a>
             <a href="#man-config">⚙️ Configuración</a>
+            <a href="#man-automatizaciones">🤖 Automatizaciones (n8n)</a>
             <a href="#man-cuenta-segura">🔒 Cuenta Segura</a>
           </div>
 
@@ -3610,6 +3687,12 @@ try {
 
             <div class="manual-subtitulo">🕵️ Actividad del ticket (trazabilidad)</div>
             <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;margin-bottom:8px;">Dentro del detalle de cada ticket hay una sección plegable "Actividad del ticket" que registra automáticamente quién creó el ticket, quién cambió el estado (y de qué a qué), y quién cambió el agente asignado — con fecha y usuario. Es información de solo lectura, útil cuando varios usuarios trabajan los mismos tickets y necesitas saber quién hizo qué.</p>
+
+            <div class="manual-subtitulo">📅 Programar atención (Agenda)</div>
+            <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;margin-bottom:8px;">Al crear o editar un ticket puedes abrir el bloque opcional "📅 Programar atención": elige fecha, hora y el agente asignado (solo usuarios activos del CRM). Si además marcas "Enviar recordatorio WhatsApp 30 min antes" y seleccionas destinatarios, el CRM le pide a n8n que lo avise por WhatsApp media hora antes de la hora programada — requiere tener n8n configurado (ver <a href="#man-automatizaciones" style="color:var(--brand-primary-hover);">🤖 Automatizaciones</a>). Los tickets con fecha programada muestran un badge 📅 en la lista; si ya pasó la hora y el ticket sigue abierto, el badge se pone en rojo. Usa el botón <span class="btn-demo btn-demo-ghost">📅 Agenda</span> junto a los filtros para ver solo esos tickets, ordenados por fecha y hora.</p>
+
+            <div class="manual-subtitulo">🧾 Cierre con nota interna (facturación)</div>
+            <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;margin-bottom:8px;">Cuando un ticket cambia a estado <strong>Cerrado</strong> y en ese mismo momento tiene texto en "Notas Internas", el CRM manda automáticamente un correo a <strong>Configuración → Correo de soporte</strong> avisando que ese ticket quedó cerrado con nota (señal de que fue facturado), y — si está configurado — dispara el evento <code>ticket_cerrado_facturado</code> hacia n8n. Solo se manda una vez, al momento exacto en que cambia a Cerrado (no en cada edición posterior de un ticket que ya estaba cerrado).</p>
           </div>
 
           <!-- ── CONTACTOS ──────────────────────────────────── -->
@@ -3684,8 +3767,31 @@ try {
               <tr><td>🖼️ Logo empresa</td><td>Imagen que aparece en el sidebar y en la página pública de registro de eventos.</td></tr>
               <tr><td>👤 Usuarios del sistema</td><td>Crea, edita o desactiva usuarios del CRM. Solo admins pueden hacer esto.</td></tr>
               <tr><td>🛡️ Backup</td><td>Descarga un archivo JSON con todos los datos del CRM por si necesitas respaldo.</td></tr>
+              <tr><td>🤖 Automatizaciones (n8n)</td><td>Webhook de n8n, destinatarios de WhatsApp y reglas de qué evento avisa a quién. Ver <a href="#man-automatizaciones" style="color:var(--brand-primary-hover);">🤖 Automatizaciones</a>.</td></tr>
             </table>
             <div class="manual-aviso"><span class="manual-tip-icon">⚠️</span><span>Si cambias el correo de soporte, los correos de alertas y registros de eventos se enviarán a la nueva dirección. Verifica que sea correcta antes de guardar.</span></div>
+          </div>
+
+          <!-- ── AUTOMATIZACIONES N8N ───────────────────────── -->
+          <div class="manual-seccion" id="man-automatizaciones">
+            <div class="manual-seccion-title">🤖 Automatizaciones (n8n)</div>
+            <p style="font-size:0.84rem;color:var(--text-main);line-height:1.6;margin-bottom:14px;">
+              n8n es un servicio externo que conecta el CRM con WhatsApp: cuando pasa algo en el CRM (un ticket se cierra, se crea un usuario, una licencia está por vencer, etc.), el CRM le avisa a n8n y n8n decide a quién y cómo mandarle el WhatsApp. El CRM nunca manda WhatsApp directo a clientes — solo avisa a n8n.
+            </p>
+
+            <div class="manual-subtitulo">🔌 Conexión</div>
+            <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;margin-bottom:8px;">Pega la URL del webhook de tu instancia de n8n y guarda. El botón <span class="btn-demo btn-demo-ghost">🔌 Probar conexión</span> manda un ping de prueba para confirmar que n8n responde.</p>
+
+            <div class="manual-subtitulo">📱 Destinatarios WhatsApp (equipo interno)</div>
+            <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;margin-bottom:8px;">Cada persona del equipo que deba recibir avisos por WhatsApp necesita su propia API Key gratis de <strong>CallMeBot</strong>: desde SU WhatsApp, mandar el mensaje exacto <em>"I allow callmebot to send me messages"</em> al número <strong>+34 644 80 93 26</strong>, y en minutos llega la API Key por WhatsApp. Con nombre, teléfono y API Key ya se puede activar el destinatario y usar el botón <span class="btn-demo btn-demo-ghost">🧪 Probar</span> para confirmar que el envío funciona antes de depender de él.</p>
+            <div class="manual-tip"><span class="manual-tip-icon">💡</span><span>Al crear un usuario nuevo del sistema, el CRM le prepara solo — inactivo y sin teléfono — un destinatario con ese mismo nombre para que sea más rápido activarlo. Nunca se activa ni se le pone teléfono automáticamente.</span></div>
+
+            <div class="manual-subtitulo">🔔 Reglas de notificación</div>
+            <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;margin-bottom:8px;">Cada evento (ticket cerrado, ticket cerrado con nota interna, usuario nuevo, licencia por vencer, etc.) tiene un interruptor ON/OFF y checkboxes de a quién avisarle. Si el evento está apagado, o no tiene destinatarios marcados, o no hay webhook configurado, el CRM simplemente no manda nada — no truena ni bloquea el guardado.</p>
+            <div class="manual-aviso"><span class="manual-tip-icon">⚠️</span><span>Los eventos de Licencias, Resumen matutino y "Ticket sin movimiento 48h" los dispara n8n solo (con un horario programado), no el CRM — el CRM únicamente guarda la configuración de a quién avisar.</span></div>
+
+            <div class="manual-subtitulo">📢 WhatsApp masivo desde Versiones</div>
+            <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;margin-bottom:8px;">El botón "📢 WhatsApp" al seleccionar empresas en Versiones manda un solo aviso a n8n con todas las empresas seleccionadas (si el webhook está configurado y la regla "WhatsApp masivo a clientes" está activa). Si no hay n8n configurado, se usa el método anterior (abrir WhatsApp Web una pestaña por empresa) como respaldo.</p>
           </div>
 
           <!-- ── CUENTA SEGURA ──────────────────────────────── -->
@@ -3714,6 +3820,9 @@ try {
               <tr><td>Activar la cuenta segura de alguien que no está presente</td><td>Configuración → Usuarios → botón "🔒 Activar segura" en su fila (tú eliges una contraseña temporal y se la compartes después)</td></tr>
               <tr><td>Ver quién ya tiene cuenta segura</td><td>Configuración → Usuarios — debajo de cada nombre dice "🔒 Cuenta segura: correo" o "🔓 Sin activar"</td></tr>
             </table>
+
+            <div class="manual-subtitulo">🛡️ Protección del login</div>
+            <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;margin-bottom:8px;">La pantalla de login tiene protecciones adicionales: el ícono 👁️ junto a la contraseña la muestra/oculta, y si Bloq Mayús está activo aparece un aviso mientras escribes. Después de <strong>5 contraseñas incorrectas seguidas</strong> para un mismo usuario, ese usuario se bloquea 15 minutos (el contador se resetea al entrar correctamente). Además, si nadie toca el mouse ni el teclado durante <strong>8 horas</strong>, la sesión se cierra sola por inactividad.</p>
           </div>
 
           <!-- ── PREGUNTAS FRECUENTES ───────────────────────── -->
@@ -4122,6 +4231,9 @@ try {
         <a href="https://dash.cloudflare.com" target="_blank" style="display:flex; align-items:center; gap:8px; color:#f97316; text-decoration:none; background:var(--bg-input); padding:10px 12px; border-radius:var(--radius-md); transition:var(--transition-base);">
           <span style="font-size:1.1rem;">🟠</span> Cloudflare Dashboard — Pages & Workers
         </a>
+        <a href="https://n8n.io" target="_blank" style="display:flex; align-items:center; gap:8px; color:#ea4b71; text-decoration:none; background:var(--bg-input); padding:10px 12px; border-radius:var(--radius-md); transition:var(--transition-base);">
+          <span style="font-size:1.1rem;">🤖</span> n8n — Automatizaciones (WhatsApp, correos, recordatorios)
+        </a>
       </div>
       <div style="text-align:center; font-size:0.72rem; color:var(--text-light); padding-top:6px; border-top:1px solid var(--border-subtle);">
         Astro 6 · Firebase 12 Firestore (tiempo real) · Cloudflare Pages · Brevo API · SheetJS · PWA
@@ -4248,7 +4360,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica } from "../data/firebase.js";
+import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica } from "../data/firebase.js";
 
 // ── Modal confirmación (reemplaza confirm() — funciona en móvil) ──
 function confirmar(msg: string, icon = "⚠️"): Promise<boolean> {
@@ -4287,6 +4399,9 @@ async function sha256(str: string): Promise<string> {
 const SESSION_KEY = "crm_session";
 const USUARIOS_KEY = "crm_usuarios";
 const PASS_DEFECTO = "Datta2026";
+const LOGIN_ATTEMPTS_KEY = "crm_login_attempts";
+const MAX_INTENTOS_LOGIN = 5;
+const BLOQUEO_LOGIN_MINUTOS = 15;
 // Dominio público real del CRM — los links que se comparten (registro a eventos, etc.)
 // siempre deben apuntar aquí, nunca a location.origin (que en desarrollo sería localhost).
 const URL_PRODUCCION = "https://crm-dattasoft.pages.dev";
@@ -4334,6 +4449,51 @@ async function seedUsuariosDefault(): Promise<Usuario[]> {
 
 let selectedUser: Usuario | null = null;
 
+// ── Protección contra intentos de contraseña ──
+// Se guarda por id de usuario en localStorage (no es dato de negocio, es un contador de UI
+// de este navegador — no hace falta Firestore para esto).
+interface IntentoLogin { fallos: number; bloqueadoHasta: number | null }
+function getIntentosLogin(): Record<string, IntentoLogin> {
+  try { return JSON.parse(localStorage.getItem(LOGIN_ATTEMPTS_KEY) || "{}"); } catch { return {}; }
+}
+function saveIntentosLogin(data: Record<string, IntentoLogin>) {
+  localStorage.setItem(LOGIN_ATTEMPTS_KEY, JSON.stringify(data));
+}
+function minutosRestantesBloqueo(usuarioId: string): number {
+  const info = getIntentosLogin()[usuarioId];
+  if (!info?.bloqueadoHasta) return 0;
+  const restanteMs = info.bloqueadoHasta - Date.now();
+  return restanteMs > 0 ? Math.ceil(restanteMs / 60000) : 0;
+}
+function registrarIntentoFallido(usuarioId: string) {
+  const data = getIntentosLogin();
+  const info = data[usuarioId] || { fallos: 0, bloqueadoHasta: null };
+  info.fallos += 1;
+  if (info.fallos >= MAX_INTENTOS_LOGIN) {
+    info.bloqueadoHasta = Date.now() + BLOQUEO_LOGIN_MINUTOS * 60000;
+    info.fallos = 0;
+  }
+  data[usuarioId] = info;
+  saveIntentosLogin(data);
+}
+function resetIntentosLogin(usuarioId: string) {
+  const data = getIntentosLogin();
+  if (data[usuarioId]) { delete data[usuarioId]; saveIntentosLogin(data); }
+}
+function mostrarAvisoBloqueo(usuarioId: string): boolean {
+  const lockEl = document.getElementById("login-lockout-warning");
+  const btn = document.getElementById("login-btn") as HTMLButtonElement | null;
+  const restante = minutosRestantesBloqueo(usuarioId);
+  if (restante > 0) {
+    if (lockEl) { lockEl.textContent = `🔒 Demasiados intentos. Espera ${restante} minuto${restante === 1 ? "" : "s"}.`; lockEl.classList.add("visible"); }
+    if (btn) btn.disabled = true;
+    return true;
+  }
+  if (lockEl) { lockEl.textContent = ""; lockEl.classList.remove("visible"); }
+  if (btn) btn.disabled = false;
+  return false;
+}
+
 async function initLoginUI() {
   let usuarios = getUsuarios();
   if (!usuarios.length) usuarios = await seedUsuariosDefault();
@@ -4368,12 +4528,14 @@ async function initLoginUI() {
       document.getElementById("login-selected-name")!.textContent = `👤 ${selectedUser.nombre}`;
       const inp = document.getElementById("login-pass-input") as HTMLInputElement;
       if (inp) { inp.value = ""; inp.focus(); }
+      mostrarAvisoBloqueo(selectedUser.id);
     });
   });
 }
 
 async function intentarLogin() {
   if (!selectedUser) return;
+  if (mostrarAvisoBloqueo(selectedUser.id)) return;
   const inp = document.getElementById("login-pass-input") as HTMLInputElement;
   const errEl = document.getElementById("login-error");
   const pass = inp?.value;
@@ -4384,30 +4546,71 @@ async function intentarLogin() {
   const usuarioActualizado = usuariosActuales.find(u => u.id === selectedUser!.id);
   const hashEsperado = usuarioActualizado?.passHash ?? selectedUser.passHash;
   if (hash !== hashEsperado) {
-    if (errEl) errEl.textContent = "Contraseña incorrecta.";
+    registrarIntentoFallido(selectedUser.id);
+    if (mostrarAvisoBloqueo(selectedUser.id)) {
+      if (errEl) errEl.textContent = "";
+    } else if (errEl) {
+      errEl.textContent = "Contraseña incorrecta.";
+    }
     if (inp) { inp.value = ""; inp.focus(); }
     return;
   }
+  resetIntentosLogin(selectedUser.id);
   if (usuarioActualizado) selectedUser = usuarioActualizado;
   sessionStorage.setItem(SESSION_KEY, JSON.stringify({ nombre: selectedUser.nombre, rol: selectedUser.rol }));
   document.getElementById("login-overlay")?.classList.add("hidden");
   if (errEl) errEl.textContent = "";
   // Notificar al IIFE (scope distinto) para que aplique permisos y registre en bitácora
   document.dispatchEvent(new CustomEvent("crm:login", { detail: { nombre: selectedUser.nombre, rol: selectedUser.rol } }));
+  iniciarControlInactividad();
 }
 
 async function verificarSesion() {
   if (sessionStorage.getItem(SESSION_KEY)) {
     document.getElementById("login-overlay")?.classList.add("hidden");
+    iniciarControlInactividad();
   } else {
     await initLoginUI();
+  }
+  const motivoCierre = sessionStorage.getItem("crm_logout_motivo");
+  if (motivoCierre) {
+    sessionStorage.removeItem("crm_logout_motivo");
+    setTimeout(() => toast(motivoCierre, "warning"), 300);
   }
 }
 
 document.getElementById("login-btn")?.addEventListener("click", intentarLogin);
 document.getElementById("login-pass-input")?.addEventListener("keydown", e => {
   if ((e as KeyboardEvent).key === "Enter") intentarLogin();
+  const warnEl = document.getElementById("login-capslock-warning");
+  if (warnEl) warnEl.classList.toggle("visible", (e as KeyboardEvent).getModifierState?.("CapsLock"));
 });
+document.getElementById("login-pass-input")?.addEventListener("keyup", e => {
+  const warnEl = document.getElementById("login-capslock-warning");
+  if (warnEl) warnEl.classList.toggle("visible", (e as KeyboardEvent).getModifierState?.("CapsLock"));
+});
+document.getElementById("login-securo-pass")?.addEventListener("keydown", e => {
+  const warnEl = document.getElementById("login-securo-capslock-warning");
+  if (warnEl) warnEl.classList.toggle("visible", (e as KeyboardEvent).getModifierState?.("CapsLock"));
+});
+document.getElementById("login-securo-pass")?.addEventListener("keyup", e => {
+  const warnEl = document.getElementById("login-securo-capslock-warning");
+  if (warnEl) warnEl.classList.toggle("visible", (e as KeyboardEvent).getModifierState?.("CapsLock"));
+});
+function initToggleVerPass(toggleId: string, inputId: string) {
+  const toggleBtn = document.getElementById(toggleId);
+  const inp = document.getElementById(inputId) as HTMLInputElement | null;
+  if (!toggleBtn || !inp) return;
+  toggleBtn.addEventListener("click", () => {
+    const oculto = inp.type === "password";
+    inp.type = oculto ? "text" : "password";
+    toggleBtn.textContent = oculto ? "🙈" : "👁️";
+    toggleBtn.setAttribute("aria-label", oculto ? "Ocultar contraseña" : "Mostrar contraseña");
+    inp.focus();
+  });
+}
+initToggleVerPass("login-pass-toggle", "login-pass-input");
+initToggleVerPass("login-securo-pass-toggle", "login-securo-pass");
 document.getElementById("login-back-btn")?.addEventListener("click", () => {
   selectedUser = null;
   document.getElementById("login-step-pass")!.style.display = "none";
@@ -4417,9 +4620,36 @@ document.getElementById("login-back-btn")?.addEventListener("click", () => {
 });
 document.getElementById("btnLogout")?.addEventListener("click", async () => {
   if (!await confirmar("¿Cerrar sesión?", "🔓")) return;
+  detenerControlInactividad();
   sessionStorage.removeItem(SESSION_KEY);
   location.reload();
 });
+
+// ── Cierre de sesión automático por inactividad ──
+const INACTIVIDAD_LIMITE_MS = 8 * 60 * 60 * 1000; // 8 horas
+let _inactividadTimer: ReturnType<typeof setTimeout> | null = null;
+function cerrarSesionPorInactividad() {
+  sessionStorage.setItem("crm_logout_motivo", "Sesión cerrada por inactividad.");
+  sessionStorage.removeItem(SESSION_KEY);
+  location.reload();
+}
+function resetTimerInactividad() {
+  if (_inactividadTimer) clearTimeout(_inactividadTimer);
+  _inactividadTimer = setTimeout(cerrarSesionPorInactividad, INACTIVIDAD_LIMITE_MS);
+}
+function iniciarControlInactividad() {
+  resetTimerInactividad();
+  ["mousemove", "mousedown", "click", "keydown", "scroll", "touchstart"].forEach(evt => {
+    document.addEventListener(evt, resetTimerInactividad, { passive: true });
+  });
+}
+function detenerControlInactividad() {
+  if (_inactividadTimer) clearTimeout(_inactividadTimer);
+  _inactividadTimer = null;
+  ["mousemove", "mousedown", "click", "keydown", "scroll", "touchstart"].forEach(evt => {
+    document.removeEventListener(evt, resetTimerInactividad);
+  });
+}
 
 // ── Cuenta segura: iniciar sesión con correo/contraseña reales de Firebase ──
 // Alternativa al login de siempre, para entrar día a día desde cualquier dispositivo una vez
@@ -4487,6 +4717,7 @@ async function intentarLoginSeguro() {
   document.getElementById("login-overlay")?.classList.add("hidden");
   if (errEl) errEl.textContent = "";
   document.dispatchEvent(new CustomEvent("crm:login", { detail: { nombre: usuarioCRM.nombre, rol: usuarioCRM.rol } }));
+  iniciarControlInactividad();
 }
 document.getElementById("login-securo-btn")?.addEventListener("click", intentarLoginSeguro);
 document.getElementById("login-securo-pass")?.addEventListener("keydown", e => {
@@ -4587,11 +4818,13 @@ verificarSesion();
   let tickets = [];
   let papelera = [];
   let bitacoraLog = (() => { try { return JSON.parse(localStorage.getItem("crm_bitacora") || "[]"); } catch { return []; } })();
-  let acercaDe = { version: "v3.0.0", fecha: "Junio 2026", notas: "" };
+  let acercaDe = { version: "v3.1.0", fecha: "Julio 2026", notas: "" };
   let configCorreo = { provider: "brevo", apiKey: "" };
+  let configN8n = { webhookUrl: "", destinatarios: [], reglas: [] };
   let unsubscribeCRM = null;
   let primeraCargaFB = true;
   let adjuntosTicketActual = []; // archivos adjuntos en formulario activo
+  let filtroAgendaActivo = false; // tab "📅 Agenda": solo tickets con fecha programada, orden asc
   let plantillaMensaje = "Hola [contacto] de [empresa].\n\nTe saludamos de parte del equipo de DATTASOFT By INFOXPERT. Te escribimos para comentarte que ya se encuentran disponibles las últimas versiones oficiales y estables para tus sistemas CONTPAQi.\n\nRevisando tu perfil, notamos que tienes la oportunidad de actualizar los siguientes módulos:\n\n[sistemas_pendientes]\n\nMantenerlos al día te garantiza la mayor estabilidad, seguridad y el cumplimiento de los cambios fiscales más recientes. Estamos para atenderles con gusto.\n\nSaludos cordiales,\nEquipo DATTASOFT BY INFOXPERT";
 
   // Si Firebase está disponible, siempre forzar modo Firebase (ignorar flag local accidental)
@@ -4940,6 +5173,7 @@ verificarSesion();
       renderBitacora();
     }
     if (sectionId === "configuracion") renderUsuariosPanel();
+    if (sectionId === "configuracion") renderN8nPanel();
     if (sectionId === "eventos") renderSeccionEventos();
     if (sectionId === "knowledge") initKB();
   }
@@ -5157,6 +5391,9 @@ verificarSesion();
     if (datos.papelera) papelera = datos.papelera;
     if (datos.acercaDe) acercaDe = datos.acercaDe;
     if (datos.configCorreo) configCorreo = datos.configCorreo;
+    if (datos.n8n && !preservarConfig) {
+      configN8n = { webhookUrl: "", ...datos.n8n, destinatarios: datos.n8n.destinatarios || [], reglas: datos.n8n.reglas || [] };
+    }
     if (datos.logoEmpresa !== undefined) {
       if (datos.logoEmpresa) {
         localStorage.setItem("crm_logo", datos.logoEmpresa);
@@ -7097,6 +7334,12 @@ verificarSesion();
     guardarLocal("crm_clientes", clientes); // respaldo local siempre primero
     const isEdit = document.getElementById("edit-emp-index")?.value !== "";
     logBitacora(`Empresa "${nuevo.EMPRESA}" ${isEdit ? "actualizada" : "creada"}`, "🏢");
+    if (!isEdit) {
+      dispararN8n("empresa_nueva", {
+        nombre: nuevo.EMPRESA, rfc: nuevo.RFC || "", contacto: nuevo.CONTACTO || "",
+        registradaPor: getUsuarioActual()?.nombre || "Sistema", fecha: new Date().toISOString(),
+      });
+    }
     if (crmLocalOnly) {
       toast("💾 Empresa guardada (Local)");
       cerrarFormEmpresa();
@@ -7298,6 +7541,49 @@ verificarSesion();
     return sent;
   }
 
+  // Datos comunes que se mandan a n8n para cualquier evento relacionado con un ticket.
+  function datosEventoTicket(t, extra = {}) {
+    return {
+      numero: t.numero, empresa: t.empresa || "", contacto: t.contacto || "", asunto: t.asunto,
+      estado: t.estado, agenteAsignado: t.agente || "", notaInterna: t.notasInternas || "",
+      cambiadoPor: getUsuarioActual()?.nombre || "Sistema", fecha: new Date().toISOString(),
+      ...extra,
+    };
+  }
+
+  // Se llama cada vez que se guarda un ticket (creación o edición) — si el estado ACABA de
+  // cambiar a "Cerrado" en esta misma acción, dispara ticket_cerrado siempre y, si además hay
+  // una nota interna con texto, manda el correo de cierre facturado y ticket_cerrado_facturado.
+  // No hace nada si el ticket ya estaba cerrado antes de esta acción (para no reenviar en cada
+  // edición posterior de un ticket que sigue cerrado).
+  async function procesarCierreConNota(t, estadoAnterior) {
+    const seAcabaDeCerrar = (t.estado || "").toLowerCase() === "cerrado" && (estadoAnterior || "").toLowerCase() !== "cerrado";
+    if (!seAcabaDeCerrar) return;
+    dispararN8n("ticket_cerrado", datosEventoTicket(t));
+    if (!(t.notasInternas || "").trim()) return;
+    const destino = parseEmailList(configTickets.correoSoporte);
+    if (destino.length) {
+      const html = `<div style="font-family:sans-serif; padding:16px; line-height:1.7; font-size:14px;">
+        <p>El ticket #${t.numero} de ${escapeHtml(t.empresa || "")} ha sido cerrado con nota interna.</p>
+        <p>
+          <strong>Contacto:</strong> ${escapeHtml(t.contacto || "")}<br>
+          <strong>Asunto:</strong> ${escapeHtml(t.asunto || "")}<br>
+          <strong>Nota interna:</strong> ${escapeHtml(t.notasInternas || "")}<br>
+          <strong>Cerrado por:</strong> ${escapeHtml(getUsuarioActual()?.nombre || "Sistema")}<br>
+          <strong>Fecha:</strong> ${new Date().toLocaleString("es-MX")}
+        </p>
+        <p>Este cierre indica que el ticket fue facturado.</p>
+      </div>`;
+      enviarEmailConProveedor({
+        to: destino,
+        subject: `✅ Ticket #${t.numero} cerrado — ${t.empresa || t.contacto || ""} [FACTURADO]`,
+        html,
+      }).catch(() => {});
+    }
+    dispararN8n("ticket_cerrado_facturado", datosEventoTicket(t));
+    logBitacora(`🧾 Ticket #${t.numero} cerrado con nota interna — correo enviado`, "🧾");
+  }
+
   async function enviarEmailEmpresa(e) {
     const idx = parseInt(e.target.closest("button").dataset.idx);
     const c = clientes[idx];
@@ -7411,18 +7697,73 @@ verificarSesion();
   });
 
   // Masivo WhatsApp
-  document.getElementById("btnWspMasivo")?.addEventListener("click", () => {
+  // WhatsApp masivo: si hay webhook de n8n configurado y la regla "version_whatsapp_clientes"
+  // está activa, manda UN solo webhook con todas las empresas seleccionadas (n8n decide con qué
+  // servicio de WhatsApp reenviarlo — CallMeBot no sirve aquí, solo funciona con números del
+  // equipo interno pre-registrados). Si no hay n8n configurado, se conserva el comportamiento
+  // anterior (abrir pestañas de WhatsApp Web una por una) como respaldo, para no dejar la función
+  // sin efecto mientras alguien termina de configurar n8n.
+  document.getElementById("btnWspMasivo")?.addEventListener("click", async () => {
     if (seleccionadosIdx.length === 0) return alert("Selecciona al menos una empresa.");
-    seleccionadosIdx.forEach((idx, i) => {
-      setTimeout(() => {
-        const c = clientes[idx];
-        const tel = c.TELEFONO_1 || c.TELEFONO_2;
-        if (!tel) return;
-        const msg = generarMensaje(c);
-        const encoded = msg ? encodeURIComponent(msg) : "";
-        window.open(`https://web.whatsapp.com/send?phone=${tel}${encoded ? `&text=${encoded}` : ""}`, "_blank");
-      }, i * 500);
-    });
+
+    const reglaVersiones = (configN8n.reglas || []).find(r => r.id === "version_whatsapp_clientes");
+    const n8nListo = !!(configN8n.webhookUrl && reglaVersiones?.activo);
+
+    if (!n8nListo) {
+      if (!configN8n.webhookUrl) {
+        toast("⚠️ Configura el webhook de n8n en Configuración → Automatizaciones para usar WhatsApp masivo.", "warning");
+      }
+      seleccionadosIdx.forEach((idx, i) => {
+        setTimeout(() => {
+          const c = clientes[idx];
+          const tel = c.TELEFONO_1 || c.TELEFONO_2;
+          if (!tel) return;
+          const msg = generarMensaje(c);
+          const encoded = msg ? encodeURIComponent(msg) : "";
+          window.open(`https://web.whatsapp.com/send?phone=${tel}${encoded ? `&text=${encoded}` : ""}`, "_blank");
+        }, i * 500);
+      });
+      return;
+    }
+
+    const empresasSinTelefono = [];
+    const empresas = seleccionadosIdx.map(idx => {
+      const c = clientes[idx];
+      const tel = c.TELEFONO_1 || c.TELEFONO_2;
+      if (!tel) { empresasSinTelefono.push(c.EMPRESA); return null; }
+      return {
+        nombre: c.EMPRESA || "", contacto: c.CONTACTO || "", telefono: tel, correo: c.CORREO || "",
+        sistemasPendientes: getSistemasPendientes(c).join("\n"),
+      };
+    }).filter(Boolean);
+
+    if (empresasSinTelefono.length) {
+      toast(`⚠️ ${empresasSinTelefono.length} empresa(s) no tienen teléfono y se omitieron del envío.`, "warning");
+    }
+    if (!empresas.length) { toast("⚠️ Ninguna empresa seleccionada tiene teléfono registrado.", "error"); return; }
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      await fetch(configN8n.webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          evento: "version_whatsapp_clientes",
+          plantillaMensaje,
+          empresas,
+          totalEmpresas: empresas.length,
+          enviadoPor: getUsuarioActual()?.nombre || "Sistema",
+          fecha: new Date().toISOString(),
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      toast(`📢 WhatsApp masivo enviado a ${empresas.length} empresa(s) vía n8n`);
+      logBitacora(`📢 WhatsApp masivo enviado a ${empresas.length} empresas vía n8n — por ${getUsuarioActual()?.nombre || "Sistema"}`, "📢");
+    } catch (err) {
+      toast("❌ Error al enviar a n8n — revisa el webhook", "error");
+    }
   });
 
   // Masivo Email
@@ -7786,7 +8127,68 @@ verificarSesion();
 
     // Also populate detail modal estado selector
     populateSelectOptions("selectCambiarEstadoDetalle", configTickets.estados, ticket?.estado || "Abierto");
+
+    // Agenda: dropdown de agente asignado, dinámico — solo usuarios reales activos del CRM
+    // (no la lista de "agentes" configurados a mano), porque el recordatorio necesita cruzar
+    // con configN8n.destinatarios[].usuarioCRM para saber a quién avisarle por WhatsApp.
+    const selAsignado = document.getElementById("form-tk-agente-asignado") as HTMLSelectElement | null;
+    if (selAsignado) {
+      selAsignado.innerHTML = `<option value="">— Sin asignar —</option>` +
+        getUsuarios().filter(u => u.activo).map(u => `<option value="${escapeHtml(u.nombre)}">${escapeHtml(u.nombre)}</option>`).join("");
+      selAsignado.value = ticket?.agenteAsignado || "";
+    }
+    const fechaInp = document.getElementById("form-tk-fecha-programada") as HTMLInputElement | null;
+    if (fechaInp) fechaInp.value = ticket?.fechaProgramada || "";
+    const horaInp = document.getElementById("form-tk-hora-programada") as HTMLInputElement | null;
+    if (horaInp) horaInp.value = ticket?.horaProgramada || "09:00";
+    const chkRec = document.getElementById("chk-recordatorio-wsp") as HTMLInputElement | null;
+    if (chkRec) chkRec.checked = !!(ticket?.recordatorioDestinatariosIds || []).length;
+    renderRecordatorioCheckboxes(ticket?.recordatorioDestinatariosIds || []);
+    actualizarVisibilidadProgramacion();
+    const avisoRec = document.getElementById("form-tk-recordatorio-aviso");
+    if (avisoRec) avisoRec.style.display = "none";
   }
+
+  function actualizarVisibilidadProgramacion() {
+    const fecha = (document.getElementById("form-tk-fecha-programada") as HTMLInputElement | null)?.value;
+    const horaWrap = document.getElementById("form-tk-hora-programada-wrap");
+    const recWrap = document.getElementById("form-tk-recordatorio-wrap");
+    const mostrar = !!fecha;
+    if (horaWrap) horaWrap.style.display = mostrar ? "" : "none";
+    if (recWrap) recWrap.style.display = mostrar ? "" : "none";
+  }
+  document.getElementById("form-tk-fecha-programada")?.addEventListener("change", actualizarVisibilidadProgramacion);
+
+  function renderRecordatorioCheckboxes(preseleccionIds = []) {
+    const cont = document.getElementById("form-tk-recordatorio-destinatarios");
+    if (!cont) return;
+    const activos = (configN8n.destinatarios || []).filter(d => d.activo);
+    cont.innerHTML = activos.length ? activos.map(d => `
+      <label style="display:flex; align-items:center; gap:4px; font-size:0.78rem; cursor:pointer;">
+        <input type="checkbox" class="chk-recordatorio-dest" value="${d.id}" ${preseleccionIds.includes(d.id) ? "checked" : ""}> ${escapeHtml(d.nombre)}
+      </label>`).join("") : `<span style="font-size:0.76rem; color:var(--text-muted);">Sin destinatarios activos — configúralos en Configuración → Automatizaciones.</span>`;
+  }
+
+  document.getElementById("form-tk-agente-asignado")?.addEventListener("change", function() {
+    const nombre = (this as HTMLSelectElement).value;
+    const avisoEl = document.getElementById("form-tk-recordatorio-aviso");
+    if (!avisoEl) return;
+    if (!nombre) { avisoEl.style.display = "none"; return; }
+    const dest = (configN8n.destinatarios || []).find(d => d.usuarioCRM === nombre);
+    if (dest && dest.activo && dest.telefono) {
+      const chk = document.querySelector(`.chk-recordatorio-dest[value="${dest.id}"]`) as HTMLInputElement | null;
+      if (chk) chk.checked = true;
+      const chkMaster = document.getElementById("chk-recordatorio-wsp") as HTMLInputElement | null;
+      if (chkMaster) chkMaster.checked = true;
+      avisoEl.style.display = "none";
+    } else {
+      avisoEl.innerHTML = `⚠️ ${escapeHtml(nombre)} no tiene WhatsApp configurado → <a href="#" id="link-ir-config-n8n" style="color:#818cf8;">Configuración</a>`;
+      avisoEl.style.display = "block";
+    }
+  });
+  document.addEventListener("click", (e) => {
+    if ((e.target as HTMLElement)?.id === "link-ir-config-n8n") { e.preventDefault(); navegarA("configuracion"); }
+  });
 
   // Contact autocomplete in ticket form
   const tkBuscarInput = document.getElementById("form-tk-contacto-buscar");
@@ -7892,6 +8294,18 @@ verificarSesion();
     return horas > 0 ? `${dias}d ${horas}h` : `${dias}d`;
   }
 
+  function estaVencidoProgramado(t) {
+    if (!t.fechaProgramada) return false;
+    if ((t.estado || "").toLowerCase() === "cerrado") return false;
+    return new Date(`${t.fechaProgramada}T${t.horaProgramada || "23:59"}`).getTime() < Date.now();
+  }
+
+  document.getElementById("btnFiltroAgenda")?.addEventListener("click", () => {
+    filtroAgendaActivo = !filtroAgendaActivo;
+    document.getElementById("btnFiltroAgenda")?.classList.toggle("btn-primary", filtroAgendaActivo);
+    renderTickets();
+  });
+
   function renderTickets() {
     const tbody = document.getElementById("tabla-tickets-body");
     if (!tbody) return;
@@ -7906,6 +8320,7 @@ verificarSesion();
     const fAgente = document.getElementById("selectFiltroAgente")?.value || "";
 
     const filtrados = tickets.map((t, i) => ({ ...t, _idx: i })).filter(t => {
+      if (filtroAgendaActivo && !t.fechaProgramada) return false;
       if (fEstado && t.estado !== fEstado) return false;
       if (fPrior && t.prioridad !== fPrior) return false;
       if (fTipo && t.tipo !== fTipo) return false;
@@ -7918,7 +8333,14 @@ verificarSesion();
                String(t.numero).includes(busq);
       }
       return true;
-    }).sort((a, b) => b.numero - a.numero);
+    }).sort((a, b) => {
+      if (filtroAgendaActivo) {
+        const fa = new Date(`${a.fechaProgramada}T${a.horaProgramada || "23:59"}`).getTime();
+        const fb = new Date(`${b.fechaProgramada}T${b.horaProgramada || "23:59"}`).getTime();
+        return fa - fb;
+      }
+      return b.numero - a.numero;
+    });
 
     filtrados.forEach(t => {
       const tr = document.createElement("tr");
@@ -7950,7 +8372,10 @@ verificarSesion();
         <td style="text-align:center;"><span class="badge badge-${slugBadge(t.prioridad || "media")}">${escapeHtml(t.prioridad)}</span>${slaBadge}</td>
         <td style="text-align:center;"><span class="badge badge-${slugBadge(t.estado || "abierto")}">${escapeHtml(t.estado)}</span></td>
         <td style="font-size:0.8rem; color:var(--text-muted);">${escapeHtml(t.agente) || "—"}</td>
-        <td style="font-size:0.78rem; color:var(--text-light);">${t.fechaCreacion ? new Date(t.fechaCreacion).toLocaleDateString() : "—"}</td>
+        <td style="font-size:0.78rem; color:var(--text-light);">
+          ${t.fechaCreacion ? new Date(t.fechaCreacion).toLocaleDateString() : "—"}
+          ${t.fechaProgramada ? `<br><span class="badge-sla ${estaVencidoProgramado(t) ? "badge-sla-over" : "badge-sla-ok"}" style="display:inline-block; margin-top:2px;">📅 ${t.fechaProgramada}${t.horaProgramada ? " " + t.horaProgramada : ""}</span>` : ""}
+        </td>
         <td style="text-align:center;">
           <div style="display:inline-flex; gap:4px;">
             <button class="btn btn-secondary btn-xs btn-ver-tk" data-idx="${t._idx}">👁️</button>
@@ -8006,7 +8431,7 @@ verificarSesion();
     ["form-tk-contacto-buscar", "form-tk-contacto", "form-tk-correo-contacto", "form-tk-empresa",
      "form-tk-asunto", "form-tk-cc", "form-tk-cco",
      "form-tk-referido", "form-tk-solicitado", "form-tk-canalizado", "form-tk-realizado",
-     "form-tk-notas-internas", "form-tk-sistema-otro"].forEach(id => {
+     "form-tk-notas-internas", "form-tk-sistema-otro", "form-tk-fecha-programada"].forEach(id => {
       const el = document.getElementById(id) as HTMLInputElement | null;
       if (el) el.value = "";
     });
@@ -8016,6 +8441,14 @@ verificarSesion();
     if (rte) rte.innerHTML = "";
     adjuntosTicketActual = [];
     renderAdjuntosForm();
+    const horaInp = document.getElementById("form-tk-hora-programada") as HTMLInputElement | null;
+    if (horaInp) horaInp.value = "09:00";
+    const chkRec = document.getElementById("chk-recordatorio-wsp") as HTMLInputElement | null;
+    if (chkRec) chkRec.checked = false;
+    actualizarVisibilidadProgramacion();
+    renderRecordatorioCheckboxes([]);
+    const avisoRec = document.getElementById("form-tk-recordatorio-aviso");
+    if (avisoRec) avisoRec.style.display = "none";
   }
 
   document.getElementById("form-tk-sistema")?.addEventListener("change", function() {
@@ -8049,6 +8482,40 @@ verificarSesion();
     document.getElementById("form-tk-descripcion")?.focus();
   });
 
+  // Envía a n8n el payload de programar/cancelar/reprogramar el recordatorio de un ticket
+  // (formato propio, distinto del genérico dispararN8n — ver sección 10 del pedido original).
+  async function enviarRecordatorioN8n(accion, t) {
+    const url = configN8n.webhookUrl;
+    if (!url) return;
+    const regla = (configN8n.reglas || []).find(r => r.id === "ticket_recordatorio");
+    if (!regla || !regla.activo) return;
+    const ids = t.recordatorioDestinatariosIds || [];
+    const destinatarios = (configN8n.destinatarios || [])
+      .filter(d => d.activo && ids.includes(d.id))
+      .map(d => ({ nombre: d.nombre, telefono: d.telefono, apiKey: d.apiKey }));
+    if (accion !== "cancelar" && !destinatarios.length) return;
+    const payload = {
+      evento: "ticket_recordatorio",
+      accion,
+      ticket: {
+        id: String(t.numero), numero: t.numero, empresa: t.empresa || "", asunto: t.asunto,
+        agenteAsignado: t.agenteAsignado || "", fechaProgramada: t.fechaProgramada || "",
+        horaProgramada: t.horaProgramada || "",
+        fechaHoraISO: t.fechaProgramada ? new Date(`${t.fechaProgramada}T${t.horaProgramada || "00:00"}`).toISOString() : "",
+      },
+      destinatarios,
+    };
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      await fetch(url, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload), signal: controller.signal,
+      }).catch(() => {});
+      clearTimeout(timeoutId);
+    } catch (err) { console.warn("[n8n] Error al enviar recordatorio", err); }
+  }
+
   document.getElementById("btnGuardarTicket")?.addEventListener("click", async () => {
     const idx = editTkIdx.value;
     const contacto = document.getElementById("form-tk-contacto").value.trim();
@@ -8069,6 +8536,13 @@ verificarSesion();
     const canalizado = document.getElementById("form-tk-canalizado")?.value.trim() || "";
     const realizado = document.getElementById("form-tk-realizado")?.value.trim() || "";
     const notasInternas = document.getElementById("form-tk-notas-internas")?.value.trim() || "";
+    const fechaProgramada = (document.getElementById("form-tk-fecha-programada") as HTMLInputElement)?.value || "";
+    const horaProgramada = fechaProgramada ? ((document.getElementById("form-tk-hora-programada") as HTMLInputElement)?.value || "09:00") : "";
+    const agenteAsignado = (document.getElementById("form-tk-agente-asignado") as HTMLSelectElement)?.value || "";
+    const recordatorioActivo = (document.getElementById("chk-recordatorio-wsp") as HTMLInputElement)?.checked || false;
+    const recordatorioDestinatariosIds = (fechaProgramada && recordatorioActivo)
+      ? Array.from(document.querySelectorAll<HTMLInputElement>(".chk-recordatorio-dest:checked")).map(el => el.value)
+      : [];
 
     if (!contacto || !asunto || !descripcion) {
       alert("Por favor rellena los campos obligatorios: Contacto, Asunto, Descripción.");
@@ -8095,6 +8569,7 @@ verificarSesion();
       const nuevoTicket = {
         numero: num, asunto, empresa, contacto, contactoCorreo, tipo, sistema, estado, prioridad, grupo, agente,
         descripcion, notasInternas, cc, cco, referido, solicitado, canalizado, realizado,
+        fechaProgramada, horaProgramada, agenteAsignado, recordatorioDestinatariosIds,
         adjuntos: [...adjuntosTicketActual],
         fechaCreacion: new Date().toISOString(),
         fechaActualizacion: new Date().toISOString(),
@@ -8104,6 +8579,9 @@ verificarSesion();
       tickets.push(nuevoTicket);
       registrarActividadTicket(nuevoTicket, `Ticket creado${agente ? ` y asignado a ${agente}` : ""}`);
       logBitacora(`Ticket #${num} creado: "${asunto}" — ${empresa || contacto}`, "🎫");
+      dispararN8n("ticket_creado_equipo", datosEventoTicket(nuevoTicket));
+      await procesarCierreConNota(nuevoTicket, "");
+      if (fechaProgramada && recordatorioDestinatariosIds.length) await enviarRecordatorioN8n("programar", nuevoTicket);
 
       const enviarCorreo = document.getElementById("chk-enviar-correo")?.checked;
       if (enviarCorreo) await enviarNotificacionTicket(nuevoTicket);
@@ -8117,14 +8595,28 @@ verificarSesion();
       }
       const adjuntosExistentes = t.adjuntos || [];
       const estadoAnterior = t.estado, agenteAnterior = t.agente, prioridadAnterior = t.prioridad;
+      const notasInternasAnterior = t.notasInternas || "";
+      const fechaProgAnterior = t.fechaProgramada || "", horaProgAnterior = t.horaProgramada || "";
+      const recordatorioIdsAnterior = t.recordatorioDestinatariosIds || [];
       Object.assign(t, { asunto, empresa, contacto, contactoCorreo, tipo, sistema, estado, prioridad, grupo, agente,
         descripcion, notasInternas, cc, cco, referido, solicitado, canalizado, realizado,
+        fechaProgramada, horaProgramada, agenteAsignado, recordatorioDestinatariosIds,
         adjuntos: [...adjuntosExistentes, ...adjuntosTicketActual],
         fechaActualizacion: new Date().toISOString() });
       if (estado !== estadoAnterior) registrarActividadTicket(t, `Estado cambiado: "${estadoAnterior}" → "${estado}"`);
       if (agente !== agenteAnterior) registrarActividadTicket(t, `Asignado cambiado: "${agenteAnterior || "sin asignar"}" → "${agente || "sin asignar"}"`);
       if (prioridad !== prioridadAnterior) registrarActividadTicket(t, `Prioridad cambiada: "${prioridadAnterior}" → "${prioridad}"`);
       logBitacora(`Ticket #${t.numero} "${t.asunto}" actualizado a ${estado}${prioridad ? ` · ${prioridad}` : ""}`, "✏️");
+      if (estado !== estadoAnterior) dispararN8n("ticket_estado_cambiado", datosEventoTicket(t));
+      if (notasInternas !== notasInternasAnterior && notasInternas.trim()) dispararN8n("ticket_nota_interna", datosEventoTicket(t));
+      await procesarCierreConNota(t, estadoAnterior);
+
+      const habiaRecordatorio = !!(fechaProgAnterior && recordatorioIdsAnterior.length);
+      const hayRecordatorioAhora = !!(fechaProgramada && recordatorioDestinatariosIds.length);
+      if (hayRecordatorioAhora && !habiaRecordatorio) await enviarRecordatorioN8n("programar", t);
+      else if (!hayRecordatorioAhora && habiaRecordatorio) await enviarRecordatorioN8n("cancelar", t);
+      else if (hayRecordatorioAhora && habiaRecordatorio && (fechaProgramada !== fechaProgAnterior || horaProgramada !== horaProgAnterior))
+        await enviarRecordatorioN8n("reprogramar", t);
     }
 
     guardarLocal("crm_tickets", tickets);
@@ -8312,8 +8804,8 @@ verificarSesion();
       return;
     }
 
+    const estadoAnterior = t.estado;
     if (nuevoEstado && nuevoEstado !== t.estado) {
-      const estadoAnterior = t.estado;
       registrarActividadTicket(t, `Estado cambiado: "${estadoAnterior}" → "${nuevoEstado}"`);
       logBitacora(`Ticket #${t.numero} cambió de estado: "${estadoAnterior}" → "${nuevoEstado}"`, "🔄");
       t.estado = nuevoEstado;
@@ -8331,6 +8823,9 @@ verificarSesion();
     t.notasInternas = nuevoNotasInternas;
 
     t.fechaActualizacion = new Date().toISOString();
+    if (nuevoEstado && nuevoEstado !== estadoAnterior) dispararN8n("ticket_estado_cambiado", datosEventoTicket(t));
+    if (notasInternasCambiaron && nuevoNotasInternas) dispararN8n("ticket_nota_interna", datosEventoTicket(t));
+    await procesarCierreConNota(t, estadoAnterior);
     guardarLocal("crm_tickets", tickets);
     if (crmLocalOnly) {
       toast("💬 Cambios guardados (Local)");
@@ -8756,6 +9251,281 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     toast(`✅ Usuario ${nombreLimpio} creado — contraseña: ${PASS_DEFECTO}`);
     logBitacora(`Nuevo usuario creado: ${nombreLimpio}`, "👤");
     renderUsuariosPanel();
+    sincronizarDestinatarioN8n(nombreLimpio);
+    dispararN8n("usuario_nuevo", { nombre: nombreLimpio, rol: esAdmin ? "admin" : "normal", creadoPor: getUsuarioActual()?.nombre || "?", fecha: new Date().toISOString() });
+  });
+
+  // ================================================================
+  // AUTOMATIZACIONES N8N
+  // ================================================================
+  const N8N_EVENTOS = [
+    { seccion: "Tickets", eventos: [
+      { id: "ticket_creado_equipo",     nombre: "Ticket creado (equipo)",   desc: "El equipo interno crea un ticket" },
+      { id: "ticket_creado_cliente",    nombre: "Ticket creado (cliente)",  desc: "Cliente crea ticket desde portal público" },
+      { id: "ticket_cerrado",           nombre: "Ticket cerrado",           desc: "Cualquier ticket se cierra" },
+      { id: "ticket_cerrado_facturado", nombre: "Ticket cerrado facturado", desc: "Ticket cerrado con nota interna" },
+      { id: "ticket_nota_interna",      nombre: "Nota interna agregada",    desc: "Se agrega nota interna a un ticket" },
+      { id: "ticket_estado_cambiado",   nombre: "Estado cambiado",          desc: "Cambia el estado de un ticket" },
+      { id: "ticket_sin_movimiento",    nombre: "Sin movimiento 48h",       desc: "Ticket abierto 48h sin actualización — disparado desde n8n con trigger programado, no desde el CRM" },
+    ]},
+    { seccion: "Agenda", eventos: [
+      { id: "ticket_recordatorio", nombre: "Recordatorio de ticket programado", desc: "30 min antes de un ticket programado" },
+    ]},
+    { seccion: "Licencias", eventos: [
+      { id: "licencia_vence_30dias", nombre: "Licencia vence en 30 días", desc: "Disparado por n8n con trigger programado" },
+      { id: "licencia_vence_15dias", nombre: "Licencia vence en 15 días", desc: "Disparado por n8n con trigger programado" },
+      { id: "licencia_vence_7dias",  nombre: "Licencia vence en 7 días",  desc: "Disparado por n8n con trigger programado" },
+      { id: "licencia_vencida_hoy",  nombre: "Licencia vence hoy",        desc: "Disparado por n8n con trigger programado" },
+    ]},
+    { seccion: "Resúmenes automáticos", eventos: [
+      { id: "resumen_matutino", nombre: "Resumen matutino", desc: "Lun-vie: tickets abiertos, sin movimiento y licencias por vencer — disparado por n8n en horario fijo", conHora: true },
+    ]},
+    { seccion: "Sistema", eventos: [
+      { id: "backup_no_realizado", nombre: "Backup no realizado", desc: "Sin backup por 7+ días" },
+      { id: "usuario_nuevo",       nombre: "Usuario nuevo",       desc: "Se crea un usuario nuevo en el CRM" },
+      { id: "empresa_nueva",       nombre: "Empresa nueva",       desc: "Se registra una empresa nueva" },
+    ]},
+  ];
+
+  function guardarConfigN8nFS() {
+    if (!crmLocalOnly) guardarConfigN8n(configN8n).catch(() => {});
+  }
+
+  // Dispara un evento a n8n si hay webhook configurado, la regla está activa y tiene
+  // destinatarios seleccionados. Silencioso: nunca bloquea la UI ni el flujo que lo llama.
+  async function dispararN8n(eventoId, datos) {
+    try {
+      const url = configN8n.webhookUrl;
+      if (!url) return;
+      const regla = (configN8n.reglas || []).find(r => r.id === eventoId);
+      if (!regla || !regla.activo) return;
+      const destinatariosIds = regla.destinatariosIds || [];
+      const destinatarios = (configN8n.destinatarios || [])
+        .filter(d => d.activo && destinatariosIds.includes(d.id))
+        .map(d => ({ nombre: d.nombre, telefono: d.telefono, apiKey: d.apiKey }));
+      if (!destinatarios.length) return;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ evento: eventoId, datos, destinatarios }),
+        signal: controller.signal,
+      }).catch(() => {});
+      clearTimeout(timeoutId);
+    } catch (err) {
+      console.warn("[n8n] Error al disparar evento", eventoId, err);
+    }
+  }
+
+  // Envía un WhatsApp de prueba directo vía CallMeBot (no pasa por n8n — CallMeBot solo
+  // funciona con números pre-registrados del equipo interno, ver nota en el panel).
+  async function probarWhatsAppCallMeBot(telefono, apiKey, mensaje) {
+    try {
+      const url = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(telefono)}&text=${encodeURIComponent(mensaje)}&apikey=${encodeURIComponent(apiKey)}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      const text = await res.text();
+      return res.ok && !/error/i.test(text);
+    } catch {
+      return false;
+    }
+  }
+
+  // Cuando se crea un usuario nuevo en el CRM, se le prepara un destinatario n8n inactivo
+  // (sin teléfono/API key) vinculado a él, si todavía no existe uno con ese nombre — queda
+  // pendiente de que un admin lo complete y active a mano en el panel de Automatizaciones.
+  function sincronizarDestinatarioN8n(nombreUsuario) {
+    const yaExiste = (configN8n.destinatarios || []).some(d => (d.nombre || "").toUpperCase() === nombreUsuario.toUpperCase());
+    if (yaExiste) return;
+    if (!configN8n.destinatarios) configN8n.destinatarios = [];
+    configN8n.destinatarios.push({
+      id: `d${Date.now()}`,
+      nombre: nombreUsuario,
+      telefono: "",
+      apiKey: "",
+      usuarioCRM: nombreUsuario,
+      activo: false,
+    });
+    guardarConfigN8nFS();
+    if (document.getElementById("section-configuracion")?.classList.contains("active")) renderN8nPanel();
+  }
+
+  function renderN8nPanel() {
+    const urlInp = document.getElementById("n8n-webhook-url") as HTMLInputElement | null;
+    if (urlInp && document.activeElement !== urlInp) urlInp.value = configN8n.webhookUrl || "";
+
+    const avisoEl = document.getElementById("n8n-destinatarios-aviso");
+    const sinTelefono = (configN8n.destinatarios || []).filter(d => !d.telefono).map(d => d.nombre || "(sin nombre)");
+    if (avisoEl) {
+      if (sinTelefono.length) {
+        avisoEl.textContent = `⚠️ Hay destinatarios sin teléfono configurado: ${sinTelefono.join(", ")}`;
+        avisoEl.style.display = "block";
+      } else {
+        avisoEl.style.display = "none";
+      }
+    }
+
+    const listEl = document.getElementById("n8n-destinatarios-list");
+    if (listEl) {
+      const usuariosOpts = getUsuarios().filter(u => u.activo);
+      listEl.innerHTML = (configN8n.destinatarios || []).map((d, i) => `
+        <div class="n8n-dest-row" data-idx="${i}" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; padding:8px; background:rgba(255,255,255,0.03); border-radius:8px;">
+          <input type="text" class="n8n-dest-nombre" value="${escapeHtml(d.nombre||"")}" placeholder="Nombre" style="width:110px;">
+          <input type="text" class="n8n-dest-telefono" value="${escapeHtml(d.telefono||"")}" placeholder="5218181234567" style="width:140px;">
+          <input type="text" class="n8n-dest-apikey" value="${escapeHtml(d.apiKey||"")}" placeholder="API Key CallMeBot" style="width:130px;">
+          <select class="n8n-dest-usuario" style="width:130px;">
+            <option value="">— Ninguno —</option>
+            ${usuariosOpts.map(u => `<option value="${escapeHtml(u.nombre)}" ${d.usuarioCRM===u.nombre?"selected":""}>${escapeHtml(u.nombre)}</option>`).join("")}
+          </select>
+          <label style="display:flex; align-items:center; gap:4px; font-size:0.78rem; white-space:nowrap;">
+            <input type="checkbox" class="n8n-dest-activo" ${d.activo?"checked":""}> Activo
+          </label>
+          <button type="button" class="btn btn-ghost btn-xs n8n-dest-probar">🧪 Probar</button>
+          <button type="button" class="btn btn-ghost btn-xs n8n-dest-eliminar" style="color:#f87171;">🗑️</button>
+          <span class="n8n-dest-probar-result" style="font-size:0.75rem; display:none; width:100%;"></span>
+        </div>
+      `).join("") || `<div style="font-size:0.8rem; color:var(--text-muted);">Sin destinatarios. Agrega uno con el botón de abajo.</div>`;
+
+      listEl.querySelectorAll<HTMLElement>(".n8n-dest-row").forEach(row => {
+        const idx = Number(row.dataset.idx);
+        const guardarFila = () => {
+          const d = configN8n.destinatarios[idx];
+          if (!d) return;
+          d.nombre = (row.querySelector(".n8n-dest-nombre") as HTMLInputElement).value.trim();
+          d.telefono = (row.querySelector(".n8n-dest-telefono") as HTMLInputElement).value.trim();
+          d.apiKey = (row.querySelector(".n8n-dest-apikey") as HTMLInputElement).value.trim();
+          d.usuarioCRM = (row.querySelector(".n8n-dest-usuario") as HTMLSelectElement).value || null;
+          d.activo = (row.querySelector(".n8n-dest-activo") as HTMLInputElement).checked;
+          guardarConfigN8nFS();
+          renderN8nPanel();
+        };
+        row.querySelectorAll("input, select").forEach(el => el.addEventListener("change", guardarFila));
+        row.querySelector(".n8n-dest-eliminar")?.addEventListener("click", async () => {
+          if (!await confirmar("¿Eliminar este destinatario?", "🗑️")) return;
+          configN8n.destinatarios.splice(idx, 1);
+          guardarConfigN8nFS();
+          renderN8nPanel();
+        });
+        row.querySelector(".n8n-dest-probar")?.addEventListener("click", async () => {
+          const d = configN8n.destinatarios[idx];
+          const resultEl = row.querySelector(".n8n-dest-probar-result") as HTMLElement;
+          if (!d?.telefono || !d?.apiKey) {
+            resultEl.textContent = "⚠️ Falta teléfono o API Key";
+            resultEl.style.color = "#f59e0b"; resultEl.style.display = "inline-block";
+            return;
+          }
+          resultEl.textContent = "Enviando...";
+          resultEl.style.color = "var(--text-muted)"; resultEl.style.display = "inline-block";
+          const ok = await probarWhatsAppCallMeBot(d.telefono, d.apiKey, "✅ Prueba de WhatsApp — DATTASOFT CRM. Si ves este mensaje, tu conexión con CallMeBot funciona correctamente.");
+          if (ok) {
+            resultEl.textContent = `✅ Enviado correctamente a ${d.telefono}`;
+            resultEl.style.color = "#34d399";
+          } else {
+            resultEl.textContent = `❌ Error al enviar — revisa teléfono/API Key`;
+            resultEl.style.color = "#f87171";
+          }
+        });
+      });
+    }
+
+    const reglasEl = document.getElementById("n8n-reglas-tabla");
+    if (reglasEl) {
+      const destActivos = (configN8n.destinatarios || []).filter(d => d.activo);
+      const seccionesHtml = N8N_EVENTOS.map(sec => `
+        <div>
+          <div style="font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px; letter-spacing:0.03em;">${sec.seccion}</div>
+          ${sec.eventos.map(ev => {
+            const regla = configN8n.reglas.find(r => r.id === ev.id) || { id: ev.id, activo: false, destinatariosIds: [] };
+            return `
+            <div class="n8n-regla-row" data-id="${ev.id}" style="padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; margin-bottom:6px;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+                <div>
+                  <label style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:0.85rem; cursor:pointer;">
+                    <input type="checkbox" class="n8n-regla-activo" ${regla.activo?"checked":""}> ${ev.nombre}
+                  </label>
+                  <div style="font-size:0.72rem; color:var(--text-muted); margin-left:26px;">${ev.desc}</div>
+                </div>
+                ${ev.conHora ? `<input type="time" class="n8n-regla-hora" value="${regla.hora||"08:00"}" style="width:100px;">` : ""}
+              </div>
+              <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; margin-left:26px;">
+                ${destActivos.length ? destActivos.map(d => `
+                  <label style="display:flex; align-items:center; gap:4px; font-size:0.76rem;">
+                    <input type="checkbox" class="n8n-regla-dest" value="${d.id}" ${(regla.destinatariosIds||[]).includes(d.id)?"checked":""}> ${escapeHtml(d.nombre)}
+                  </label>`).join("") : `<span style="font-size:0.74rem; color:var(--text-muted);">Sin destinatarios activos configurados arriba.</span>`}
+              </div>
+            </div>`;
+          }).join("")}
+        </div>
+      `).join("");
+
+      const reglaVersiones = configN8n.reglas.find(r => r.id === "version_whatsapp_clientes") || { activo: false };
+      const versionesHtml = `
+        <div>
+          <div style="font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px; letter-spacing:0.03em;">Versiones CONTPAQi</div>
+          <div class="n8n-regla-row" data-id="version_whatsapp_clientes" style="padding:10px; background:rgba(255,255,255,0.03); border-radius:8px;">
+            <label style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:0.85rem; cursor:pointer;">
+              <input type="checkbox" class="n8n-regla-activo" ${reglaVersiones.activo?"checked":""}> WhatsApp masivo a clientes
+            </label>
+            <div style="font-size:0.72rem; color:var(--text-muted); margin:4px 0 0 26px;">WhatsApp masivo a clientes con versiones desactualizadas (manual, requiere selección)</div>
+            <div style="font-size:0.72rem; color:#818cf8; margin:8px 0 0 26px;">📌 Este evento envía mensajes a los teléfonos de las empresas clientes, no al equipo interno. La configuración del envío (servicio de WhatsApp) se hace directamente en n8n.</div>
+          </div>
+        </div>`;
+
+      reglasEl.innerHTML = seccionesHtml + versionesHtml;
+
+      reglasEl.querySelectorAll<HTMLElement>(".n8n-regla-row").forEach(row => {
+        const id = row.dataset.id!;
+        const guardarRegla = () => {
+          let regla = configN8n.reglas.find(r => r.id === id);
+          if (!regla) { regla = { id, activo: false, destinatariosIds: [] }; configN8n.reglas.push(regla); }
+          regla.activo = (row.querySelector(".n8n-regla-activo") as HTMLInputElement).checked;
+          const horaInp = row.querySelector(".n8n-regla-hora") as HTMLInputElement | null;
+          if (horaInp) regla.hora = horaInp.value;
+          const destChecks = row.querySelectorAll<HTMLInputElement>(".n8n-regla-dest:checked");
+          regla.destinatariosIds = Array.from(destChecks).map(el => el.value);
+          guardarConfigN8nFS();
+        };
+        row.querySelectorAll("input").forEach(el => el.addEventListener("change", guardarRegla));
+      });
+    }
+  }
+
+  document.getElementById("btnGuardarN8nUrl")?.addEventListener("click", () => {
+    const inp = document.getElementById("n8n-webhook-url") as HTMLInputElement;
+    configN8n.webhookUrl = inp?.value.trim() || "";
+    guardarConfigN8nFS();
+    toast("💾 Webhook de n8n guardado");
+  });
+
+  document.getElementById("btnProbarN8n")?.addEventListener("click", async () => {
+    const resultEl = document.getElementById("n8n-test-result")!;
+    const url = configN8n.webhookUrl;
+    if (!url) { resultEl.textContent = "⚠️ Primero guarda una URL de webhook"; resultEl.style.color = "#f59e0b"; resultEl.style.display = "inline"; return; }
+    resultEl.textContent = "Probando..."; resultEl.style.color = "var(--text-muted)"; resultEl.style.display = "inline";
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ test: true }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) { resultEl.textContent = "✅ Conexión exitosa"; resultEl.style.color = "#34d399"; }
+      else { resultEl.textContent = "❌ Sin respuesta"; resultEl.style.color = "#f87171"; }
+    } catch {
+      resultEl.textContent = "❌ Sin respuesta"; resultEl.style.color = "#f87171";
+    }
+  });
+
+  document.getElementById("btnAgregarDestinatarioN8n")?.addEventListener("click", () => {
+    if (!configN8n.destinatarios) configN8n.destinatarios = [];
+    configN8n.destinatarios.push({ id: `d${Date.now()}`, nombre: "", telefono: "", apiKey: "", usuarioCRM: "", activo: false });
+    renderN8nPanel();
   });
 
   document.getElementById("btnCambiarMiPass")?.addEventListener("click", async () => {
@@ -9749,6 +10519,12 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       if (dias >= 7) {
         elAlerta.style.display = "block";
         if (elAlertaMsg) elAlertaMsg.textContent = `Han pasado ${dias} días desde el último backup`;
+        // Como máximo una vez por día (por navegador) para no reenviar el mismo aviso en cada render.
+        const hoy = new Date().toISOString().slice(0, 10);
+        if (sessionStorage.getItem("crm_n8n_backup_aviso") !== hoy) {
+          sessionStorage.setItem("crm_n8n_backup_aviso", hoy);
+          dispararN8n("backup_no_realizado", { diasSinBackup: dias, ultimoBackup: ultimo });
+        }
       } else {
         elAlerta.style.display = "none";
       }
@@ -10048,6 +10824,10 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         };
         tickets.push(nuevoTicketPub);
         registrarActividadTicket(nuevoTicketPub, `Ticket aceptado desde el portal público (folio original: ${tp.folioPub || "—"})`);
+        // El portal público (ticket-publico.astro) no tiene acceso a agenda/datos (ahí viven las
+        // API keys de WhatsApp) por las reglas de Firestore, así que el evento se dispara aquí,
+        // al aceptarlo dentro del CRM — es el primer punto donde config.n8n está disponible.
+        dispararN8n("ticket_creado_cliente", datosEventoTicket(nuevoTicketPub));
 
         guardarLocal("crm_tickets", tickets);
         if (!crmLocalOnly) await guardarTickets(tickets);

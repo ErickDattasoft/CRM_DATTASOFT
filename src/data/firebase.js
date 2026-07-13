@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, onSnapshot, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, onSnapshot, addDoc, updateDoc, serverTimestamp, enableMultiTabIndexedDbPersistence } from "firebase/firestore";
 import { getAuth, signInAnonymously, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
 
 // Configuración de Firebase — los valores web son públicos por diseño (seguridad via Firestore Rules)
@@ -34,6 +34,21 @@ function avisarErrorGuardado(operacion, error) {
 const app  = firebaseEnabled ? initializeApp(firebaseConfig) : null;
 const db   = firebaseEnabled ? getFirestore(app) : null;
 const auth = firebaseEnabled ? getAuth(app) : null;
+
+// Persistencia offline (IndexedDB): permite leer el último snapshot conocido sin conexión y
+// deja en cola las escrituras hasta reconectar. Multi-tab para no romper si el usuario tiene
+// el CRM abierto en varias pestañas a la vez (la versión single-tab falla en ese caso).
+if (db) {
+  enableMultiTabIndexedDbPersistence(db).catch(err => {
+    if (err.code === "failed-precondition") {
+      console.warn("[CRM] Persistencia offline no disponible (múltiples pestañas sin soporte multi-tab).");
+    } else if (err.code === "unimplemented") {
+      console.warn("[CRM] Persistencia offline no soportada en este navegador.");
+    } else {
+      console.warn("[CRM] No se pudo activar persistencia offline:", err);
+    }
+  });
+}
 
 
 // Iniciar sesión anónima automáticamente al cargar el módulo.
@@ -282,6 +297,21 @@ export async function guardarConfigCorreo(configCorreo) {
     return true;
   } catch (error) {
     avisarErrorGuardado("configuración de correo", error);
+    return false;
+  }
+}
+
+/**
+ * Guarda la configuración de automatizaciones n8n (webhook, destinatarios de WhatsApp,
+ * reglas de notificación) en Firestore.
+ */
+export async function guardarConfigN8n(n8n) {
+  try {
+    const docRef = doc(db, "agenda", "datos");
+    await setDoc(docRef, { n8n: limpiar(n8n) }, { merge: true });
+    return true;
+  } catch (error) {
+    avisarErrorGuardado("configuración de n8n", error);
     return false;
   }
 }
