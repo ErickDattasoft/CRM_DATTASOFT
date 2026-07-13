@@ -2686,6 +2686,10 @@ try {
               <select id="form-tk-estado"></select>
             </div>
             <div class="form-group">
+              <label style="color:#f59e0b;">🧾 Facturación</label>
+              <select id="form-tk-facturado"></select>
+            </div>
+            <div class="form-group">
               <label>Prioridad <span class="required">*</span></label>
               <select id="form-tk-prioridad"></select>
             </div>
@@ -2930,6 +2934,11 @@ try {
             <div class="card-title">🧑‍💼 Agentes</div>
             <div class="config-list" id="cfg-list-agente"></div>
             <button class="btn btn-ghost btn-xs" style="margin-top:10px;" data-cfg-add="agente">➕ Agregar</button>
+          </div>
+          <div class="card">
+            <div class="card-title">🧾 Facturación</div>
+            <div class="config-list" id="cfg-list-facturado"></div>
+            <button class="btn btn-ghost btn-xs" style="margin-top:10px;" data-cfg-add="facturado">➕ Agregar</button>
           </div>
         </div>
 
@@ -3691,8 +3700,8 @@ try {
             <div class="manual-subtitulo">📅 Programar atención (Agenda)</div>
             <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;margin-bottom:8px;">Al crear o editar un ticket puedes abrir el bloque opcional "📅 Programar atención": elige fecha, hora y el agente asignado (solo usuarios activos del CRM). Si además marcas "Enviar recordatorio WhatsApp 30 min antes" y seleccionas destinatarios, el CRM le pide a n8n que lo avise por WhatsApp media hora antes de la hora programada — requiere tener n8n configurado (ver <a href="#man-automatizaciones" style="color:var(--brand-primary-hover);">🤖 Automatizaciones</a>). Los tickets con fecha programada muestran un badge 📅 en la lista; si ya pasó la hora y el ticket sigue abierto, el badge se pone en rojo. Usa el botón <span class="btn-demo btn-demo-ghost">📅 Agenda</span> junto a los filtros para ver solo esos tickets, ordenados por fecha y hora.</p>
 
-            <div class="manual-subtitulo">🧾 Cierre con nota interna (facturación)</div>
-            <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;margin-bottom:8px;">Cuando un ticket cambia a estado <strong>Cerrado</strong> y en ese mismo momento tiene texto en "Notas Internas", el CRM manda automáticamente un correo a <strong>Configuración → Correo de soporte</strong> avisando que ese ticket quedó cerrado con nota (señal de que fue facturado), y — si está configurado — dispara el evento <code>ticket_cerrado_facturado</code> hacia n8n. Solo se manda una vez, al momento exacto en que cambia a Cerrado (no en cada edición posterior de un ticket que ya estaba cerrado).</p>
+            <div class="manual-subtitulo">🧾 Facturación</div>
+            <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;margin-bottom:8px;">Junto a Estado hay un campo <strong>Facturación</strong> (editable también desde el detalle del ticket): <strong>NO FACTURADO</strong> por defecto, o <strong>FACTURADO</strong>. En cuanto un ticket queda a la vez en estado <strong>Cerrado</strong> y en <strong>FACTURADO</strong> — sin importar cuál de los dos cambies primero, incluso si el ticket ya llevaba tiempo cerrado y solo marcas Facturación después — el CRM manda automáticamente un correo a <strong>Configuración → Correo de soporte</strong> avisando del cierre facturado, y — si está configurado — dispara el evento <code>ticket_cerrado_facturado</code> hacia n8n. Solo se manda una vez esa combinación; no se repite en ediciones posteriores mientras el ticket siga Cerrado y FACTURADO. Las opciones de este campo se administran igual que Tipos/Estados/Prioridades en Configuración → Tickets.</p>
           </div>
 
           <!-- ── CONTACTOS ──────────────────────────────────── -->
@@ -3945,10 +3954,16 @@ try {
       </details>
     </div>
     <div style="border-top:1px solid var(--border-color); padding-top:14px;">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div style="display:flex; gap:6px; align-items:center;">
-          <label style="font-size:0.72rem; font-weight:700; color:var(--text-muted);">Cambiar Estado:</label>
-          <select id="selectCambiarEstadoDetalle" style="padding:5px 10px; font-size:0.75rem;"></select>
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
+          <div style="display:flex; gap:6px; align-items:center;">
+            <label style="font-size:0.72rem; font-weight:700; color:var(--text-muted);">Cambiar Estado:</label>
+            <select id="selectCambiarEstadoDetalle" style="padding:5px 10px; font-size:0.75rem;"></select>
+          </div>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <label style="font-size:0.72rem; font-weight:700; color:#f59e0b;">🧾 Facturación:</label>
+            <select id="det-tk-facturado" style="padding:5px 10px; font-size:0.75rem;"></select>
+          </div>
         </div>
         <button class="btn btn-primary btn-sm" id="btnAgregarNotaTicket">💾 Guardar cambios</button>
       </div>
@@ -4838,6 +4853,7 @@ verificarSesion();
     grupos: ["Ventas", "Soporte", "Marketing", "Otros"],
     agentes: ["Erick", "Arturo", "Gelmi", "Gaby"],
     sistemas: [...listaSistemas],
+    facturacion: ["NO FACTURADO", "FACTURADO"],
     correoSoporte: "erick.casas@dattasoft.mx",
     sla: { Urgente: 4, Alta: 8, Media: 24, Baja: 72 }
   };
@@ -7552,27 +7568,36 @@ verificarSesion();
   }
 
   // Se llama cada vez que se guarda un ticket (creación o edición) — si el estado ACABA de
-  // cambiar a "Cerrado" en esta misma acción, dispara ticket_cerrado siempre y, si además hay
-  // una nota interna con texto, manda el correo de cierre facturado y ticket_cerrado_facturado.
-  // No hace nada si el ticket ya estaba cerrado antes de esta acción (para no reenviar en cada
-  // edición posterior de un ticket que sigue cerrado).
-  async function procesarCierreConNota(t, estadoAnterior) {
+  // cambiar a "Cerrado" en esta misma acción, dispara ticket_cerrado. No hace nada si el ticket
+  // ya estaba cerrado antes de esta acción (para no reenviar en cada edición posterior de un
+  // ticket que sigue cerrado).
+  async function procesarCierreTicket(t, estadoAnterior) {
     const seAcabaDeCerrar = (t.estado || "").toLowerCase() === "cerrado" && (estadoAnterior || "").toLowerCase() !== "cerrado";
-    if (!seAcabaDeCerrar) return;
-    dispararN8n("ticket_cerrado", datosEventoTicket(t));
-    if (!(t.notasInternas || "").trim()) return;
+    if (seAcabaDeCerrar) dispararN8n("ticket_cerrado", datosEventoTicket(t));
+  }
+
+  // Correo + evento n8n de "cerrado y facturado" — se dispara la primera vez que la combinación
+  // (estado === Cerrado) Y (facturación === FACTURADO) se cumple, sin importar cuál de los dos
+  // campos fue el que acaba de cambiar: cerrar un ticket ya marcado FACTURADO, o marcar FACTURADO
+  // un ticket que ya estaba cerrado, ambos disparan el correo igual. Si la combinación ya estaba
+  // cumplida antes de esta acción, no se reenvía (evita mandar el correo de nuevo en cada edición
+  // posterior de un ticket que sigue cerrado y facturado).
+  async function procesarFacturacion(t, estadoAnterior, facturadoAnterior) {
+    const estaCerrado = (t.estado || "").toLowerCase() === "cerrado";
+    const estaFacturado = (t.facturado || "").toUpperCase() === "FACTURADO";
+    const yaEstabaCumplida = (estadoAnterior || "").toLowerCase() === "cerrado" && (facturadoAnterior || "").toUpperCase() === "FACTURADO";
+    if (!estaCerrado || !estaFacturado || yaEstabaCumplida) return;
     const destino = parseEmailList(configTickets.correoSoporte);
     if (destino.length) {
       const html = `<div style="font-family:sans-serif; padding:16px; line-height:1.7; font-size:14px;">
-        <p>El ticket #${t.numero} de ${escapeHtml(t.empresa || "")} ha sido cerrado con nota interna.</p>
+        <p>El ticket #${t.numero} de ${escapeHtml(t.empresa || "")} fue cerrado y marcado como <strong>FACTURADO</strong>.</p>
         <p>
           <strong>Contacto:</strong> ${escapeHtml(t.contacto || "")}<br>
           <strong>Asunto:</strong> ${escapeHtml(t.asunto || "")}<br>
-          <strong>Nota interna:</strong> ${escapeHtml(t.notasInternas || "")}<br>
-          <strong>Cerrado por:</strong> ${escapeHtml(getUsuarioActual()?.nombre || "Sistema")}<br>
+          ${(t.notasInternas || "").trim() ? `<strong>Nota interna:</strong> ${escapeHtml(t.notasInternas)}<br>` : ""}
+          <strong>Actualizado por:</strong> ${escapeHtml(getUsuarioActual()?.nombre || "Sistema")}<br>
           <strong>Fecha:</strong> ${new Date().toLocaleString("es-MX")}
         </p>
-        <p>Este cierre indica que el ticket fue facturado.</p>
       </div>`;
       enviarEmailConProveedor({
         to: destino,
@@ -7581,7 +7606,7 @@ verificarSesion();
       }).catch(() => {});
     }
     dispararN8n("ticket_cerrado_facturado", datosEventoTicket(t));
-    logBitacora(`🧾 Ticket #${t.numero} cerrado con nota interna — correo enviado`, "🧾");
+    logBitacora(`🧾 Ticket #${t.numero} cerrado y FACTURADO — correo enviado`, "🧾");
   }
 
   async function enviarEmailEmpresa(e) {
@@ -8121,6 +8146,7 @@ verificarSesion();
     const inputOtroSistema = document.getElementById("form-tk-sistema-otro") as HTMLInputElement | null;
     if (inputOtroSistema) { inputOtroSistema.style.display = "none"; inputOtroSistema.value = ""; }
     populateSelectOptions("form-tk-estado", configTickets.estados, ticket?.estado || "Abierto");
+    populateSelectOptions("form-tk-facturado", configTickets.facturacion, ticket?.facturado || "NO FACTURADO");
     populateSelectOptions("form-tk-prioridad", configTickets.prioridades, ticket?.prioridad || "Media");
     populateSelectOptions("form-tk-grupo", configTickets.grupos, ticket?.grupo || configTickets.grupos[0]);
     populateSelectOptions("form-tk-agente", ["", ...getListaAgentes()], ticket?.agente || "");
@@ -8525,6 +8551,7 @@ verificarSesion();
     const tipo = document.getElementById("form-tk-tipo").value;
     let sistema = document.getElementById("form-tk-sistema").value;
     const estado = document.getElementById("form-tk-estado").value;
+    const facturado = document.getElementById("form-tk-facturado")?.value || "NO FACTURADO";
     const prioridad = document.getElementById("form-tk-prioridad").value;
     const grupo = document.getElementById("form-tk-grupo").value;
     const agente = document.getElementById("form-tk-agente").value;
@@ -8567,7 +8594,7 @@ verificarSesion();
     if (idx === "") {
       const num = tickets.length > 0 ? Math.max(...tickets.map(t => t.numero)) + 1 : 1001;
       const nuevoTicket = {
-        numero: num, asunto, empresa, contacto, contactoCorreo, tipo, sistema, estado, prioridad, grupo, agente,
+        numero: num, asunto, empresa, contacto, contactoCorreo, tipo, sistema, estado, facturado, prioridad, grupo, agente,
         descripcion, notasInternas, cc, cco, referido, solicitado, canalizado, realizado,
         fechaProgramada, horaProgramada, agenteAsignado, recordatorioDestinatariosIds,
         adjuntos: [...adjuntosTicketActual],
@@ -8580,7 +8607,8 @@ verificarSesion();
       registrarActividadTicket(nuevoTicket, `Ticket creado${agente ? ` y asignado a ${agente}` : ""}`);
       logBitacora(`Ticket #${num} creado: "${asunto}" — ${empresa || contacto}`, "🎫");
       dispararN8n("ticket_creado_equipo", datosEventoTicket(nuevoTicket));
-      await procesarCierreConNota(nuevoTicket, "");
+      await procesarCierreTicket(nuevoTicket, "");
+      await procesarFacturacion(nuevoTicket, "", "");
       if (fechaProgramada && recordatorioDestinatariosIds.length) await enviarRecordatorioN8n("programar", nuevoTicket);
 
       const enviarCorreo = document.getElementById("chk-enviar-correo")?.checked;
@@ -8596,9 +8624,10 @@ verificarSesion();
       const adjuntosExistentes = t.adjuntos || [];
       const estadoAnterior = t.estado, agenteAnterior = t.agente, prioridadAnterior = t.prioridad;
       const notasInternasAnterior = t.notasInternas || "";
+      const facturadoAnterior = t.facturado || "NO FACTURADO";
       const fechaProgAnterior = t.fechaProgramada || "", horaProgAnterior = t.horaProgramada || "";
       const recordatorioIdsAnterior = t.recordatorioDestinatariosIds || [];
-      Object.assign(t, { asunto, empresa, contacto, contactoCorreo, tipo, sistema, estado, prioridad, grupo, agente,
+      Object.assign(t, { asunto, empresa, contacto, contactoCorreo, tipo, sistema, estado, facturado, prioridad, grupo, agente,
         descripcion, notasInternas, cc, cco, referido, solicitado, canalizado, realizado,
         fechaProgramada, horaProgramada, agenteAsignado, recordatorioDestinatariosIds,
         adjuntos: [...adjuntosExistentes, ...adjuntosTicketActual],
@@ -8606,10 +8635,12 @@ verificarSesion();
       if (estado !== estadoAnterior) registrarActividadTicket(t, `Estado cambiado: "${estadoAnterior}" → "${estado}"`);
       if (agente !== agenteAnterior) registrarActividadTicket(t, `Asignado cambiado: "${agenteAnterior || "sin asignar"}" → "${agente || "sin asignar"}"`);
       if (prioridad !== prioridadAnterior) registrarActividadTicket(t, `Prioridad cambiada: "${prioridadAnterior}" → "${prioridad}"`);
+      if (facturado !== facturadoAnterior) registrarActividadTicket(t, `Facturación cambiada: "${facturadoAnterior}" → "${facturado}"`);
       logBitacora(`Ticket #${t.numero} "${t.asunto}" actualizado a ${estado}${prioridad ? ` · ${prioridad}` : ""}`, "✏️");
       if (estado !== estadoAnterior) dispararN8n("ticket_estado_cambiado", datosEventoTicket(t));
       if (notasInternas !== notasInternasAnterior && notasInternas.trim()) dispararN8n("ticket_nota_interna", datosEventoTicket(t));
-      await procesarCierreConNota(t, estadoAnterior);
+      await procesarCierreTicket(t, estadoAnterior);
+      await procesarFacturacion(t, estadoAnterior, facturadoAnterior);
 
       const habiaRecordatorio = !!(fechaProgAnterior && recordatorioIdsAnterior.length);
       const hayRecordatorioAhora = !!(fechaProgramada && recordatorioDestinatariosIds.length);
@@ -8752,6 +8783,7 @@ verificarSesion();
     bTipo.textContent = t.tipo || "General";
 
     populateSelectOptions("selectCambiarEstadoDetalle", configTickets.estados, t.estado);
+    populateSelectOptions("det-tk-facturado", configTickets.facturacion, t.facturado || "NO FACTURADO");
     renderActividadTicket(t);
 
     if (modalDetalle) modalDetalle.style.display = "flex";
@@ -8799,18 +8831,27 @@ verificarSesion();
     const nuevoNotasInternas = (document.getElementById("det-tk-notas-internas") as HTMLTextAreaElement)?.value.trim() || "";
     const notasInternasCambiaron = nuevoNotasInternas !== (t.notasInternas || "");
 
-    if (nuevoEstado === t.estado && !camposGestionCambiaron && !notasInternasCambiaron) {
-      alert("Cambia el estado o modifica algún campo de Referido/Solicitado/Canalizado/Realizado/Notas Internas.");
+    const nuevoFacturado = (document.getElementById("det-tk-facturado") as HTMLSelectElement)?.value || (t.facturado || "NO FACTURADO");
+    const facturadoCambio = nuevoFacturado !== (t.facturado || "NO FACTURADO");
+
+    if (nuevoEstado === t.estado && !camposGestionCambiaron && !notasInternasCambiaron && !facturadoCambio) {
+      alert("Cambia el estado, la facturación, o modifica algún campo de Referido/Solicitado/Canalizado/Realizado/Notas Internas.");
       return;
     }
 
     const estadoAnterior = t.estado;
+    const facturadoAnterior = t.facturado || "NO FACTURADO";
     if (nuevoEstado && nuevoEstado !== t.estado) {
       registrarActividadTicket(t, `Estado cambiado: "${estadoAnterior}" → "${nuevoEstado}"`);
       logBitacora(`Ticket #${t.numero} cambió de estado: "${estadoAnterior}" → "${nuevoEstado}"`, "🔄");
       t.estado = nuevoEstado;
       document.getElementById("det-tk-estado-badge").textContent = nuevoEstado;
       document.getElementById("det-tk-estado-badge").className = `badge badge-${slugBadge(nuevoEstado)}`;
+    }
+    if (facturadoCambio) {
+      registrarActividadTicket(t, `Facturación cambiada: "${facturadoAnterior}" → "${nuevoFacturado}"`);
+      logBitacora(`Ticket #${t.numero}: facturación cambiada a "${nuevoFacturado}"`, "🧾");
+      t.facturado = nuevoFacturado;
     }
 
     if (camposGestionCambiaron) logBitacora(`Ticket #${t.numero}: datos de gestión actualizados (Referido/Solicitado/Canalizado/Realizado)`, "✏️");
@@ -8825,7 +8866,8 @@ verificarSesion();
     t.fechaActualizacion = new Date().toISOString();
     if (nuevoEstado && nuevoEstado !== estadoAnterior) dispararN8n("ticket_estado_cambiado", datosEventoTicket(t));
     if (notasInternasCambiaron && nuevoNotasInternas) dispararN8n("ticket_nota_interna", datosEventoTicket(t));
-    await procesarCierreConNota(t, estadoAnterior);
+    await procesarCierreTicket(t, estadoAnterior);
+    await procesarFacturacion(t, estadoAnterior, facturadoAnterior);
     guardarLocal("crm_tickets", tickets);
     if (crmLocalOnly) {
       toast("💬 Cambios guardados (Local)");
@@ -8919,13 +8961,12 @@ verificarSesion();
       localOnlyCheckbox.checked = crmLocalOnly;
     }
 
-    const fields = ["tipo", "estado", "prioridad", "grupo", "agente", "sistema"];
+    const fields = ["tipo", "estado", "prioridad", "grupo", "agente", "sistema", "facturado"];
     fields.forEach(field => {
       const listEl = document.getElementById(`cfg-list-${field}`);
       if (!listEl) return;
       listEl.innerHTML = "";
-      const items = configTickets[`${field}s`] || configTickets[`${field}es`] || [];
-      const key = field === "estado" ? "estados" : field === "prioridad" ? "prioridades" : `${field}s`;
+      const key = field === "estado" ? "estados" : field === "prioridad" ? "prioridades" : field === "facturado" ? "facturacion" : `${field}s`;
 
       (configTickets[key] || []).forEach((item, idx) => {
         const div = document.createElement("div");
@@ -8998,7 +9039,7 @@ verificarSesion();
     document.querySelectorAll("[data-cfg-add]").forEach(btn => {
       btn.onclick = () => {
         const field = btn.dataset.cfgAdd;
-        const key = field === "estado" ? "estados" : field === "prioridad" ? "prioridades" : `${field}s`;
+        const key = field === "estado" ? "estados" : field === "prioridad" ? "prioridades" : field === "facturado" ? "facturacion" : `${field}s`;
         const val = prompt(`Nuevo ${field}:`);
         if (val && val.trim()) {
           if (!configTickets[key]) configTickets[key] = [];
@@ -9059,6 +9100,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       grupos: configTickets.grupos,
       agentes: configTickets.agentes,
       sistemas: configTickets.sistemas,
+      facturacion: configTickets.facturacion,
       correoSoporte: configTickets.correoSoporte
     });
     if (ok) { toast("💾 Configuración guardada"); ocultarEstado(); sincronizarConfigPublica(); }
