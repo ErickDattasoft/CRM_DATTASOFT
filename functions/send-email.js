@@ -17,7 +17,7 @@ export const onRequestPost = async (context) => {
     });
   }
 
-  const { to, subject, html, replyTo, from, cc, bcc } = payload;
+  const { to, subject, html, replyTo, from, cc, bcc, attachment } = payload;
   if (!to || !subject || !html) {
     return new Response(JSON.stringify({ error: "Faltan campos: to, subject, html" }), {
       status: 400, headers: { "Content-Type": "application/json" },
@@ -52,6 +52,13 @@ export const onRequestPost = async (context) => {
       .filter(Boolean)
       .filter(e => !toList.some(t => t.email === e));
     if (bccList.length) body.bcc = bccList.map(email => ({ email }));
+  }
+  // attachment: [{ content: "<base64 sin prefijo data:...>", name: "archivo.pdf" }] — Brevo lo
+  // reenvía tal cual, no requerimos parsearlo aquí.
+  if (Array.isArray(attachment) && attachment.length) {
+    body.attachment = attachment
+      .filter(a => a && a.content && a.name)
+      .map(a => ({ content: a.content, name: a.name }));
   }
 
   const resp = await fetch("https://api.brevo.com/v3/smtp/email", {

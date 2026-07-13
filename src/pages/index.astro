@@ -51,6 +51,8 @@ try {
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3/dist/jspdf-autotable.min.js"></script>
   <style is:global>
     /* ===== RESET & VARIABLES ===== */
     :root {
@@ -1051,6 +1053,50 @@ try {
     }
     .config-section {
       margin-bottom: 24px;
+    }
+    /* Catálogo de conceptos de Cotizaciones — clase propia (NUNCA .config-item) para que sus
+       filas de 3 campos no caigan en el guardado genérico de .config-item input de un solo
+       campo (Tipos/Estados/Prioridades/etc.), que asume un único valor por fila. */
+    .config-item-cat {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: var(--radius-md);
+      font-size: 0.9rem;
+      color: var(--text-bright);
+      min-height: 44px;
+    }
+    .config-item-cat input {
+      padding: 8px 10px;
+      font-size: 0.9rem;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-bright);
+      border-radius: 8px;
+      outline: none;
+      min-width: 0;
+    }
+    .config-item-cat input:focus {
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.18);
+      border-color: rgba(99, 102, 241, 0.4);
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .config-item-cat .cat-field-nombre { flex: 2; }
+    .config-item-cat .cat-field-precio { flex: 1; text-align: right; }
+    .config-item-cat .cat-field-dto { flex: 1; text-align: center; }
+    .config-item-cat .btn-del-cat-item {
+      width: 22px; min-width: 22px; height: 22px; padding: 0; font-size: 0.72rem; line-height: 1;
+      border-radius: 8px;
+      background: rgba(239, 68, 68, 0.10) !important;
+      color: rgba(239, 68, 68, 1) !important;
+      border-color: rgba(239, 68, 68, 0.22) !important;
+      transition: background 0.2s ease;
+    }
+    .config-item-cat .btn-del-cat-item:hover {
+      background: rgba(239, 68, 68, 0.18) !important;
     }
     /* Specific: remove white/background for trash icons in Configuración */
     #section-configuracion .config-item button.cfg-del-item,
@@ -2126,6 +2172,11 @@ try {
         <span class="nav-badge" id="badge-contactos">0</span>
       </div>
       <div class="sidebar-section-label">Soporte</div>
+      <div class="nav-item" data-section="cotizaciones" data-tooltip="Cotizaciones">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">Cotizaciones</span>
+        <span class="nav-badge" id="badge-cotizaciones" title="Borrador / Enviadas">0</span>
+      </div>
       <div class="nav-item" data-section="tickets" data-tooltip="Tickets">
         <span class="nav-icon">🎫</span>
         <span class="nav-label">Tickets</span>
@@ -2588,6 +2639,167 @@ try {
       </div>
 
       <!-- ============================== -->
+      <!-- SECTION: COTIZACIONES          -->
+      <!-- ============================== -->
+      <div class="section" id="section-cotizaciones">
+        <div class="stats-grid">
+          <div class="stat-card stat-total">
+            <span class="stat-value" id="cot-count-total">0</span>
+            <span class="stat-label">Total Cotizaciones</span>
+          </div>
+          <div class="stat-card stat-open">
+            <span class="stat-value" id="cot-count-activas">0</span>
+            <span class="stat-label">Activas</span>
+          </div>
+          <div class="stat-card stat-resolved">
+            <span class="stat-value" id="cot-count-aceptadas">0</span>
+            <span class="stat-label">Aceptadas</span>
+          </div>
+          <div class="stat-card stat-closed">
+            <span class="stat-value" id="cot-count-vencidas">0</span>
+            <span class="stat-label">Vencidas</span>
+          </div>
+        </div>
+
+        <div class="controls-bar">
+          <div class="controls-left">
+            <div class="search-bar">
+              <input type="text" id="txtBuscarCotizacion" placeholder="Buscar por empresa o número...">
+            </div>
+            <select id="selectFiltroEstadoCot" style="max-width:160px;">
+              <option value="">🎯 Todos</option>
+              <option value="borrador">Borrador</option>
+              <option value="enviada">Enviada</option>
+              <option value="aceptada">Aceptada</option>
+              <option value="rechazada">Rechazada</option>
+              <option value="vencida">Vencida</option>
+            </select>
+          </div>
+          <div class="controls-right">
+            <button class="btn btn-primary btn-sm" id="btnNuevaCotizacion">➕ Nueva Cotización</button>
+          </div>
+        </div>
+
+        <!-- Formulario Cotización (oculto) -->
+        <div class="card hidden" id="formulario-cotizacion" style="border-color: rgba(99,102,241,0.3);">
+          <div class="card-title" id="form-cot-titulo">➕ Nueva Cotización</div>
+          <input type="hidden" id="edit-cot-id">
+
+          <!-- Card 1: Emisor -->
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-title">🧑‍💼 Emisor</div>
+            <div class="form-grid">
+              <div class="form-group"><label>Nombre</label><input id="form-cot-emisor-nombre" placeholder="Nombre de quien cotiza"></div>
+              <div class="form-group"><label>Cargo</label><input id="form-cot-emisor-cargo" placeholder="Ej: Ejecutivo de Ventas"></div>
+              <div class="form-group"><label>Teléfono</label><input id="form-cot-emisor-tel" placeholder="Ej: 9991234567"></div>
+              <div class="form-group"><label>✉️ Correo</label><input id="form-cot-emisor-correo" type="email" placeholder="correo@dattasoft.mx"></div>
+            </div>
+          </div>
+
+          <!-- Card 2: Receptor -->
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-title">🏢 Receptor</div>
+            <div class="form-group" style="margin-bottom:14px;">
+              <label>Empresa <span class="required">*</span> <span style="font-size:0.7rem;font-weight:400;color:var(--text-muted);">— busca o escribe una nueva</span></label>
+              <div class="autocomplete-wrap">
+                <input id="form-cot-empresa-buscar" placeholder="Escribe el nombre de la empresa..." autocomplete="off" style="font-weight:600;">
+                <input type="hidden" id="form-cot-empresa">
+                <div class="autocomplete-list hidden" id="cot-empresa-autocomplete"></div>
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>RFC <span style="font-size:0.7rem;font-weight:400;color:var(--text-muted);" title="Si la empresa existe y el RFC está vacío, se actualizará también en Empresas al guardar">(se sincroniza con Empresas)</span></label>
+                <input id="form-cot-rfc" placeholder="Ej: XAXX010101000">
+              </div>
+              <div class="form-group"><label>Contacto</label><input id="form-cot-contacto" placeholder="Nombre del contacto"></div>
+              <div class="form-group"><label>✉️ Correo</label><input id="form-cot-correo" type="email" placeholder="contacto@empresa.mx"></div>
+            </div>
+          </div>
+
+          <!-- Card 3: Datos generales -->
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-title">🧾 Datos Generales</div>
+            <div class="form-grid">
+              <div class="form-group"><label>Número</label><input id="form-cot-numero" readonly placeholder="Se genera al guardar" style="opacity:0.7;"></div>
+              <div class="form-group"><label>Fecha de emisión</label><input type="date" id="form-cot-fecha-creacion"></div>
+              <div class="form-group"><label>Fecha de vigencia</label><input type="date" id="form-cot-fecha-vigencia"></div>
+              <div class="form-group hidden" id="form-cot-estado-wrap">
+                <label>Estado</label>
+                <select id="form-cot-estado">
+                  <option value="borrador">Borrador</option>
+                  <option value="enviada">Enviada</option>
+                  <option value="aceptada">Aceptada</option>
+                  <option value="rechazada">Rechazada</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: Conceptos -->
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-title">📦 Conceptos</div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="min-width:220px;">Descripción</th>
+                    <th style="width:80px; text-align:center;">Cant.</th>
+                    <th style="width:120px; text-align:center;">Precio Unit.</th>
+                    <th style="width:90px; text-align:center;" title="Descuento aplicado a esta línea. Se pre-llena del catálogo pero puedes cambiarlo.">Dto.%</th>
+                    <th style="width:60px; text-align:center;">IVA</th>
+                    <th style="width:120px; text-align:center;">Subtotal</th>
+                    <th style="width:40px;"></th>
+                  </tr>
+                </thead>
+                <tbody id="tabla-cot-conceptos-body"></tbody>
+              </table>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" id="btnAgregarConceptoCot" style="margin-top:10px;">➕ Agregar concepto</button>
+            <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+              <div style="min-width:240px; font-size:0.9rem;">
+                <div style="display:flex; justify-content:space-between; padding:4px 0; color:var(--text-light);"><span>Subtotal</span><span id="cot-subtotal">$0.00</span></div>
+                <div style="display:flex; justify-content:space-between; padding:4px 0; color:var(--text-light);"><span>IVA (16%)</span><span id="cot-iva">$0.00</span></div>
+                <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:1px solid rgba(255,255,255,0.1); margin-top:4px; font-size:1.15rem; font-weight:800; color:var(--brand-secondary);"><span>TOTAL</span><span id="cot-total">$0.00</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 5: Notas -->
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-title">📝 Notas y Condiciones</div>
+            <div class="form-group">
+              <textarea id="form-cot-notas" rows="4" placeholder="Condiciones, forma de pago, tiempos de entrega..."></textarea>
+            </div>
+          </div>
+
+          <div class="form-actions" style="flex-wrap:wrap;">
+            <button class="btn btn-primary" id="btnGuardarCotizacionBorrador">💾 Guardar borrador</button>
+            <button class="btn btn-secondary" id="btnGuardarCotizacionPDF">📄 Guardar y generar PDF</button>
+            <button class="btn btn-ghost hidden" id="btnCrearTicketDesdeCot">🎫 Crear ticket desde esta cotización</button>
+            <button class="btn btn-secondary" id="btnCancelarCotizacion">Cancelar</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Número</th>
+                <th>Empresa</th>
+                <th>Fecha</th>
+                <th>Vigencia</th>
+                <th style="text-align:right;">Total</th>
+                <th style="text-align:center;">Estado</th>
+                <th style="text-align:center;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-cotizaciones-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ============================== -->
       <!-- SECTION: TICKETS               -->
       <!-- ============================== -->
       <div class="section" id="section-tickets">
@@ -2981,6 +3193,22 @@ try {
             </div>
           </div>
           <button class="btn btn-success btn-sm" id="btnGuardarSLA" style="margin-top:10px;">💾 Guardar SLA</button>
+        </div>
+
+        <!-- Cotizaciones -->
+        <div class="card" style="margin-top:20px;">
+          <div class="card-title">🧾 Cotizaciones</div>
+          <div class="form-group" style="margin-bottom:18px;">
+            <label>Condiciones y términos por defecto</label>
+            <textarea id="cfg-cotizacion-terminos" rows="4" placeholder="Ej: Precios en pesos mexicanos. No incluyen IVA salvo que se indique en el concepto. Cotización válida por 15 días."></textarea>
+          </div>
+          <div class="card-title" style="font-size:0.85rem;">📦 Catálogo de Conceptos Rápidos</div>
+          <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:12px; line-height:1.5;">Aparecen como sugerencias al escribir la descripción de un concepto en una cotización.</p>
+          <div class="config-list" id="cfg-list-catalogo-cotizaciones"></div>
+          <button class="btn btn-ghost btn-xs" style="margin-top:10px;" id="btnAddConceptoCatalogo">➕ Agregar</button>
+          <div style="margin-top:16px;">
+            <button class="btn btn-success btn-sm" id="btnGuardarConfigCotizaciones">💾 Guardar Cotizaciones</button>
+          </div>
         </div>
 
         <div class="card" style="margin-top:20px;">
@@ -4121,6 +4349,7 @@ try {
   <div class="drawer-tabs">
     <div class="drawer-tab active" data-drawer-tab="historial">📋 Historial</div>
     <div class="drawer-tab" data-drawer-tab="tareas">📌 Tareas</div>
+    <div class="drawer-tab" data-drawer-tab="cotizaciones">🧾 Cotizaciones</div>
   </div>
   <div style="display:flex; gap:6px; align-items:center; padding:10px 20px 0; flex-wrap:wrap;">
     <select id="hist-filtro-tipo" title="Tipo" style="font-size:0.78rem; padding:6px 8px; display:none;">
@@ -4177,6 +4406,10 @@ try {
     </div>
     <div id="drawer-tareas-lista"><div class="timeline-empty">Sin tareas para esta empresa.</div></div>
   </div>
+  <!-- Panel Cotizaciones -->
+  <div class="drawer-body" id="drawer-panel-cotizaciones" style="display:none;">
+    <div id="drawer-cotizaciones-lista"><div class="timeline-empty">Sin cotizaciones para esta empresa.</div></div>
+  </div>
 </div>
 
 <!-- ===== MODAL: Nueva Tarea (desde Dashboard) ===== -->
@@ -4208,6 +4441,24 @@ try {
       </div>
       <div class="form-group"><label>Descripción</label><textarea id="modal-tarea-desc" rows="2" style="resize:vertical;"></textarea></div>
       <button class="btn btn-primary btn-block" id="btnGuardarModalTarea">💾 Crear Tarea</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: Enviar Cotización por Correo ===== -->
+<div id="modal-enviar-cotizacion" class="modal-center" style="display:none;">
+  <div class="modal-box" style="width:480px; max-width:95%;">
+    <div class="modal-header">
+      <h2>✉️ Enviar Cotización</h2>
+      <button class="modal-close" id="btnCerrarModalEnviarCot">×</button>
+    </div>
+    <div style="padding:16px 18px; display:flex; flex-direction:column; gap:10px;">
+      <input type="hidden" id="modal-cot-mail-id">
+      <div class="form-group"><label>Para <span class="required">*</span></label><input id="modal-cot-mail-para" type="email" placeholder="cliente@empresa.mx"></div>
+      <div class="form-group"><label>Asunto</label><input id="modal-cot-mail-asunto"></div>
+      <div class="form-group"><label>Cuerpo</label><textarea id="modal-cot-mail-cuerpo" rows="5" style="resize:vertical;"></textarea></div>
+      <div style="font-size:0.78rem; color:var(--text-muted);">📎 El PDF de la cotización se adjunta automáticamente.</div>
+      <button class="btn btn-primary btn-block" id="btnEnviarCotizacionCorreo">✉️ Enviar</button>
     </div>
   </div>
 </div>
@@ -4394,7 +4645,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica } from "../data/firebase.js";
+import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones } from "../data/firebase.js";
 
 // ── Modal confirmación (reemplaza confirm() — funciona en móvil) ──
 function confirmar(msg: string, icon = "⚠️"): Promise<boolean> {
@@ -4885,6 +5136,9 @@ verificarSesion();
   let alertasVencimiento = {};
   let solicitudesAcceso: any[] = [];
 
+  let cotizaciones = [];
+  let configCotizaciones = { terminos: "", catalogo: [] };
+
   let drawerEmpresaActual = null;
   let drawerTabActual = "historial";
 
@@ -5037,6 +5291,8 @@ verificarSesion();
     plantillaMensaje = localStorage.getItem("crm_plantilla") || plantillaMensaje;
     tickets = safeParseLocal("crm_tickets", []);
     contactos = safeParseLocal("crm_contactos", unificarContactosIniciales());
+    cotizaciones = safeParseLocal("crm_cotizaciones", []);
+    configCotizaciones = safeParseLocal("crm_config_cotizaciones", { terminos: "", catalogo: [] });
     // Si los datos cargados vienen del import Excel (filas), normalizarlos a la forma esperada
     if (Array.isArray(clientes) && clientes.length > 0) {
       const sample = clientes[0] || {};
@@ -5173,6 +5429,7 @@ verificarSesion();
     versiones: { title: "Versiones CONTPAQi", sub: "Versiones oficiales del mercado y plantilla de notificación" },
     empresas: { title: "Empresas", sub: "Gestión de empresas, sistemas instalados y vencimientos de licencias" },
     contactos: { title: "Contactos", sub: "Directorio de contactos asociados a empresas" },
+    cotizaciones: { title: "Cotizaciones", sub: "Genera, envía y da seguimiento a cotizaciones antes de abrir un ticket" },
     tickets: { title: "Soporte — Tickets", sub: "Sistema de tickets de soporte técnico" },
     configuracion: { title: "Configuración", sub: "Ajustes del sistema de tickets y campos" },
     bitacora: { title: "Bitácora de Acciones", sub: "Registro de actividades del CRM" },
@@ -5187,6 +5444,7 @@ verificarSesion();
     cerrarFormEmpresa();
     cerrarFormContacto();
     cerrarFormTicket();
+    cerrarFormCotizacion();
 
     navItems.forEach(n => n.classList.toggle("active", n.dataset.section === sectionId));
     sections.forEach(s => s.classList.toggle("active", s.id === `section-${sectionId}`));
@@ -5198,6 +5456,7 @@ verificarSesion();
     if (sectionId === "versiones") initMarketForms();
     if (sectionId === "empresas") renderEmpresas();
     if (sectionId === "contactos") renderContactos();
+    if (sectionId === "cotizaciones") renderCotizaciones();
     if (sectionId === "tickets") {
       const sel = document.getElementById("selectFiltroEstado");
       if (sel) sel.value = filtroEstado; // "" resetea el filtro, valor específico lo aplica
@@ -5397,6 +5656,8 @@ verificarSesion();
     if (datos.plantillaMensaje !== undefined) plantillaMensaje = datos.plantillaMensaje;
     if (datos.tickets !== undefined && (datos.tickets.length > 0 || tickets.length === 0)) tickets = datos.tickets || [];
     if (datos.contactos !== undefined && (datos.contactos.length > 0 || contactos.length === 0)) contactos = datos.contactos || [];
+    if (datos.cotizaciones !== undefined && (datos.cotizaciones.length > 0 || cotizaciones.length === 0)) cotizaciones = datos.cotizaciones || [];
+    if (datos.configCotizaciones && !preservarConfig) configCotizaciones = { terminos: "", catalogo: [], ...datos.configCotizaciones };
     // Si el usuario está en la sección de configuración y aún no ha guardado, preservar
     // los cambios en memoria para no pisar ediciones en progreso (prioridades, estados, etc.)
     if (datos.configTickets && !preservarConfig) configTickets = { ...configTickets, ...datos.configTickets };
@@ -5462,6 +5723,7 @@ verificarSesion();
     if (secActiva === "bitacora") renderBitacora();
     if (secActiva === "eventos") renderSeccionEventos();
     if (secActiva === "versiones") initMarketForms();
+    if (secActiva === "cotizaciones") renderCotizaciones();
   }
 
   function inicializarApp() {
@@ -6352,6 +6614,9 @@ verificarSesion();
       badgeResueltos.textContent = resueltosPorFacturar;
       badgeResueltos.style.display = resueltosPorFacturar > 0 ? "inline-flex" : "none";
     }
+    const cotizacionesActivas = cotizaciones.filter(c => c.estado === "borrador" || c.estado === "enviada").length;
+    const badgeCot = el("badge-cotizaciones");
+    if (badgeCot) badgeCot.textContent = cotizacionesActivas;
     updateBrowserTabTitle();
 
     // Recent tickets
@@ -6629,10 +6894,40 @@ verificarSesion();
     document.querySelectorAll(".drawer-tab").forEach(t => t.classList.toggle("active", t.dataset.drawerTab === tab));
     document.getElementById("drawer-panel-historial").style.display = tab === "historial" ? "" : "none";
     document.getElementById("drawer-panel-tareas").style.display = tab === "tareas" ? "" : "none";
+    const panelCot = document.getElementById("drawer-panel-cotizaciones");
+    if (panelCot) panelCot.style.display = tab === "cotizaciones" ? "" : "none";
     const selTipo = document.getElementById("hist-filtro-tipo") as HTMLSelectElement;
     if (selTipo) selTipo.style.display = tab === "historial" ? "" : "none";
     if (tab === "historial") renderDrawerHistorial();
-    else renderDrawerTareas();
+    else if (tab === "tareas") renderDrawerTareas();
+    else if (tab === "cotizaciones") renderDrawerCotizaciones();
+  }
+
+  function renderDrawerCotizaciones() {
+    const cont = document.getElementById("drawer-cotizaciones-lista");
+    if (!cont || drawerEmpresaActual === null) return;
+    const empresa = (clientes[drawerEmpresaActual]?.EMPRESA || "").toLowerCase();
+    const cotsEmp = cotizaciones.filter(c => (c.empresaNombre || "").toLowerCase() === empresa)
+      .sort((a, b) => (b.numero || "").localeCompare(a.numero || ""));
+    if (!cotsEmp.length) { cont.innerHTML = '<div class="timeline-empty">Sin cotizaciones para esta empresa.</div>'; return; }
+    cont.innerHTML = cotsEmp.map(c => {
+      const totales = calcularTotalesCotizacion(c.conceptos);
+      const estadoVisual = estadoVisualCotizacion(c);
+      return `
+        <div style="display:flex; align-items:center; gap:10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:8px;">
+          <div style="flex:1; min-width:0;">
+            <div style="font-weight:700; font-size:0.85rem; color:var(--text-bright);">${escapeHtml(c.numero)}</div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">${c.fechaCreacion ? new Date(c.fechaCreacion).toLocaleDateString() : "—"} · ${formatMoney(totales.total)}</div>
+          </div>
+          <span class="badge badge-${slugBadge(estadoVisual)}">${escapeHtml(estadoVisual)}</span>
+          <button class="btn btn-secondary btn-xs btn-pdf-cot-drawer" data-id="${c.id}" title="Descargar PDF">📄</button>
+        </div>`;
+    }).join("");
+    cont.querySelectorAll(".btn-pdf-cot-drawer").forEach(b => b.addEventListener("click", (e) => {
+      const id = (e.currentTarget as HTMLElement).dataset.id;
+      const cot = cotizaciones.find(c => c.id === id);
+      if (cot) descargarPDFCotizacion(cot);
+    }));
   }
 
   function renderDrawerHistorial() {
@@ -7526,14 +7821,14 @@ verificarSesion();
     };
   }
 
-  async function enviarEmailConProveedor({ to, subject, html, text, replyTo = "", cc = "", bcc = "" }) {
+  async function enviarEmailConProveedor({ to, subject, html, text, replyTo = "", cc = "", bcc = "", attachment = null }) {
     const cuerpo = html || `<pre style="font-family:sans-serif; white-space:pre-wrap;">${text || ""}</pre>`;
     const fromEmail = parseEmailList(document.getElementById("cfg-correo-soporte")?.value.trim() || configTickets.correoSoporte)[0] || "";
     try {
       const response = await fetch("/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to, subject, html: cuerpo, replyTo, cc, bcc, from: fromEmail }),
+        body: JSON.stringify({ to, subject, html: cuerpo, replyTo, cc, bcc, from: fromEmail, ...(attachment ? { attachment } : {}) }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || data.message || JSON.stringify(data));
@@ -9083,6 +9378,7 @@ verificarSesion();
     const resumenSemanalCheckbox = document.getElementById("cfg-resumen-semanal-activo") as HTMLInputElement | null;
     if (resumenSemanalCheckbox) resumenSemanalCheckbox.checked = configTickets.resumenSemanalActivo !== false;
     renderConfigSLA();
+    renderConfigCotizaciones();
 
     // Cargar proveedor de correo guardado
     const providerRadio = document.querySelector(`input[name="cfg-mail-provider"][value="${configCorreo.provider || "brevo"}"]`);
@@ -9297,6 +9593,64 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const ok = await guardarConfigTickets({ sla: configTickets.sla });
     if (ok) { toast("⏱️ SLA guardado"); renderTickets(); }
     else toast("⚠️ Error al guardar SLA", "error");
+  });
+
+  // Configuración de Cotizaciones: términos por defecto + catálogo de conceptos rápidos.
+  // El catálogo usa .config-item-cat (nunca .config-item) para no caer en el guardado genérico
+  // de listas de 1 campo (Tipos/Estados/etc.) — ver comentario en el CSS de .config-item-cat.
+  function renderConfigCotizaciones() {
+    const terminosEl = document.getElementById("cfg-cotizacion-terminos") as HTMLTextAreaElement | null;
+    if (terminosEl) terminosEl.value = configCotizaciones.terminos || "";
+    renderCatalogoConceptos();
+  }
+
+  function renderCatalogoConceptos() {
+    const listEl = document.getElementById("cfg-list-catalogo-cotizaciones");
+    if (!listEl) return;
+    listEl.innerHTML = "";
+    (configCotizaciones.catalogo || []).forEach((item: any, idx: number) => {
+      const div = document.createElement("div");
+      div.className = "config-item-cat";
+      div.innerHTML = `
+        <input class="cat-field-nombre" placeholder="Nombre del concepto" value="${escapeHtml(item.nombre || "")}" data-cat-idx="${idx}" data-cat-field="nombre">
+        <input class="cat-field-precio" type="number" min="0" step="0.01" placeholder="Precio" value="${item.precioUnitario ?? 0}" data-cat-idx="${idx}" data-cat-field="precioUnitario">
+        <input class="cat-field-dto" type="number" min="0" max="100" step="1" placeholder="Dto. %" value="${item.descuentoPorDefecto ?? 0}" data-cat-idx="${idx}" data-cat-field="descuentoPorDefecto">
+        <button class="btn btn-danger btn-xs btn-del-cat-item" data-cat-idx="${idx}">🗑️</button>
+      `;
+      listEl.appendChild(div);
+    });
+  }
+
+  document.getElementById("btnAddConceptoCatalogo")?.addEventListener("click", () => {
+    configCotizaciones.catalogo = configCotizaciones.catalogo || [];
+    configCotizaciones.catalogo.push({ nombre: "", precioUnitario: 0, descuentoPorDefecto: 0 });
+    renderCatalogoConceptos();
+  });
+
+  document.getElementById("cfg-list-catalogo-cotizaciones")?.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest(".btn-del-cat-item") as HTMLElement | null;
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.catIdx || "");
+    configCotizaciones.catalogo.splice(idx, 1);
+    renderCatalogoConceptos();
+  });
+
+  document.getElementById("btnGuardarConfigCotizaciones")?.addEventListener("click", async () => {
+    const terminosEl = document.getElementById("cfg-cotizacion-terminos") as HTMLTextAreaElement | null;
+    configCotizaciones.terminos = terminosEl?.value || "";
+    const catalogo: any[] = [];
+    document.querySelectorAll("#cfg-list-catalogo-cotizaciones .config-item-cat").forEach(div => {
+      const nombre = (div.querySelector('[data-cat-field="nombre"]') as HTMLInputElement)?.value.trim() || "";
+      const precioUnitario = parseFloat((div.querySelector('[data-cat-field="precioUnitario"]') as HTMLInputElement)?.value || "0") || 0;
+      const descuentoPorDefecto = parseFloat((div.querySelector('[data-cat-field="descuentoPorDefecto"]') as HTMLInputElement)?.value || "0") || 0;
+      if (nombre) catalogo.push({ nombre, precioUnitario, descuentoPorDefecto });
+    });
+    configCotizaciones.catalogo = catalogo;
+    guardarLocal("crm_config_cotizaciones", configCotizaciones);
+    const ok = firebaseEnabled && !crmLocalOnly ? await guardarConfigCotizaciones(configCotizaciones) : true;
+    if (ok) toast("🧾 Configuración de Cotizaciones guardada");
+    else toast("⚠️ Error al guardar (se guardó localmente)", "error");
+    renderCatalogoConceptos();
   });
 
   async function renderSolicitudesAccesoPanel() {
@@ -10893,6 +11247,733 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   }
+
+  // ============================================================
+  // COTIZACIONES
+  // ============================================================
+
+  function formatMoney(n) {
+    return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(Number(n) || 0);
+  }
+
+  function fechaISO(d) { return d.toISOString().slice(0, 10); }
+
+  function subtotalLineaConcepto(c) {
+    return (Number(c.cantidad) || 0) * (Number(c.precioUnitario) || 0) * (1 - (Number(c.descuento) || 0) / 100);
+  }
+
+  function calcularTotalesCotizacion(conceptos) {
+    let subtotalGeneral = 0, totalIVA = 0;
+    (conceptos || []).forEach(c => {
+      const sub = subtotalLineaConcepto(c);
+      subtotalGeneral += sub;
+      if (c.tieneIVA !== false) totalIVA += sub * 0.16;
+    });
+    return { subtotalGeneral, totalIVA, total: subtotalGeneral + totalIVA };
+  }
+
+  // "Vencida" se calcula al vuelo para listar/filtrar — nunca se persiste en Firestore, para no
+  // generar escrituras automáticas silenciosas cada vez que alguien abre el CRM.
+  function cotizacionEsVencida(c) {
+    if (!c.fechaVigencia) return false;
+    if (c.estado !== "borrador" && c.estado !== "enviada") return false;
+    return new Date(c.fechaVigencia) < new Date(new Date().toDateString());
+  }
+  function estadoVisualCotizacion(c) {
+    return cotizacionEsVencida(c) ? "vencida" : (c.estado || "borrador");
+  }
+
+  // Sincroniza el RFC de la empresa desde una cotización — mismo patrón que
+  // sincronizarEmpresaDesdeContactos: prefiere el valor recién capturado, mutando en sitio el
+  // array `clientes` y guardando. Solo escribe si el RFC realmente cambió (evita bitácora/escrituras
+  // de más en cada guardado si el usuario no tocó el campo).
+  function sincronizarRFCEmpresaDesdeCotizacion(empresaNombre, rfc) {
+    if (!empresaNombre || !rfc) return;
+    const empIdx = clientes.findIndex(c => (c.EMPRESA || "").toLowerCase() === empresaNombre.toLowerCase());
+    if (empIdx === -1) return;
+    if (clientes[empIdx].RFC === rfc) return;
+    clientes[empIdx] = { ...clientes[empIdx], RFC: rfc };
+    if (crmLocalOnly) guardarLocal("crm_clientes", clientes); else guardarClientes(clientes);
+    logBitacora(`RFC de "${empresaNombre}" actualizado desde cotización`, "🔄");
+    renderEmpresas();
+  }
+
+  // ----- Lista -----
+  function renderCotizaciones() {
+    const tbody = document.getElementById("tabla-cotizaciones-body");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    const busq = document.getElementById("txtBuscarCotizacion")?.value.toLowerCase().trim() || "";
+    const fEstado = document.getElementById("selectFiltroEstadoCot")?.value || "";
+
+    const filtradas = cotizaciones.map((c, i) => ({ ...c, _idx: i })).filter(c => {
+      const estadoVisual = estadoVisualCotizacion(c);
+      if (fEstado && estadoVisual !== fEstado) return false;
+      if (busq) {
+        return (c.empresaNombre || "").toLowerCase().includes(busq) ||
+               (c.numero || "").toLowerCase().includes(busq);
+      }
+      return true;
+    }).sort((a, b) => (b.numero || "").localeCompare(a.numero || ""));
+
+    filtradas.forEach(c => {
+      const totales = calcularTotalesCotizacion(c.conceptos);
+      const estadoVisual = estadoVisualCotizacion(c);
+      const tr = document.createElement("tr");
+      tr.dataset.idx = c._idx;
+      if (estadoVisual === "vencida") tr.style.color = "#f87171";
+      tr.innerHTML = `
+        <td style="font-weight:700;">${escapeHtml(c.numero) || "—"}</td>
+        <td>${escapeHtml(c.empresaNombre) || "—"}</td>
+        <td style="font-size:0.8rem;">${c.fechaCreacion ? new Date(c.fechaCreacion).toLocaleDateString() : "—"}</td>
+        <td style="font-size:0.8rem;">${c.fechaVigencia ? new Date(c.fechaVigencia).toLocaleDateString() : "—"}</td>
+        <td style="text-align:right; font-weight:600;">${formatMoney(totales.total)}</td>
+        <td style="text-align:center;"><span class="badge badge-${slugBadge(estadoVisual)}">${escapeHtml(estadoVisual)}</span></td>
+        <td style="text-align:center;">
+          <div style="display:inline-flex; gap:4px;">
+            <button class="btn btn-primary btn-xs btn-edit-cot" data-idx="${c._idx}" title="Editar">✏️</button>
+            <button class="btn btn-secondary btn-xs btn-pdf-cot" data-idx="${c._idx}" title="PDF">📄</button>
+            <button class="btn btn-secondary btn-xs btn-mail-cot" data-idx="${c._idx}" title="Enviar correo">✉️</button>
+            <button class="btn btn-ghost btn-xs btn-dup-cot" data-idx="${c._idx}" title="Duplicar">📋</button>
+            <button class="btn btn-danger btn-xs btn-del-cot" data-idx="${c._idx}" title="Eliminar">🗑️</button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll(".btn-edit-cot").forEach(b => b.addEventListener("click", prepararEdicionCotizacion));
+    tbody.querySelectorAll(".btn-pdf-cot").forEach(b => b.addEventListener("click", (e) => {
+      const idx = parseInt(e.target.closest("button").dataset.idx);
+      descargarPDFCotizacion(cotizaciones[idx]);
+    }));
+    tbody.querySelectorAll(".btn-mail-cot").forEach(b => b.addEventListener("click", (e) => {
+      const idx = parseInt(e.target.closest("button").dataset.idx);
+      abrirModalEnviarCotizacion(cotizaciones[idx]);
+    }));
+    tbody.querySelectorAll(".btn-dup-cot").forEach(b => b.addEventListener("click", duplicarCotizacion));
+    tbody.querySelectorAll(".btn-del-cot").forEach(b => b.addEventListener("click", eliminarCotizacion));
+
+    const el = id => document.getElementById(id);
+    el("cot-count-total").textContent = cotizaciones.length;
+    el("cot-count-activas").textContent = cotizaciones.filter(c => c.estado === "borrador" || c.estado === "enviada").length;
+    el("cot-count-aceptadas").textContent = cotizaciones.filter(c => c.estado === "aceptada").length;
+    el("cot-count-vencidas").textContent = cotizaciones.filter(cotizacionEsVencida).length;
+  }
+  document.getElementById("txtBuscarCotizacion")?.addEventListener("input", renderCotizaciones);
+  document.getElementById("selectFiltroEstadoCot")?.addEventListener("change", renderCotizaciones);
+
+  // ----- Conceptos (tabla editable dentro del formulario) -----
+  const tablaCotConceptosBody = document.getElementById("tabla-cot-conceptos-body");
+  let conceptosCotActual: any[] = [];
+
+  function actualizarTotalesFormCotizacion() {
+    const t = calcularTotalesCotizacion(conceptosCotActual);
+    const elSub = document.getElementById("cot-subtotal");
+    const elIva = document.getElementById("cot-iva");
+    const elTot = document.getElementById("cot-total");
+    if (elSub) elSub.textContent = formatMoney(t.subtotalGeneral);
+    if (elIva) elIva.textContent = formatMoney(t.totalIVA);
+    if (elTot) elTot.textContent = formatMoney(t.total);
+  }
+
+  // Actualiza solo las celdas derivadas (dto highlight, subtotal, totales) de una fila sin
+  // reconstruir el <tbody> — reconstruirlo en cada tecleo le robaría el foco al input activo.
+  function actualizarFilaConceptoCot(i) {
+    const row = tablaCotConceptosBody?.querySelector(`tr[data-cidx="${i}"]`);
+    if (!row) return;
+    const c = conceptosCotActual[i];
+    const dtoTd = row.children[3] as HTMLElement;
+    if (dtoTd) dtoTd.style.background = (Number(c.descuento) > 0) ? "rgba(250,204,21,0.15)" : "";
+    const subTd = row.children[5] as HTMLElement;
+    if (subTd) {
+      const bruto = (Number(c.cantidad) || 0) * (Number(c.precioUnitario) || 0);
+      const sub = subtotalLineaConcepto(c);
+      subTd.innerHTML = (Number(c.descuento) > 0)
+        ? `<span style="text-decoration:line-through; color:var(--text-muted); font-size:0.72rem; display:block;">${formatMoney(bruto)}</span>${formatMoney(sub)}`
+        : formatMoney(sub);
+    }
+    actualizarTotalesFormCotizacion();
+  }
+
+  function renderConceptosCotizacion() {
+    if (!tablaCotConceptosBody) return;
+    tablaCotConceptosBody.innerHTML = "";
+    conceptosCotActual.forEach((c, i) => {
+      const tr = document.createElement("tr");
+      tr.dataset.cidx = String(i);
+      const bruto = (Number(c.cantidad) || 0) * (Number(c.precioUnitario) || 0);
+      const sub = subtotalLineaConcepto(c);
+      tr.innerHTML = `
+        <td class="autocomplete-wrap">
+          <input class="cot-concepto-desc" data-cidx="${i}" value="${escapeHtml(c.descripcion || "")}" placeholder="Descripción o elige del catálogo" autocomplete="off" style="width:100%;">
+          <div class="autocomplete-list hidden cot-concepto-catalogo-list" data-cidx="${i}"></div>
+        </td>
+        <td><input type="number" min="0" step="1" class="cot-concepto-cant" data-cidx="${i}" data-field="cantidad" value="${c.cantidad ?? 1}" style="width:100%; text-align:center;"></td>
+        <td><input type="number" min="0" step="0.01" class="cot-concepto-precio" data-cidx="${i}" data-field="precioUnitario" value="${c.precioUnitario ?? 0}" style="width:100%; text-align:right;"></td>
+        <td style="${Number(c.descuento) > 0 ? "background:rgba(250,204,21,0.15);" : ""}"><input type="number" min="0" max="100" step="1" class="cot-concepto-dto" data-cidx="${i}" data-field="descuento" value="${c.descuento ?? 0}" style="width:100%; text-align:center;" title="Descuento aplicado a esta línea. Se pre-llena del catálogo pero puedes cambiarlo."></td>
+        <td style="text-align:center;"><input type="checkbox" class="cot-concepto-iva" data-cidx="${i}" ${c.tieneIVA !== false ? "checked" : ""}></td>
+        <td class="cot-concepto-subtotal" style="text-align:right; font-weight:600;">${Number(c.descuento) > 0 ? `<span style="text-decoration:line-through; color:var(--text-muted); font-size:0.72rem; display:block;">${formatMoney(bruto)}</span>${formatMoney(sub)}` : formatMoney(sub)}</td>
+        <td style="text-align:center;"><button type="button" class="btn btn-danger btn-xs cot-concepto-del" data-cidx="${i}">🗑️</button></td>
+      `;
+      tablaCotConceptosBody.appendChild(tr);
+    });
+    actualizarTotalesFormCotizacion();
+  }
+
+  function agregarConceptoCotizacion() {
+    conceptosCotActual.push({ descripcion: "", cantidad: 1, precioUnitario: 0, descuento: 0, tieneIVA: true });
+    renderConceptosCotizacion();
+  }
+  document.getElementById("btnAgregarConceptoCot")?.addEventListener("click", agregarConceptoCotizacion);
+
+  function setConceptoDesdeCatalogo(i, item) {
+    conceptosCotActual[i].descripcion = item.nombre;
+    conceptosCotActual[i].precioUnitario = Number(item.precioUnitario) || 0;
+    conceptosCotActual[i].descuento = Number(item.descuentoPorDefecto) || 0;
+    const row = tablaCotConceptosBody?.querySelector(`tr[data-cidx="${i}"]`);
+    if (row) {
+      const descInp = row.querySelector(".cot-concepto-desc") as HTMLInputElement | null;
+      const precioInp = row.querySelector(".cot-concepto-precio") as HTMLInputElement | null;
+      const dtoInp = row.querySelector(".cot-concepto-dto") as HTMLInputElement | null;
+      if (descInp) descInp.value = conceptosCotActual[i].descripcion;
+      if (precioInp) precioInp.value = String(conceptosCotActual[i].precioUnitario);
+      if (dtoInp) dtoInp.value = String(conceptosCotActual[i].descuento);
+      row.querySelector(".cot-concepto-catalogo-list")?.classList.add("hidden");
+    }
+    actualizarFilaConceptoCot(i);
+  }
+
+  // Eventos delegados en la tabla de conceptos — se registran UNA sola vez (no dentro de
+  // renderConceptosCotizacion) para no reconstruir el <tbody> en cada tecleo.
+  tablaCotConceptosBody?.addEventListener("input", (e) => {
+    const target = e.target as HTMLInputElement;
+    const i = parseInt(target.dataset.cidx || "");
+    if (isNaN(i) || !conceptosCotActual[i]) return;
+    if (target.classList.contains("cot-concepto-desc")) {
+      conceptosCotActual[i].descripcion = target.value;
+      const val = target.value.toLowerCase().trim();
+      const list = tablaCotConceptosBody.querySelector(`.cot-concepto-catalogo-list[data-cidx="${i}"]`);
+      if (!list) return;
+      if (!val) { list.classList.add("hidden"); return; }
+      const matches = (configCotizaciones.catalogo || []).filter((it: any) => (it.nombre || "").toLowerCase().includes(val)).slice(0, 8);
+      if (!matches.length) { list.classList.add("hidden"); return; }
+      list.innerHTML = "";
+      matches.forEach((item: any) => {
+        const div = document.createElement("div");
+        div.className = "autocomplete-item";
+        div.innerHTML = `<span style="font-weight:600;">${escapeHtml(item.nombre)}</span> <span style="color:var(--text-muted); font-size:0.75rem;">— ${formatMoney(item.precioUnitario)}${item.descuentoPorDefecto ? ` (${item.descuentoPorDefecto}% dto.)` : ""}</span>`;
+        div.addEventListener("click", () => setConceptoDesdeCatalogo(i, item));
+        list.appendChild(div);
+      });
+      list.classList.remove("hidden");
+      return;
+    }
+    if (target.classList.contains("cot-concepto-cant") || target.classList.contains("cot-concepto-precio") || target.classList.contains("cot-concepto-dto")) {
+      conceptosCotActual[i][target.dataset.field as string] = parseFloat(target.value) || 0;
+      actualizarFilaConceptoCot(i);
+    }
+  });
+  tablaCotConceptosBody?.addEventListener("change", (e) => {
+    const target = e.target as HTMLInputElement;
+    const i = parseInt(target.dataset.cidx || "");
+    if (isNaN(i) || !conceptosCotActual[i]) return;
+    if (target.classList.contains("cot-concepto-iva")) {
+      conceptosCotActual[i].tieneIVA = target.checked;
+      actualizarTotalesFormCotizacion();
+    }
+  });
+  tablaCotConceptosBody?.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest(".cot-concepto-del") as HTMLElement | null;
+    if (!btn) return;
+    const i = parseInt(btn.dataset.cidx || "");
+    conceptosCotActual.splice(i, 1);
+    renderConceptosCotizacion();
+  });
+  document.addEventListener("click", e => {
+    if (!(e.target as HTMLElement).closest(".cot-concepto-desc") && !(e.target as HTMLElement).closest(".cot-concepto-catalogo-list")) {
+      tablaCotConceptosBody?.querySelectorAll(".cot-concepto-catalogo-list").forEach(l => l.classList.add("hidden"));
+    }
+  });
+
+  // ----- Autocomplete de empresa (receptor) -----
+  const cotEmpBuscar = document.getElementById("form-cot-empresa-buscar");
+  const cotEmpHidden = document.getElementById("form-cot-empresa") as HTMLInputElement | null;
+  const cotEmpList = document.getElementById("cot-empresa-autocomplete");
+
+  function setEmpresaCotizacion(c: any) {
+    const nombre = typeof c === "string" ? c : (c.EMPRESA || "");
+    if (cotEmpBuscar) (cotEmpBuscar as HTMLInputElement).value = nombre;
+    if (cotEmpHidden) cotEmpHidden.value = nombre;
+    if (typeof c !== "string") {
+      const fRfc = document.getElementById("form-cot-rfc") as HTMLInputElement | null; if (fRfc) fRfc.value = c.RFC || "";
+      const fCt = document.getElementById("form-cot-contacto") as HTMLInputElement | null; if (fCt) fCt.value = c.CONTACTO || "";
+      const fCo = document.getElementById("form-cot-correo") as HTMLInputElement | null; if (fCo) fCo.value = c.CORREO || "";
+    }
+    cotEmpList?.classList.add("hidden");
+  }
+
+  cotEmpBuscar?.addEventListener("input", function() {
+    const val = (this as HTMLInputElement).value.toLowerCase().trim();
+    if (cotEmpHidden) cotEmpHidden.value = (this as HTMLInputElement).value.trim();
+    if (!val) { cotEmpList?.classList.add("hidden"); return; }
+    const matches = clientes.filter((c: any) => (c.EMPRESA || "").toLowerCase().includes(val)).slice(0, 12);
+    if (!matches.length) { cotEmpList?.classList.add("hidden"); return; }
+    if (!cotEmpList) return;
+    cotEmpList.innerHTML = "";
+    matches.forEach((c: any) => {
+      const div = document.createElement("div");
+      div.className = "autocomplete-item";
+      div.innerHTML = `<span style="font-weight:600; color:#f1f5f9;">🏢 ${escapeHtml(c.EMPRESA)}</span>`;
+      div.addEventListener("click", () => setEmpresaCotizacion(c));
+      cotEmpList.appendChild(div);
+    });
+    cotEmpList.classList.remove("hidden");
+  });
+
+  document.addEventListener("click", e => {
+    if (!(e.target as HTMLElement).closest("#form-cot-empresa-buscar") && !(e.target as HTMLElement).closest("#cot-empresa-autocomplete")) {
+      cotEmpList?.classList.add("hidden");
+    }
+  });
+
+  // ----- Formulario: abrir / cerrar / editar -----
+  const formCot = document.getElementById("formulario-cotizacion");
+  const editCotId = document.getElementById("edit-cot-id") as HTMLInputElement | null;
+
+  function cerrarFormCotizacion() {
+    formCot?.classList.add("hidden");
+    if (editCotId) editCotId.value = "";
+    ["form-cot-emisor-nombre", "form-cot-emisor-cargo", "form-cot-emisor-tel", "form-cot-emisor-correo",
+     "form-cot-empresa-buscar", "form-cot-empresa", "form-cot-rfc", "form-cot-contacto", "form-cot-correo",
+     "form-cot-numero", "form-cot-notas"].forEach(id => {
+      const el = document.getElementById(id) as HTMLInputElement | null;
+      if (el) el.value = "";
+    });
+    document.getElementById("form-cot-estado-wrap")?.classList.add("hidden");
+    conceptosCotActual = [];
+    renderConceptosCotizacion();
+    document.getElementById("btnCrearTicketDesdeCot")?.classList.add("hidden");
+  }
+
+  document.getElementById("btnNuevaCotizacion")?.addEventListener("click", () => {
+    cerrarFormCotizacion();
+    const tituloEl = document.getElementById("form-cot-titulo");
+    if (tituloEl) tituloEl.textContent = "➕ Nueva Cotización";
+    const uActual = getUsuarioActual();
+    const uFull = uActual ? getUsuarios().find(u => u.nombre === uActual.nombre) : null;
+    const fNom = document.getElementById("form-cot-emisor-nombre") as HTMLInputElement | null; if (fNom) fNom.value = uActual?.nombre || "";
+    const fCorreo = document.getElementById("form-cot-emisor-correo") as HTMLInputElement | null; if (fCorreo) fCorreo.value = uFull?.authEmail || "";
+    const hoy = new Date();
+    const vigencia = new Date(hoy.getTime() + 15 * 86400000);
+    (document.getElementById("form-cot-fecha-creacion") as HTMLInputElement).value = fechaISO(hoy);
+    (document.getElementById("form-cot-fecha-vigencia") as HTMLInputElement).value = fechaISO(vigencia);
+    (document.getElementById("form-cot-notas") as HTMLTextAreaElement).value = configCotizaciones.terminos || "";
+    conceptosCotActual = [{ descripcion: "", cantidad: 1, precioUnitario: 0, descuento: 0, tieneIVA: true }];
+    renderConceptosCotizacion();
+    formCot?.classList.remove("hidden");
+    formCot?.scrollIntoView({ behavior: "smooth" });
+  });
+
+  document.getElementById("btnCancelarCotizacion")?.addEventListener("click", cerrarFormCotizacion);
+
+  function prepararEdicionCotizacion(e) {
+    const idx = parseInt((e.target as HTMLElement).closest("button")!.getAttribute("data-idx") || "");
+    const c = cotizaciones[idx];
+    if (!c) return;
+    cerrarFormCotizacion();
+    const tituloEl = document.getElementById("form-cot-titulo");
+    if (tituloEl) tituloEl.textContent = "✏️ Editar Cotización";
+    if (editCotId) editCotId.value = c.id;
+    (document.getElementById("form-cot-emisor-nombre") as HTMLInputElement).value = c.emisorNombre || "";
+    (document.getElementById("form-cot-emisor-cargo") as HTMLInputElement).value = c.emisorCargo || "";
+    (document.getElementById("form-cot-emisor-tel") as HTMLInputElement).value = c.emisorTel || "";
+    (document.getElementById("form-cot-emisor-correo") as HTMLInputElement).value = c.emisorCorreo || "";
+    setEmpresaCotizacion(c.empresaNombre || "");
+    (document.getElementById("form-cot-rfc") as HTMLInputElement).value = c.empresaRFC || "";
+    (document.getElementById("form-cot-contacto") as HTMLInputElement).value = c.empresaContacto || "";
+    (document.getElementById("form-cot-correo") as HTMLInputElement).value = c.empresaCorreo || "";
+    (document.getElementById("form-cot-numero") as HTMLInputElement).value = c.numero || "";
+    (document.getElementById("form-cot-fecha-creacion") as HTMLInputElement).value = (c.fechaCreacion || "").slice(0, 10);
+    (document.getElementById("form-cot-fecha-vigencia") as HTMLInputElement).value = (c.fechaVigencia || "").slice(0, 10);
+    (document.getElementById("form-cot-notas") as HTMLTextAreaElement).value = c.notas || "";
+    document.getElementById("form-cot-estado-wrap")?.classList.remove("hidden");
+    (document.getElementById("form-cot-estado") as HTMLSelectElement).value = c.estado || "borrador";
+    conceptosCotActual = (c.conceptos || []).map((x: any) => ({ ...x }));
+    renderConceptosCotizacion();
+    document.getElementById("btnCrearTicketDesdeCot")?.classList.remove("hidden");
+    formCot?.classList.remove("hidden");
+    formCot?.scrollIntoView({ behavior: "smooth" });
+  }
+
+  async function reservarFolioCotizacion() {
+    const anio = new Date().getFullYear();
+    if (!firebaseEnabled || crmLocalOnly) {
+      // Modo local (sin Firebase): folio calculado localmente. Acepta el mismo riesgo de
+      // duplicado bajo uso concurrente que ya existe hoy para folios de Tickets en modo local —
+      // no hay forma de hacerlo atómico sin backend.
+      const usados = cotizaciones.filter(c => (c.numero || "").startsWith(`COT-${anio}-`)).map(c => parseInt((c.numero || "").split("-")[2]) || 0);
+      const numero = usados.length ? Math.max(...usados) + 1 : 1;
+      return { ok: true, folio: `COT-${anio}-${String(numero).padStart(3, "0")}` };
+    }
+    return await obtenerSiguienteFolioCotizacion(anio);
+  }
+
+  async function guardarCotizacionDesdeForm(generarPdfDespues: boolean) {
+    const empresaNombre = (document.getElementById("form-cot-empresa") as HTMLInputElement).value.trim()
+      || (document.getElementById("form-cot-empresa-buscar") as HTMLInputElement).value.trim();
+    if (!empresaNombre) { toast("⚠️ Indica la empresa receptora"); return; }
+    if (!conceptosCotActual.length || conceptosCotActual.every(c => !c.descripcion.trim())) {
+      toast("⚠️ Agrega al menos un concepto"); return;
+    }
+
+    const rfc = (document.getElementById("form-cot-rfc") as HTMLInputElement).value.trim();
+    const estadoWrapVisible = !document.getElementById("form-cot-estado-wrap")?.classList.contains("hidden");
+    const datosForm = {
+      emisorNombre: (document.getElementById("form-cot-emisor-nombre") as HTMLInputElement).value.trim(),
+      emisorCargo: (document.getElementById("form-cot-emisor-cargo") as HTMLInputElement).value.trim(),
+      emisorTel: (document.getElementById("form-cot-emisor-tel") as HTMLInputElement).value.trim(),
+      emisorCorreo: (document.getElementById("form-cot-emisor-correo") as HTMLInputElement).value.trim(),
+      empresaNombre,
+      empresaRFC: rfc,
+      empresaContacto: (document.getElementById("form-cot-contacto") as HTMLInputElement).value.trim(),
+      empresaCorreo: (document.getElementById("form-cot-correo") as HTMLInputElement).value.trim(),
+      fechaCreacion: (document.getElementById("form-cot-fecha-creacion") as HTMLInputElement).value,
+      fechaVigencia: (document.getElementById("form-cot-fecha-vigencia") as HTMLInputElement).value,
+      conceptos: conceptosCotActual.filter(c => c.descripcion.trim()).map(c => ({
+        descripcion: c.descripcion, cantidad: Number(c.cantidad) || 0, precioUnitario: Number(c.precioUnitario) || 0,
+        descuento: Number(c.descuento) || 0, tieneIVA: c.tieneIVA !== false
+      })),
+      notas: (document.getElementById("form-cot-notas") as HTMLTextAreaElement).value,
+    };
+
+    const id = editCotId?.value || "";
+    let cot;
+    if (id) {
+      cot = cotizaciones.find(c => c.id === id);
+      if (!cot) { toast("⚠️ No se encontró la cotización a editar"); return; }
+      const estadoAnterior = cot.estado;
+      Object.assign(cot, datosForm);
+      if (estadoWrapVisible) {
+        const nuevoEstado = (document.getElementById("form-cot-estado") as HTMLSelectElement).value;
+        cot.estado = nuevoEstado;
+      }
+      if (crmLocalOnly) guardarLocal("crm_cotizaciones", cotizaciones); else await guardarCotizaciones(cotizaciones);
+      if (estadoWrapVisible && cot.estado !== estadoAnterior) {
+        logBitacora(`Cotización ${cot.numero} → ${cot.estado}`, "📋");
+      } else {
+        logBitacora(`Cotización ${cot.numero} actualizada`, "📋");
+      }
+    } else {
+      const res = await reservarFolioCotizacion();
+      if (!res.ok) { toast("⚠️ No se pudo generar el folio, intenta de nuevo"); return; }
+      cot = {
+        id: "cot_" + Date.now(),
+        numero: res.folio,
+        estado: "borrador",
+        creadoPor: getUsuarioActual()?.nombre || "Sistema",
+        ...datosForm,
+      };
+      cotizaciones.push(cot);
+      if (crmLocalOnly) guardarLocal("crm_cotizaciones", cotizaciones); else await agregarCotizacion(cot);
+      logBitacora(`Cotización ${cot.numero} creada para ${cot.empresaNombre}`, "📋");
+      if (editCotId) editCotId.value = cot.id;
+      (document.getElementById("form-cot-numero") as HTMLInputElement).value = cot.numero;
+    }
+
+    if (rfc) sincronizarRFCEmpresaDesdeCotizacion(empresaNombre, rfc);
+
+    guardarLocal("crm_cotizaciones", cotizaciones);
+    document.getElementById("form-cot-estado-wrap")?.classList.remove("hidden");
+    (document.getElementById("form-cot-estado") as HTMLSelectElement).value = cot.estado;
+    document.getElementById("btnCrearTicketDesdeCot")?.classList.remove("hidden");
+    toast(id ? "💾 Cotización actualizada" : "💾 Cotización guardada");
+    renderCotizaciones();
+    renderDashboard();
+    if (generarPdfDespues) descargarPDFCotizacion(cot);
+  }
+
+  document.getElementById("btnGuardarCotizacionBorrador")?.addEventListener("click", () => guardarCotizacionDesdeForm(false));
+  document.getElementById("btnGuardarCotizacionPDF")?.addEventListener("click", () => guardarCotizacionDesdeForm(true));
+
+  // ----- Duplicar / Eliminar -----
+  async function duplicarCotizacion(e) {
+    const idx = parseInt((e.target as HTMLElement).closest("button")!.getAttribute("data-idx") || "");
+    const orig = cotizaciones[idx];
+    if (!orig) return;
+    if (!await confirmar(`¿Duplicar la cotización ${orig.numero}?`, "📋")) return;
+    const res = await reservarFolioCotizacion();
+    if (!res.ok) { toast("⚠️ No se pudo generar el folio, intenta de nuevo"); return; }
+    const hoy = new Date();
+    const vigencia = new Date(hoy.getTime() + 15 * 86400000);
+    const copia = {
+      ...orig,
+      id: "cot_" + Date.now(),
+      numero: res.folio,
+      estado: "borrador",
+      fechaCreacion: fechaISO(hoy),
+      fechaVigencia: fechaISO(vigencia),
+      conceptos: (orig.conceptos || []).map((c: any) => ({ ...c })),
+    };
+    cotizaciones.push(copia);
+    if (crmLocalOnly) guardarLocal("crm_cotizaciones", cotizaciones); else await agregarCotizacion(copia);
+    logBitacora(`Cotización ${copia.numero} creada para ${copia.empresaNombre} (duplicada de ${orig.numero})`, "📋");
+    guardarLocal("crm_cotizaciones", cotizaciones);
+    toast(`📋 Duplicada como ${copia.numero}`);
+    renderCotizaciones();
+    renderDashboard();
+  }
+
+  async function eliminarCotizacion(e) {
+    const idx = parseInt((e.target as HTMLElement).closest("button")!.getAttribute("data-idx") || "");
+    const c = cotizaciones[idx];
+    if (!c) return;
+    if (!await confirmar(`¿Eliminar la cotización ${c.numero}? Esta acción no se puede deshacer.`, "🗑️")) return;
+    cotizaciones = cotizaciones.filter(x => x.id !== c.id);
+    if (crmLocalOnly) guardarLocal("crm_cotizaciones", cotizaciones); else await guardarCotizaciones(cotizaciones);
+    logBitacora(`Cotización ${c.numero} eliminada`, "🗑️");
+    guardarLocal("crm_cotizaciones", cotizaciones);
+    toast("🗑️ Cotización eliminada");
+    renderCotizaciones();
+    renderDashboard();
+  }
+
+  // ----- Puente a Tickets -----
+  // Nunca crea el ticket automáticamente: abre el formulario ya prellenado y el usuario revisa
+  // y guarda manualmente, igual que cualquier otro alta de ticket.
+  function crearTicketDesdeCotizacion() {
+    const id = editCotId?.value;
+    const cot = cotizaciones.find(c => c.id === id);
+    if (!cot) return;
+    navegarA("tickets");
+    cerrarFormTicket();
+    const tituloTk = document.getElementById("form-tk-titulo");
+    if (tituloTk) tituloTk.textContent = "➕ Crear Ticket de Soporte";
+    initTicketFormDropdowns();
+    (document.getElementById("form-tk-empresa") as HTMLInputElement).value = cot.empresaNombre || "";
+    (document.getElementById("form-tk-contacto") as HTMLInputElement).value = cot.empresaContacto || "";
+    (document.getElementById("form-tk-correo-contacto") as HTMLInputElement).value = cot.empresaCorreo || "";
+    (document.getElementById("form-tk-asunto") as HTMLInputElement).value = `Seguimiento a cotización ${cot.numero}`;
+    formTk?.classList.remove("hidden");
+    formTk?.scrollIntoView({ behavior: "smooth" });
+  }
+  document.getElementById("btnCrearTicketDesdeCot")?.addEventListener("click", crearTicketDesdeCotizacion);
+
+  // ----- PDF -----
+  function cargarLogoPDF() {
+    try { return localStorage.getItem("crm_logo") || null; } catch { return null; }
+  }
+
+  function formatoImagenDesdeDataURI(dataUri: string) {
+    if (dataUri.includes("image/jpeg") || dataUri.includes("image/jpg")) return "JPEG";
+    if (dataUri.includes("image/webp")) return "WEBP";
+    return "PNG";
+  }
+
+  function generarPDFCotizacion(cot: any) {
+    const { jsPDF } = (window as any).jspdf;
+    const doc = new jsPDF({ unit: "mm", format: "letter" });
+    const morado: [number, number, number] = [99, 102, 241];
+    const grisTexto: [number, number, number] = [71, 85, 105];
+    let y = 15;
+
+    const logo = cargarLogoPDF();
+    if (logo) {
+      try { doc.addImage(logo, formatoImagenDesdeDataURI(logo), 14, y, 30, 16, undefined, "FAST"); } catch (e) { console.warn("[PDF] No se pudo insertar el logo:", e); }
+    }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.setTextColor(...morado);
+    doc.text("COTIZACIÓN", 200, y + 8, { align: "right" });
+    doc.setFontSize(12);
+    doc.setTextColor(...grisTexto);
+    doc.text(cot.numero || "", 200, y + 15, { align: "right" });
+
+    y += 26;
+    doc.setDrawColor(...morado);
+    doc.setLineWidth(0.6);
+    doc.line(14, y, 200, y);
+    y += 8;
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...morado);
+    doc.text("EMISOR", 14, y);
+    doc.text("RECEPTOR", 110, y);
+    y += 5;
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(30, 30, 30);
+    const emisorLineas = [cot.emisorNombre, cot.emisorCargo, cot.emisorTel, cot.emisorCorreo].filter(Boolean);
+    const receptorLineas = [cot.empresaNombre, cot.empresaRFC ? `RFC: ${cot.empresaRFC}` : "", cot.empresaContacto, cot.empresaCorreo].filter(Boolean);
+    const maxLineas = Math.max(emisorLineas.length, receptorLineas.length);
+    for (let i = 0; i < maxLineas; i++) {
+      if (emisorLineas[i]) doc.text(String(emisorLineas[i]), 14, y + i * 5, { maxWidth: 88 });
+      if (receptorLineas[i]) doc.text(String(receptorLineas[i]), 110, y + i * 5, { maxWidth: 88 });
+    }
+    y += maxLineas * 5 + 6;
+
+    doc.setFontSize(9);
+    doc.setTextColor(...grisTexto);
+    doc.text(`Fecha de emisión: ${cot.fechaCreacion ? new Date(cot.fechaCreacion).toLocaleDateString("es-MX") : "—"}`, 14, y);
+    doc.text(`Vigencia: ${cot.fechaVigencia ? new Date(cot.fechaVigencia).toLocaleDateString("es-MX") : "—"}`, 110, y);
+    y += 8;
+
+    const filasConDescuento: number[] = [];
+    const conceptos = cot.conceptos || [];
+    const body = conceptos.map((c: any, i: number) => {
+      if (Number(c.descuento) > 0) filasConDescuento.push(i);
+      const precioTxt = Number(c.descuento) > 0
+        ? `${formatMoney(c.precioUnitario)}\n${formatMoney(c.precioUnitario * (1 - c.descuento / 100))}`
+        : formatMoney(c.precioUnitario);
+      return [
+        c.descripcion || "",
+        String(c.cantidad ?? 0),
+        precioTxt,
+        `${c.descuento || 0}%`,
+        c.tieneIVA !== false ? "Sí" : "No",
+        formatMoney(subtotalLineaConcepto(c)),
+      ];
+    });
+
+    (doc as any).autoTable({
+      startY: y,
+      head: [["Descripción", "Cant.", "P. Unit.", "Dto.%", "IVA", "Subtotal"]],
+      body,
+      theme: "grid",
+      headStyles: { fillColor: morado, textColor: 255, fontStyle: "bold" },
+      styles: { fontSize: 8.5, cellPadding: 2.2, valign: "middle" },
+      columnStyles: { 0: { cellWidth: 70 }, 1: { halign: "center", cellWidth: 15 }, 2: { halign: "right", cellWidth: 28 }, 3: { halign: "center", cellWidth: 16 }, 4: { halign: "center", cellWidth: 12 }, 5: { halign: "right", cellWidth: 25 } },
+      didDrawCell: (data: any) => {
+        if (data.section !== "body" || data.column.index !== 2) return;
+        if (!filasConDescuento.includes(data.row.index)) return;
+        const cell = data.cell;
+        const original = conceptos[data.row.index];
+        const texto = formatMoney(original.precioUnitario);
+        const anchoTexto = doc.getTextWidth(texto);
+        const xFin = cell.x + cell.width - 2.2;
+        const xIni = xFin - anchoTexto;
+        const yLinea = cell.y + 4.3;
+        doc.setDrawColor(150, 150, 150);
+        doc.setLineWidth(0.25);
+        doc.line(xIni, yLinea, xFin, yLinea);
+      },
+    });
+
+    let yFinal = (doc as any).lastAutoTable.finalY + 8;
+    const totales = calcularTotalesCotizacion(cot.conceptos);
+    doc.setFontSize(9.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...grisTexto);
+    doc.text("Subtotal:", 150, yFinal, { align: "right" });
+    doc.text(formatMoney(totales.subtotalGeneral), 200, yFinal, { align: "right" });
+    yFinal += 6;
+    doc.text("IVA (16%):", 150, yFinal, { align: "right" });
+    doc.text(formatMoney(totales.totalIVA), 200, yFinal, { align: "right" });
+    yFinal += 7;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(...morado);
+    doc.text("TOTAL:", 150, yFinal, { align: "right" });
+    doc.text(formatMoney(totales.total), 200, yFinal, { align: "right" });
+    yFinal += 12;
+
+    if (cot.notas) {
+      const notasLineas = doc.splitTextToSize(cot.notas, 178);
+      const cajaAlto = notasLineas.length * 4.5 + 8;
+      if (yFinal + cajaAlto > 260) { doc.addPage(); yFinal = 20; }
+      doc.setDrawColor(220, 220, 220);
+      doc.setFillColor(248, 250, 252);
+      doc.rect(14, yFinal, 186, cajaAlto, "FD");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.5);
+      doc.setTextColor(...grisTexto);
+      doc.text("Notas y condiciones:", 18, yFinal + 6);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(60, 60, 60);
+      doc.text(notasLineas, 18, yFinal + 11);
+    }
+
+    const paginas = doc.getNumberOfPages();
+    for (let p = 1; p <= paginas; p++) {
+      doc.setPage(p);
+      doc.setFontSize(7.5);
+      doc.setTextColor(150, 150, 150);
+      doc.text(
+        `Cotización válida hasta ${cot.fechaVigencia ? new Date(cot.fechaVigencia).toLocaleDateString("es-MX") : "—"} — ${cot.emisorCorreo || ""} — ${cot.emisorTel || ""}`,
+        105, 285, { align: "center" }
+      );
+    }
+
+    return doc;
+  }
+
+  function nombreArchivoPDFCotizacion(cot: any) {
+    const empresaSlug = (cot.empresaNombre || "cliente").replace(/[^a-zA-Z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+    return `${cot.numero || "COT"}_${empresaSlug}.pdf`;
+  }
+
+  function descargarPDFCotizacion(cot: any) {
+    if (!cot) return;
+    const doc = generarPDFCotizacion(cot);
+    doc.save(nombreArchivoPDFCotizacion(cot));
+  }
+
+  function obtenerPDFCotizacionBase64(cot: any) {
+    const doc = generarPDFCotizacion(cot);
+    const datauri = doc.output("datauristring");
+    return datauri.split(",")[1];
+  }
+
+  // ----- Envío por correo -----
+  const modalEnviarCot = document.getElementById("modal-enviar-cotizacion");
+
+  function abrirModalEnviarCotizacion(cot: any) {
+    if (!cot) return;
+    (document.getElementById("modal-cot-mail-id") as HTMLInputElement).value = cot.id;
+    (document.getElementById("modal-cot-mail-para") as HTMLInputElement).value = cot.empresaCorreo || "";
+    (document.getElementById("modal-cot-mail-asunto") as HTMLInputElement).value = `Cotización ${cot.numero} — DATTASOFT`;
+    (document.getElementById("modal-cot-mail-cuerpo") as HTMLTextAreaElement).value =
+      `Hola${cot.empresaContacto ? " " + cot.empresaContacto : ""},\n\nAdjuntamos la cotización ${cot.numero} solicitada. Queda vigente hasta el ${cot.fechaVigencia ? new Date(cot.fechaVigencia).toLocaleDateString("es-MX") : "—"}.\n\nQuedamos atentos a tus comentarios.\n\nSaludos,\n${cot.emisorNombre || "Equipo DATTASOFT"}`;
+    if (modalEnviarCot) (modalEnviarCot as HTMLElement).style.display = "flex";
+  }
+
+  document.getElementById("btnCerrarModalEnviarCot")?.addEventListener("click", () => {
+    if (modalEnviarCot) (modalEnviarCot as HTMLElement).style.display = "none";
+  });
+
+  document.getElementById("btnEnviarCotizacionCorreo")?.addEventListener("click", async () => {
+    const id = (document.getElementById("modal-cot-mail-id") as HTMLInputElement).value;
+    const cot = cotizaciones.find(c => c.id === id);
+    if (!cot) return;
+    const para = (document.getElementById("modal-cot-mail-para") as HTMLInputElement).value.trim();
+    if (!para || !para.includes("@")) { toast("⚠️ Ingresa un correo válido"); return; }
+    const asunto = (document.getElementById("modal-cot-mail-asunto") as HTMLInputElement).value.trim();
+    const cuerpo = (document.getElementById("modal-cot-mail-cuerpo") as HTMLTextAreaElement).value;
+    const btn = document.getElementById("btnEnviarCotizacionCorreo") as HTMLButtonElement | null;
+    if (btn) { btn.disabled = true; btn.textContent = "Enviando..."; }
+    try {
+      const pdfBase64 = obtenerPDFCotizacionBase64(cot);
+      const res = await enviarEmailConProveedor({
+        to: para,
+        subject: asunto,
+        html: `<div style="font-family:sans-serif; white-space:pre-wrap; line-height:1.6;">${escapeHtml(cuerpo)}</div>`,
+        attachment: [{ content: pdfBase64, name: nombreArchivoPDFCotizacion(cot) }],
+      });
+      if (res.ok) {
+        cot.estado = "enviada";
+        if (crmLocalOnly) guardarLocal("crm_cotizaciones", cotizaciones); else await guardarCotizaciones(cotizaciones);
+        logBitacora(`Cotización ${cot.numero} enviada a ${para}`, "✉️");
+        guardarLocal("crm_cotizaciones", cotizaciones);
+        if (modalEnviarCot) (modalEnviarCot as HTMLElement).style.display = "none";
+        renderCotizaciones();
+        renderDashboard();
+      }
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = "✉️ Enviar"; }
+    }
+  });
 
   // ============================================================
   // TICKETS PÚBLICOS (Portal de Clientes)

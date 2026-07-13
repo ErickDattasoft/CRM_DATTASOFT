@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, onSnapshot, addDoc, updateDoc, arrayUnion, serverTimestamp, enableMultiTabIndexedDbPersistence } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, onSnapshot, addDoc, updateDoc, arrayUnion, serverTimestamp, enableMultiTabIndexedDbPersistence, runTransaction } from "firebase/firestore";
 import { getAuth, signInAnonymously, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
 
 // Configuración de Firebase — los valores web son públicos por diseño (seguridad via Firestore Rules)
@@ -348,6 +348,86 @@ export async function agregarEntradaBitacora(entry) {
     return true;
   } catch (error) {
     avisarErrorGuardado("bitácora", error);
+    return false;
+  }
+}
+
+// ================================================================
+// COTIZACIONES
+// ================================================================
+
+/**
+ * Reserva de forma atómica el siguiente folio consecutivo de cotización para el año dado
+ * (ej. 3 → "COT-2026-003"). Usa runTransaction para que, si dos pestañas llaman esto casi al
+ * mismo tiempo, Firestore serialice ambas lecturas+escrituras y ninguna calcule el mismo número
+ * — a diferencia de Math.max(...tickets.map(t=>t.numero))+1 (el patrón que usan hoy los Tickets),
+ * que sí puede duplicarse bajo uso concurrente, la misma clase de condición de carrera que causó
+ * la pérdida real de entradas de Bitácora arreglada en agregarEntradaBitacora(). El contador vive
+ * en agenda/datos.contadorCotizaciones = { "2026": 3, ... }.
+ */
+export async function obtenerSiguienteFolioCotizacion(anio) {
+  try {
+    const docRef = doc(db, "agenda", "datos");
+    const numero = await runTransaction(db, async (transaction) => {
+      const snap = await transaction.get(docRef);
+      const contador = snap.exists() ? (snap.data().contadorCotizaciones || {}) : {};
+      const actual = contador[String(anio)] || 0;
+      const siguiente = actual + 1;
+      transaction.update(docRef, { [`contadorCotizaciones.${anio}`]: siguiente });
+      return siguiente;
+    });
+    const folio = `COT-${anio}-${String(numero).padStart(3, "0")}`;
+    return { ok: true, numero, folio };
+  } catch (error) {
+    avisarErrorGuardado("folio de cotización", error);
+    return { ok: false, error: error?.code || error?.message || String(error) };
+  }
+}
+
+/**
+ * Agrega una sola cotización nueva de forma atómica (arrayUnion), igual que
+ * agregarEntradaBitacora(): nunca sobrescribe cotizaciones creadas por otra pestaña casi al
+ * mismo tiempo. Úsalo solo para el primer guardado de una cotización nueva (o al duplicar); para
+ * editar una cotización ya existente usa guardarCotizaciones() con el arreglo completo.
+ */
+export async function agregarCotizacion(cotizacion) {
+  try {
+    const docRef = doc(db, "agenda", "datos");
+    await updateDoc(docRef, { cotizaciones: arrayUnion(limpiar(cotizacion)) });
+    return true;
+  } catch (error) {
+    avisarErrorGuardado("cotización", error);
+    return false;
+  }
+}
+
+/**
+ * Guarda el arreglo completo de cotizaciones en Firestore. Úsalo para ediciones sobre
+ * cotizaciones ya existentes (cambio de estado, editar conceptos, etc.) — no para crear una
+ * cotización nueva (usa agregarCotizacion() para eso, ver por qué en su comentario).
+ */
+export async function guardarCotizaciones(cotizaciones) {
+  try {
+    const docRef = doc(db, "agenda", "datos");
+    await setDoc(docRef, { cotizaciones: limpiar(cotizaciones) }, { merge: true });
+    return true;
+  } catch (error) {
+    avisarErrorGuardado("cotizaciones", error);
+    return false;
+  }
+}
+
+/**
+ * Guarda la configuración de Cotizaciones (términos/condiciones por defecto y catálogo de
+ * conceptos rápidos) en Firestore.
+ */
+export async function guardarConfigCotizaciones(configCotizaciones) {
+  try {
+    const docRef = doc(db, "agenda", "datos");
+    await setDoc(docRef, { configCotizaciones: limpiar(configCotizaciones) }, { merge: true });
+    return true;
+  } catch (error) {
+    avisarErrorGuardado("configuración de cotizaciones", error);
     return false;
   }
 }
