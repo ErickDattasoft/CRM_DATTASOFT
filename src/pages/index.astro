@@ -2207,7 +2207,6 @@ try {
       <span style="font-size:1.1rem; flex-shrink:0;">🔐</span>
       <span id="banner-sesion-anonima-msg" style="flex:1; min-width:200px;"></span>
       <button class="btn btn-primary btn-sm" id="btn-banner-sesion-anonima-accion" style="flex-shrink:0;"></button>
-      <button class="btn btn-ghost btn-sm" id="btn-banner-sesion-anonima-cerrar" title="Cerrar" style="flex-shrink:0;">✕</button>
     </div>
 
     <div class="content-scroll">
@@ -5756,9 +5755,9 @@ verificarSesion();
     }
     banner.style.display = "flex";
   }
-  document.getElementById("btn-banner-sesion-anonima-cerrar")?.addEventListener("click", () => {
-    document.getElementById("banner-sesion-anonima")!.style.display = "none";
-  });
+  // Sin botón de cerrar a propósito: mientras la sesión siga siendo anónima en este dispositivo,
+  // nada de lo que se haga se guarda de verdad — el banner solo desaparece solo cuando
+  // revisarSesionAnonima() detecta que ya hay una sesión segura real (tras iniciarSesionSegura()).
 
   // ============================================================
   // CUENTA SEGURA (paso 1 de migración a autenticación real — ver plan)
