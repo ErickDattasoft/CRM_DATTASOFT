@@ -4394,7 +4394,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica } from "../data/firebase.js";
+import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica } from "../data/firebase.js";
 
 // ── Modal confirmación (reemplaza confirm() — funciona en móvil) ──
 function confirmar(msg: string, icon = "⚠️"): Promise<boolean> {
@@ -5708,7 +5708,12 @@ verificarSesion();
     limite60.setDate(limite60.getDate() - 60);
     bitacoraLog = bitacoraLog.filter(e => new Date(e.fecha) >= limite60);
     guardarLocal("crm_bitacora", bitacoraLog);
-    if (firebaseEnabled) guardarBitacora(bitacoraLog).catch(err => console.error("[Bitácora] Error al guardar en Firebase:", err));
+    // agregarEntradaBitacora() agrega solo esta entrada (arrayUnion, atómico en el servidor) en
+    // vez de mandar bitacoraLog completo: como la vista de Bitácora de una pestaña ya abierta no
+    // se resincroniza sola con Firestore (ver fusionarBitacoraFirebase), dos usuarios activos al
+    // mismo tiempo tenían cada uno una copia desactualizada del arreglo — quien guardaba al
+    // final borraba silenciosamente la entrada que el otro acababa de registrar.
+    if (firebaseEnabled) agregarEntradaBitacora(entry).catch(err => console.error("[Bitácora] Error al guardar en Firebase:", err));
   }
 
   // Listener para el evento de login (cruzar scope IIFE ↔ auth)

@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, onSnapshot, addDoc, updateDoc, serverTimestamp, enableMultiTabIndexedDbPersistence } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, onSnapshot, addDoc, updateDoc, arrayUnion, serverTimestamp, enableMultiTabIndexedDbPersistence } from "firebase/firestore";
 import { getAuth, signInAnonymously, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
 
 // Configuración de Firebase — los valores web son públicos por diseño (seguridad via Firestore Rules)
@@ -317,12 +317,34 @@ export async function guardarConfigN8n(n8n) {
 }
 
 /**
- * Guarda la bitácora del CRM en Firestore.
+ * Sobrescribe por completo la bitácora del CRM en Firestore. Úsalo solo para operaciones que de
+ * verdad quieren reemplazar el arreglo entero (limpiar toda la bitácora, recortar entradas de
+ * +60 días justo después de leer un snapshot fresco) — nunca para agregar una entrada suelta:
+ * dos sesiones que llamen esto casi al mismo tiempo, cada una con su propia copia en memoria del
+ * arreglo, se pisan entre sí y la que escribe al final borra silenciosamente lo que la otra
+ * acababa de agregar. Para agregar una entrada, usa agregarEntradaBitacora().
  */
 export async function guardarBitacora(bitacora) {
   try {
     const docRef = doc(db, "agenda", "datos");
     await setDoc(docRef, { bitacora }, { merge: true });
+    return true;
+  } catch (error) {
+    avisarErrorGuardado("bitácora", error);
+    return false;
+  }
+}
+
+/**
+ * Agrega una sola entrada a la bitácora de forma atómica (arrayUnion), sin necesitar leer ni
+ * mandar el arreglo completo. A diferencia de guardarBitacora(bitacora_completa), esto no se
+ * pierde aunque otra sesión escriba al mismo tiempo con una copia desactualizada del arreglo —
+ * cada entrada nueva sencillamente se agrega en el servidor, nunca sobrescribe lo que ya había.
+ */
+export async function agregarEntradaBitacora(entry) {
+  try {
+    const docRef = doc(db, "agenda", "datos");
+    await updateDoc(docRef, { bitacora: arrayUnion(limpiar(entry)) });
     return true;
   } catch (error) {
     avisarErrorGuardado("bitácora", error);
