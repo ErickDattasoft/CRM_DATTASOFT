@@ -8696,6 +8696,7 @@ verificarSesion();
       if (prioridad !== prioridadAnterior) registrarActividadTicket(t, `Prioridad cambiada: "${prioridadAnterior}" → "${prioridad}"`);
       if (facturado !== facturadoAnterior) registrarActividadTicket(t, `Facturación cambiada: "${facturadoAnterior}" → "${facturado}"`);
       logBitacora(`Ticket #${t.numero} "${t.asunto}" actualizado a ${estado}${prioridad ? ` · ${prioridad}` : ""}`, "✏️");
+      if (facturado !== facturadoAnterior) logBitacora(`Ticket #${t.numero}: facturación cambiada a "${facturado}"`, "🧾");
       if (estado !== estadoAnterior) dispararN8n("ticket_estado_cambiado", datosEventoTicket(t));
       if (notasInternas !== notasInternasAnterior && notasInternas.trim()) dispararN8n("ticket_nota_interna", datosEventoTicket(t));
       await procesarCierreTicket(t, estadoAnterior);
@@ -9228,6 +9229,25 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       return;
     }
     mostrarEstado("💾 Guardando configuración...");
+    // Antes de guardar, se trae la versión más fresca de Firestore y se fusiona (unión) con las
+    // listas de esta pestaña: mismo problema que tenía Bitácora — esta pestaña pudo quedarse con
+    // una copia vieja de Tipos/Estados/Facturación/etc. mientras otra sesión agregaba algo, y
+    // guardar el arreglo completo desde esa copia vieja borraría silenciosamente lo ajeno. Aquí
+    // solo se agregan los valores que falten (nunca se quita nada de lo que ya está en pantalla),
+    // así que si otra pestaña borró algo sin refrescar, podría "reaparecer" — trade-off aceptado
+    // para evitar la pérdida de datos real que sí estaba pasando.
+    const camposListaConfig = ["tipos", "estados", "prioridades", "grupos", "agentes", "sistemas", "facturacion"];
+    try {
+      const datosFrescos = await cargarDatosCRM();
+      const listasFrescas = datosFrescos?.configTickets || {};
+      camposListaConfig.forEach(key => {
+        const remoto = listasFrescas[key];
+        if (!remoto || !remoto.length) return;
+        const local = configTickets[key] || [];
+        const extra = remoto.filter(v => !local.includes(v));
+        if (extra.length) configTickets[key] = [...local, ...extra];
+      });
+    } catch { /* si falla la lectura fresca, se guarda con lo que ya había en memoria */ }
     const ok = await guardarConfigTickets({
       tipos: configTickets.tipos,
       estados: configTickets.estados,
@@ -9239,7 +9259,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       correoSoporte: configTickets.correoSoporte,
       resumenSemanalActivo: configTickets.resumenSemanalActivo
     });
-    if (ok) { toast("💾 Configuración guardada"); ocultarEstado(); sincronizarConfigPublica(); }
+    if (ok) { toast("💾 Configuración guardada"); ocultarEstado(); sincronizarConfigPublica(); renderConfig(); }
     else { guardarLocal("crm_config_tickets", configTickets); mostrarEstado("⚠️ Guardado localmente", 3000); }
   });
 
