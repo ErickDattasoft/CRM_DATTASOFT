@@ -726,6 +726,11 @@ try {
     .badge-pendiente { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
     .badge-resuelto { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); }
     .badge-cerrado { background: rgba(100, 116, 139, 0.15); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.2); }
+    .badge-garantia { background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.25); }
+
+    /* Facturación badges */
+    .badge-no-facturado { background: rgba(100, 116, 139, 0.15); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.2); }
+    .badge-facturado { background: rgba(245, 158, 11, 0.18); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 700; }
 
     /* Priority badges */
     .badge-baja { background: rgba(100, 116, 139, 0.15); color: #94a3b8; }
@@ -2636,6 +2641,9 @@ try {
             <select id="selectFiltroAgente" style="max-width:140px;">
               <option value="">🧑‍💼 Agente</option>
             </select>
+            <select id="selectFiltroFacturado" style="max-width:150px;">
+              <option value="">🧾 Facturación</option>
+            </select>
             <button class="btn btn-ghost btn-sm" id="btnFiltroAgenda" title="Ver solo tickets con fecha programada, ordenados por fecha/hora">📅 Agenda</button>
           </div>
           <div class="controls-right">
@@ -2782,6 +2790,7 @@ try {
                 <th style="text-align:center">Tipo</th>
                 <th style="text-align:center">Prioridad</th>
                 <th style="text-align:center">Estado</th>
+                <th style="text-align:center">Facturación</th>
                 <th>Agente</th>
                 <th>Creado</th>
                 <th style="text-align:center">Acciones</th>
@@ -2822,6 +2831,12 @@ try {
               <button id="btn-guardar-correo-soporte" class="btn btn-primary btn-sm" style="white-space:nowrap;">💾 Guardar</button>
             </div>
             <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">Cuando un cliente crea un ticket desde el portal público, la notificación llega a este o estos correos (sepáralos con coma, ej. <code>erick.casas@dattasoft.mx, soporte@dattasoft.mx</code>). El primer correo de la lista también se usa como remitente en confirmaciones al cliente.</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+            <input id="cfg-resumen-semanal-activo" type="checkbox" style="width:auto; cursor:pointer;" checked>
+            <label for="cfg-resumen-semanal-activo" style="cursor:pointer; text-transform:none; font-size:0.85rem; color:var(--text-main); font-weight:500;">
+              📊 Enviar resumen semanal automático (cada lunes) a los correos de soporte
+            </label>
           </div>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; padding:12px 14px; background:rgba(99,102,241,0.06); border-radius:8px; border:1px solid rgba(99,102,241,0.15);">
             <span style="font-size:0.8rem; font-weight:600; color:var(--brand-primary-hover); white-space:nowrap;">🧪 Prueba de correo</span>
@@ -3883,6 +3898,9 @@ try {
     <div class="modal-header">
       <h2 id="det-tk-num">Ticket #1001</h2>
       <div style="display:flex; align-items:center; gap:8px;">
+        <label style="display:flex; align-items:center; gap:4px; font-size:0.75rem; color:var(--text-muted); cursor:pointer; white-space:nowrap;" title="Incluir el logotipo de la empresa al imprimir">
+          <input type="checkbox" id="chkImprimirLogo" checked style="width:auto; cursor:pointer;"> Logo
+        </label>
         <button class="btn btn-ghost btn-sm" id="btnImprimirTicket" title="Imprimir o guardar como PDF">🖨️ Imprimir</button>
         <button class="btn btn-ghost btn-sm" id="btnReenviarCorreoTicket" title="Reenviar correo de notificación al contacto">✉️ Reenviar correo</button>
         <button class="modal-close" id="btnCerrarDetalle">×</button>
@@ -4856,7 +4874,9 @@ verificarSesion();
     sistemas: [...listaSistemas],
     facturacion: ["NO FACTURADO", "FACTURADO"],
     correoSoporte: "erick.casas@dattasoft.mx",
-    sla: { Urgente: 4, Alta: 8, Media: 24, Baja: 72 }
+    sla: { Urgente: 4, Alta: 8, Media: 24, Baja: 72 },
+    resumenSemanalActivo: true,
+    resumenSemanalUltimoEnvio: ""
   };
 
   let interacciones = [];
@@ -6160,7 +6180,7 @@ verificarSesion();
     if (tipo === "tickets" || tipo === "todo") {
       const rows = tickets.map(t => ({
         Folio: t.numero, Asunto: t.asunto, Empresa: t.empresa, Contacto: t.contacto,
-        Tipo: t.tipo, Sistema: t.sistema || "", Estado: t.estado, Prioridad: t.prioridad, Grupo: t.grupo,
+        Tipo: t.tipo, Sistema: t.sistema || "", Estado: t.estado, Facturación: t.facturado || "NO FACTURADO", Prioridad: t.prioridad, Grupo: t.grupo,
         Agente: t.agente, Referido: t.referido, Solicitado: t.solicitado,
         Canalizado: t.canalizado, Realizado: t.realizado,
         Descripción: (t.descripcion || "").replace(/<[^>]+>/g, ""),
@@ -8310,6 +8330,11 @@ verificarSesion();
       const cur = selAgente.value;
       selAgente.innerHTML = '<option value="">🧑‍💼 Agente</option>' + agentes.map(a => `<option value="${a}"${a===cur?' selected':''}>${a}</option>`).join("");
     }
+    const selFacturado = document.getElementById("selectFiltroFacturado");
+    if (selFacturado) {
+      const cur = selFacturado.value;
+      selFacturado.innerHTML = '<option value="">🧾 Facturación</option>' + (configTickets.facturacion || []).map(f => `<option value="${f}"${f===cur?' selected':''}>${f}</option>`).join("");
+    }
   }
 
   // Formatea horas SLA como "Xd Yh" cuando pasan de 24h, para que se entienda más rápido
@@ -8345,6 +8370,7 @@ verificarSesion();
     const fPrior = document.getElementById("selectFiltroPrioridad")?.value || "";
     const fTipo = document.getElementById("selectFiltroTipo")?.value || "";
     const fAgente = document.getElementById("selectFiltroAgente")?.value || "";
+    const fFacturado = document.getElementById("selectFiltroFacturado")?.value || "";
 
     const filtrados = tickets.map((t, i) => ({ ...t, _idx: i })).filter(t => {
       if (filtroAgendaActivo && !t.fechaProgramada) return false;
@@ -8352,6 +8378,7 @@ verificarSesion();
       if (fPrior && t.prioridad !== fPrior) return false;
       if (fTipo && t.tipo !== fTipo) return false;
       if (fAgente && t.agente !== fAgente) return false;
+      if (fFacturado && (t.facturado || "NO FACTURADO") !== fFacturado) return false;
       if (busq) {
         return (t.asunto || "").toLowerCase().includes(busq) ||
                (t.empresa || "").toLowerCase().includes(busq) ||
@@ -8398,6 +8425,7 @@ verificarSesion();
         </td>
         <td style="text-align:center;"><span class="badge badge-${slugBadge(t.prioridad || "media")}">${escapeHtml(t.prioridad)}</span>${slaBadge}</td>
         <td style="text-align:center;"><span class="badge badge-${slugBadge(t.estado || "abierto")}">${escapeHtml(t.estado)}</span></td>
+        <td style="text-align:center;"><span class="badge badge-${slugBadge(t.facturado || "no facturado")}">${escapeHtml(t.facturado) || "NO FACTURADO"}</span></td>
         <td style="font-size:0.8rem; color:var(--text-muted);">${escapeHtml(t.agente) || "—"}</td>
         <td style="font-size:0.78rem; color:var(--text-light);">
           ${t.fechaCreacion ? new Date(t.fechaCreacion).toLocaleDateString() : "—"}
@@ -8803,12 +8831,13 @@ verificarSesion();
   // Abre una ventana con una versión imprimible del ticket y llama a window.print() — el propio
   // diálogo de impresión del navegador ya ofrece "Guardar como PDF" como destino, sin necesidad
   // de generar el PDF nosotros mismos.
-  function imprimirTicket(t) {
+  function imprimirTicket(t, incluirLogo = true) {
     const win = window.open("", "_blank", "width=800,height=900");
     if (!win) {
       toast("⚠️ El navegador bloqueó la ventana de impresión — permite pop-ups para este sitio", "warning");
       return;
     }
+    const logoBase64 = incluirLogo ? (localStorage.getItem("crm_logo") || "") : "";
     const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -8816,7 +8845,9 @@ verificarSesion();
 <title>Ticket #${t.numero} — ${escapeHtml(t.asunto || "")}</title>
 <style>
   body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; padding: 32px; max-width: 720px; margin: 0 auto; }
-  h1 { font-size: 1.3rem; color: #4f46e5; margin: 0 0 2px; }
+  .encabezado { display: flex; align-items: center; gap: 14px; margin-bottom: 2px; }
+  .encabezado img { height: 48px; max-width: 180px; object-fit: contain; }
+  h1 { font-size: 1.3rem; color: #4f46e5; margin: 0; }
   .sub { color: #6b7280; font-size: 0.85rem; margin-bottom: 20px; }
   table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
   td { padding: 7px 12px; font-size: 0.9rem; border-bottom: 1px solid #e5e7eb; }
@@ -8828,7 +8859,10 @@ verificarSesion();
 </style>
 </head>
 <body>
-  <h1>Ticket #${t.numero}</h1>
+  <div class="encabezado">
+    ${logoBase64 ? `<img src="${logoBase64}" alt="Logo">` : ""}
+    <h1>Ticket #${t.numero}</h1>
+  </div>
   <div class="sub">${escapeHtml(t.asunto || "")}</div>
   <table>
     <tr><td class="k">Empresa</td><td>${escapeHtml(t.empresa || "—")}</td></tr>
@@ -8849,11 +8883,19 @@ verificarSesion();
     win.onload = () => { win.focus(); win.print(); };
   }
 
+  const chkImprimirLogo = document.getElementById("chkImprimirLogo") as HTMLInputElement | null;
+  if (chkImprimirLogo) {
+    chkImprimirLogo.checked = localStorage.getItem("crm_imprimir_logo") !== "false";
+    chkImprimirLogo.addEventListener("change", () => {
+      localStorage.setItem("crm_imprimir_logo", String(chkImprimirLogo.checked));
+    });
+  }
+
   document.getElementById("btnImprimirTicket")?.addEventListener("click", () => {
     if (ticketDetalleNumero === null) return;
     const t = ticketPorNumero(ticketDetalleNumero);
     if (!t) { toast("⚠️ Este ticket ya no existe (fue eliminado)", "error"); return; }
-    imprimirTicket(t);
+    imprimirTicket(t, chkImprimirLogo ? chkImprimirLogo.checked : true);
   });
 
   document.getElementById("btnReenviarCorreoTicket")?.addEventListener("click", async (e) => {
@@ -8948,6 +8990,7 @@ verificarSesion();
   document.getElementById("selectFiltroPrioridad")?.addEventListener("change", renderTickets);
   document.getElementById("selectFiltroTipo")?.addEventListener("change", renderTickets);
   document.getElementById("selectFiltroAgente")?.addEventListener("change", renderTickets);
+  document.getElementById("selectFiltroFacturado")?.addEventListener("change", renderTickets);
 
   // ============================================================
   // ZOHO MAILTO
@@ -9005,6 +9048,8 @@ verificarSesion();
   function renderConfig() {
     actualizarUIBackup();
     document.getElementById("cfg-correo-soporte").value = configTickets.correoSoporte || "";
+    const resumenSemanalCheckbox = document.getElementById("cfg-resumen-semanal-activo") as HTMLInputElement | null;
+    if (resumenSemanalCheckbox) resumenSemanalCheckbox.checked = configTickets.resumenSemanalActivo !== false;
     renderConfigSLA();
 
     // Cargar proveedor de correo guardado
@@ -9129,6 +9174,8 @@ verificarSesion();
       }
     });
     configTickets.correoSoporte = document.getElementById("cfg-correo-soporte").value.trim();
+    const resumenSemanalCheckboxGuardar = document.getElementById("cfg-resumen-semanal-activo") as HTMLInputElement | null;
+    if (resumenSemanalCheckboxGuardar) configTickets.resumenSemanalActivo = resumenSemanalCheckboxGuardar.checked;
 
     const selectedProvider = document.querySelector('input[name="cfg-mail-provider"]:checked')?.value || "";
     const apiKeyVal = document.getElementById("cfg-mail-apikey")?.value.trim() || "";
@@ -9158,7 +9205,8 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       agentes: configTickets.agentes,
       sistemas: configTickets.sistemas,
       facturacion: configTickets.facturacion,
-      correoSoporte: configTickets.correoSoporte
+      correoSoporte: configTickets.correoSoporte,
+      resumenSemanalActivo: configTickets.resumenSemanalActivo
     });
     if (ok) { toast("💾 Configuración guardada"); ocultarEstado(); sincronizarConfigPublica(); }
     else { guardarLocal("crm_config_tickets", configTickets); mostrarEstado("⚠️ Guardado localmente", 3000); }
@@ -9166,13 +9214,15 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
   document.getElementById("btn-guardar-correo-soporte")?.addEventListener("click", async () => {
     configTickets.correoSoporte = document.getElementById("cfg-correo-soporte").value.trim();
+    const resumenSemanalCheckboxRapido = document.getElementById("cfg-resumen-semanal-activo") as HTMLInputElement | null;
+    if (resumenSemanalCheckboxRapido) configTickets.resumenSemanalActivo = resumenSemanalCheckboxRapido.checked;
     updateMailProviderHelp();
     if (crmLocalOnly) {
       guardarLocal("crm_config_tickets", configTickets);
       toast("💾 Correo de soporte guardado (Local)");
       return;
     }
-    const ok = await guardarConfigTickets({ correoSoporte: configTickets.correoSoporte });
+    const ok = await guardarConfigTickets({ correoSoporte: configTickets.correoSoporte, resumenSemanalActivo: configTickets.resumenSemanalActivo });
     if (ok) { toast("💾 Correo de soporte guardado"); sincronizarConfigPublica(); }
     else { guardarLocal("crm_config_tickets", configTickets); toast("⚠️ Sin conexión — guardado solo localmente", "warning"); }
   });
@@ -13247,10 +13297,14 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   // F_WEEKLY: RESUMEN SEMANAL (lunes automático)
   // ============================================================
   async function enviarResumenSemanal() {
+    if (configTickets.resumenSemanalActivo === false) return; // Desactivado en Configuración
     const hoy = new Date();
     if (hoy.getDay() !== 1) return; // Solo lunes
     const hoyStr = hoy.toISOString().split("T")[0];
-    if (localStorage.getItem("crm_resumen_semanal_enviado") === hoyStr) return; // Ya se envió hoy
+    // El candado de "ya enviado" se guarda en configTickets (Firestore), no en localStorage:
+    // localStorage es por navegador/dispositivo, así que con varios dispositivos abriendo el
+    // CRM el mismo lunes, cada uno lo veía como "no enviado" y mandaba su propio correo.
+    if (configTickets.resumenSemanalUltimoEnvio === hoyStr) return; // Ya se envió hoy
     const correos = parseEmailList(configTickets.correoSoporte);
     if (!correos.length || !firebaseEnabled) return;
 
@@ -13315,7 +13369,8 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ to: correos, subject: `📊 Resumen Semanal CRM — ${fmtFecha(lunes)} al ${fmtFecha(domingo)}`, html })
       });
-      localStorage.setItem("crm_resumen_semanal_enviado", hoyStr);
+      configTickets.resumenSemanalUltimoEnvio = hoyStr;
+      if (!crmLocalOnly) guardarConfigTickets({ resumenSemanalUltimoEnvio: hoyStr }).catch(() => {});
       toast("📊 Resumen semanal enviado a " + correos.join(", "));
     } catch(e) { console.warn("[ResumenSemanal] Error al enviar:", e); }
   }
