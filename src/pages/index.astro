@@ -3883,6 +3883,7 @@ try {
     <div class="modal-header">
       <h2 id="det-tk-num">Ticket #1001</h2>
       <div style="display:flex; align-items:center; gap:8px;">
+        <button class="btn btn-ghost btn-sm" id="btnImprimirTicket" title="Imprimir o guardar como PDF">🖨️ Imprimir</button>
         <button class="btn btn-ghost btn-sm" id="btnReenviarCorreoTicket" title="Reenviar correo de notificación al contacto">✉️ Reenviar correo</button>
         <button class="modal-close" id="btnCerrarDetalle">×</button>
       </div>
@@ -8797,6 +8798,62 @@ verificarSesion();
   document.getElementById("btnCerrarDetalle")?.addEventListener("click", cerrarDetalleTicket);
   modalDetalle?.addEventListener("click", (e) => {
     if (e.target === modalDetalle) cerrarDetalleTicket();
+  });
+
+  // Abre una ventana con una versión imprimible del ticket y llama a window.print() — el propio
+  // diálogo de impresión del navegador ya ofrece "Guardar como PDF" como destino, sin necesidad
+  // de generar el PDF nosotros mismos.
+  function imprimirTicket(t) {
+    const win = window.open("", "_blank", "width=800,height=900");
+    if (!win) {
+      toast("⚠️ El navegador bloqueó la ventana de impresión — permite pop-ups para este sitio", "warning");
+      return;
+    }
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Ticket #${t.numero} — ${escapeHtml(t.asunto || "")}</title>
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; padding: 32px; max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 1.3rem; color: #4f46e5; margin: 0 0 2px; }
+  .sub { color: #6b7280; font-size: 0.85rem; margin-bottom: 20px; }
+  table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+  td { padding: 7px 12px; font-size: 0.9rem; border-bottom: 1px solid #e5e7eb; }
+  td.k { font-weight: bold; background: #f3f4f6; width: 150px; }
+  h2 { font-size: 1rem; margin: 18px 0 8px; color: #111827; }
+  .desc { background: #f9fafb; padding: 14px; border-radius: 6px; font-size: 0.9rem; line-height: 1.5; }
+  footer { margin-top: 28px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 0.75rem; color: #9ca3af; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+  <h1>Ticket #${t.numero}</h1>
+  <div class="sub">${escapeHtml(t.asunto || "")}</div>
+  <table>
+    <tr><td class="k">Empresa</td><td>${escapeHtml(t.empresa || "—")}</td></tr>
+    <tr><td class="k">Contacto</td><td>${escapeHtml(t.contacto || "—")}</td></tr>
+    <tr><td class="k">Tipo</td><td>${escapeHtml(t.tipo || "—")}</td></tr>
+    <tr><td class="k">Prioridad</td><td>${escapeHtml(t.prioridad || "—")}</td></tr>
+    <tr><td class="k">Estado</td><td>${escapeHtml(t.estado || "—")}</td></tr>
+    <tr><td class="k">Agente</td><td>${escapeHtml(t.agente || "—")}</td></tr>
+    <tr><td class="k">Fecha de creación</td><td>${t.fechaCreacion ? new Date(t.fechaCreacion).toLocaleString("es-MX") : "—"}</td></tr>
+  </table>
+  <h2>Descripción</h2>
+  <div class="desc">${descripcionTicketAHtml(t.descripcion)}</div>
+  <footer>DATTASOFT BY INFOXPERT — Sistema de Tickets · Impreso el ${new Date().toLocaleString("es-MX")}</footer>
+</body>
+</html>`;
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => { win.focus(); win.print(); };
+  }
+
+  document.getElementById("btnImprimirTicket")?.addEventListener("click", () => {
+    if (ticketDetalleNumero === null) return;
+    const t = ticketPorNumero(ticketDetalleNumero);
+    if (!t) { toast("⚠️ Este ticket ya no existe (fue eliminado)", "error"); return; }
+    imprimirTicket(t);
   });
 
   document.getElementById("btnReenviarCorreoTicket")?.addEventListener("click", async (e) => {
