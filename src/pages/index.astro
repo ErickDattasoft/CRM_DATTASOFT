@@ -4755,7 +4755,22 @@ const BLOQUEO_LOGIN_MINUTOS = 15;
 // siempre deben apuntar aquí, nunca a location.origin (que en desarrollo sería localhost).
 const URL_PRODUCCION = "https://crm-dattasoft.pages.dev";
 
-interface Usuario { id: string; nombre: string; rol: "admin" | "normal"; passHash: string; activo: boolean; authEmail?: string; }
+interface Usuario { id: string; nombre: string; rol: "admin" | "normal"; passHash: string; activo: boolean; authEmail?: string; seccionesPermitidas?: string[]; }
+
+// Secciones que un admin puede restringir por usuario "normal" desde Configuración → Usuarios.
+// Dashboard siempre es visible (es el home). Bitácora ya es admin-only por rol (regla aparte,
+// no se toca aquí). SOPORTE (Knowledge Base) ya tiene su propio control de acceso por persona
+// gestionado por el propietario (kbAcceso) — mezclarlo aquí crearía dos candados independientes.
+const SECCIONES_CONFIGURABLES = [
+  { id: "empresas", label: "🏢 Empresas" },
+  { id: "contactos", label: "📇 Contactos" },
+  { id: "cotizaciones", label: "📋 Cotizaciones" },
+  { id: "tickets", label: "🎫 Tickets" },
+  { id: "eventos", label: "📅 Eventos" },
+  { id: "versiones", label: "🚀 Versiones" },
+  { id: "configuracion", label: "⚙️ Configuración" },
+  { id: "manual", label: "📖 Manual de Uso" },
+];
 
 function getUsuarioActual(): { nombre: string; rol: string } | null {
   try { const s = sessionStorage.getItem(SESSION_KEY); return s ? JSON.parse(s) : null; } catch { return null; }
@@ -5502,6 +5517,9 @@ verificarSesion();
   };
 
   function navegarA(sectionId, filtroEstado = "") {
+    // Defensa además de ocultar el ítem del sidebar: si alguien llega a una sección restringida
+    // por un estado viejo de la UI (o un enlace directo), lo manda al Dashboard en vez de mostrarla.
+    if (sectionId !== "dashboard" && !tieneAccesoSeccion(sectionId)) { navegarA("dashboard"); return; }
     // Si hay un formulario de edición abierto (empresa, contacto o ticket), se cancela
     // automáticamente al navegar a otro apartado — no hace falta dar clic en "Cancelar".
     cerrarFormEmpresa();
@@ -6006,6 +6024,22 @@ verificarSesion();
   // ============================================================
   // PERMISOS DE NAVEGACIÓN
   // ============================================================
+  // true si el usuario en sesión puede ver `sectionId`. Los admins siempre ven todo (para que
+  // nunca se puedan bloquear ellos mismos por accidente). Un usuario "normal" sin
+  // seccionesPermitidas configurado también ve todo — es el default de compatibilidad para no
+  // quitarle acceso a nadie el día que esta función se activó. Secciones fuera de
+  // SECCIONES_CONFIGURABLES (dashboard, bitácora, knowledge) no se filtran aquí — tienen su
+  // propia regla aparte.
+  function tieneAccesoSeccion(sectionId) {
+    if (!SECCIONES_CONFIGURABLES.some(s => s.id === sectionId)) return true;
+    const u = getUsuarioActual();
+    if (!u) return false;
+    if (u.rol === "admin") return true;
+    const permitidas = getUsuarios().find(x => x.nombre === u.nombre)?.seccionesPermitidas;
+    if (!permitidas || !Array.isArray(permitidas)) return true;
+    return permitidas.includes(sectionId);
+  }
+
   function aplicarPermisosNavegacion() {
     const u = getUsuarioActual();
     const esAdmin = u?.rol === "admin";
@@ -6014,6 +6048,12 @@ verificarSesion();
     // Importar JSON solo para admins — puede sobreescribir datos
     const btnImport = document.getElementById("btnImportarJSON") as HTMLButtonElement | null;
     if (btnImport) btnImport.style.display = esAdmin ? "" : "none";
+    // Oculta del sidebar las secciones que el admin restringió para este usuario (Configuración
+    // → Usuarios). Solo aplica a "normal" — tieneAccesoSeccion ya deja pasar todo a los admins.
+    SECCIONES_CONFIGURABLES.forEach(s => {
+      const nav = document.querySelector(`.nav-item[data-section="${s.id}"]`) as HTMLElement | null;
+      if (nav) nav.style.display = tieneAccesoSeccion(s.id) ? "" : "none";
+    });
     // Solicitar permiso de notificaciones del navegador
     if (esAdmin && "Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();
@@ -9867,17 +9907,28 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const cont = document.getElementById("cfg-usuarios-list");
     if (!cont) return;
     cont.innerHTML = usuarios.map((u, i) => `
-      <div style="display:flex; align-items:center; gap:10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px 14px; opacity:${u.activo ? 1 : 0.5};">
-        <div style="width:32px; height:32px; border-radius:50%; background:${u.rol==="admin"?"rgba(99,102,241,0.2)":"rgba(255,255,255,0.06)"}; display:flex; align-items:center; justify-content:center; font-weight:800; color:${u.rol==="admin"?"#818cf8":"var(--text-main)"}; font-size:0.85rem; flex-shrink:0;">${u.nombre[0]}</div>
-        <div style="flex:1; min-width:0;">
-          <div style="font-weight:700; color:var(--text-bright); font-size:0.88rem;">${u.nombre} <span style="font-size:0.68rem; padding:1px 6px; border-radius:3px; background:${u.rol==="admin"?"rgba(99,102,241,0.12)":"rgba(255,255,255,0.06)"}; color:${u.rol==="admin"?"#818cf8":"var(--text-muted)"};">${u.rol==="admin"?"Admin":"Normal"}</span></div>
-          <div style="font-size:0.7rem; color:${u.activo?"#34d399":"#f87171"};">${u.activo?"● Activo":"● Inactivo"}</div>
-          <div style="font-size:0.68rem; color:${u.authEmail?"#34d399":"#fbbf24"}; margin-top:1px;">${u.authEmail?`🔒 Cuenta segura: ${escapeHtml(u.authEmail)}`:"🔓 Sin activar cuenta segura"}</div>
+      <div style="background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px 14px; opacity:${u.activo ? 1 : 0.5};">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:32px; height:32px; border-radius:50%; background:${u.rol==="admin"?"rgba(99,102,241,0.2)":"rgba(255,255,255,0.06)"}; display:flex; align-items:center; justify-content:center; font-weight:800; color:${u.rol==="admin"?"#818cf8":"var(--text-main)"}; font-size:0.85rem; flex-shrink:0;">${u.nombre[0]}</div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-weight:700; color:var(--text-bright); font-size:0.88rem;">${u.nombre} <span style="font-size:0.68rem; padding:1px 6px; border-radius:3px; background:${u.rol==="admin"?"rgba(99,102,241,0.12)":"rgba(255,255,255,0.06)"}; color:${u.rol==="admin"?"#818cf8":"var(--text-muted)"};">${u.rol==="admin"?"Admin":"Normal"}</span></div>
+            <div style="font-size:0.7rem; color:${u.activo?"#34d399":"#f87171"};">${u.activo?"● Activo":"● Inactivo"}</div>
+            <div style="font-size:0.68rem; color:${u.authEmail?"#34d399":"#fbbf24"}; margin-top:1px;">${u.authEmail?`🔒 Cuenta segura: ${escapeHtml(u.authEmail)}`:"🔓 Sin activar cuenta segura"}</div>
+          </div>
+          ${!u.authEmail ? `<button class="btn btn-ghost btn-xs btn-activar-cuenta-segura" data-i="${i}" title="Activar cuenta segura para ${escapeHtml(u.nombre)}" style="color:#818cf8; white-space:nowrap;">🔒 Activar segura</button>` : ""}
+          <button class="btn btn-ghost btn-xs btn-reset-pass" data-i="${i}" title="Restablecer contraseña" style="white-space:nowrap;">🔑 Reset</button>
+          <button class="btn btn-ghost btn-xs btn-toggle-rol" data-i="${i}" title="${u.rol==="admin"?"Quitar permisos de administrador":"Dar permisos de administrador"}" style="color:${u.rol==="admin"?"#fbbf24":"#818cf8"}; white-space:nowrap;">${u.rol==="admin"?"⬇️ Quitar admin":"⬆️ Hacer admin"}</button>
+          <button class="btn btn-ghost btn-xs btn-toggle-user" data-i="${i}" style="color:${u.activo?"#f87171":"#34d399"}; white-space:nowrap;">${u.activo?"🚫 Off":"✅ On"}</button>
         </div>
-        ${!u.authEmail ? `<button class="btn btn-ghost btn-xs btn-activar-cuenta-segura" data-i="${i}" title="Activar cuenta segura para ${escapeHtml(u.nombre)}" style="color:#818cf8; white-space:nowrap;">🔒 Activar segura</button>` : ""}
-        <button class="btn btn-ghost btn-xs btn-reset-pass" data-i="${i}" title="Restablecer contraseña" style="white-space:nowrap;">🔑 Reset</button>
-        <button class="btn btn-ghost btn-xs btn-toggle-rol" data-i="${i}" title="${u.rol==="admin"?"Quitar permisos de administrador":"Dar permisos de administrador"}" style="color:${u.rol==="admin"?"#fbbf24":"#818cf8"}; white-space:nowrap;">${u.rol==="admin"?"⬇️ Quitar admin":"⬆️ Hacer admin"}</button>
-        <button class="btn btn-ghost btn-xs btn-toggle-user" data-i="${i}" style="color:${u.activo?"#f87171":"#34d399"}; white-space:nowrap;">${u.activo?"🚫 Off":"✅ On"}</button>
+        ${u.rol !== "admin" ? `
+        <div style="margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.08); display:flex; flex-wrap:wrap; gap:10px;">
+          <span style="font-size:0.68rem; color:var(--text-muted); width:100%;">👁️ Secciones visibles para ${escapeHtml(u.nombre)} (todas marcadas = sin restricción):</span>
+          ${SECCIONES_CONFIGURABLES.map(s => `
+            <label style="display:flex; align-items:center; gap:4px; font-size:0.75rem; color:var(--text-main); cursor:pointer;">
+              <input type="checkbox" class="chk-seccion-usuario" data-i="${i}" data-seccion="${s.id}" ${(!Array.isArray(u.seccionesPermitidas) || u.seccionesPermitidas.includes(s.id)) ? "checked" : ""} style="width:auto; cursor:pointer;">
+              ${s.label}
+            </label>`).join("")}
+        </div>` : ""}
       </div>`).join("");
     cont.querySelectorAll<HTMLButtonElement>(".btn-activar-cuenta-segura").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -9937,6 +9988,21 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         toast(`${usuarios[i].activo ? "✅ Activado" : "🚫 Desactivado"}: ${u.nombre}`);
         logBitacora(`Usuario ${u.nombre} ${usuarios[i].activo ? "activado" : "desactivado"}`, "👥");
         renderUsuariosPanel();
+      });
+    });
+    cont.querySelectorAll<HTMLInputElement>(".chk-seccion-usuario").forEach(chk => {
+      chk.addEventListener("change", () => {
+        const i = parseInt(chk.dataset.i!);
+        const seccion = chk.dataset.seccion!;
+        const u = usuarios[i];
+        // Sin configurar aún = veía todo; al tocar el primer checkbox se vuelve explícito
+        // partiendo de "todas marcadas", para que el resto no se desmarque solo.
+        let actuales = Array.isArray(u.seccionesPermitidas) ? [...u.seccionesPermitidas] : SECCIONES_CONFIGURABLES.map(s => s.id);
+        actuales = chk.checked ? [...new Set([...actuales, seccion])] : actuales.filter(s => s !== seccion);
+        usuarios[i].seccionesPermitidas = actuales;
+        saveUsuariosLocal(usuarios);
+        if (!crmLocalOnly) guardarUsuarios(usuarios).catch(() => {});
+        logBitacora(`Secciones visibles de ${u.nombre} actualizadas`, "🛡️");
       });
     });
   }
