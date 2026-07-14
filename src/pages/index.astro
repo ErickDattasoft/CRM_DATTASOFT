@@ -1185,7 +1185,8 @@ try {
       transition: var(--transition-base);
       border-bottom: 1px solid var(--border-subtle);
     }
-    .autocomplete-item:hover {
+    .autocomplete-item:hover,
+    .autocomplete-item.highlighted {
       background: rgba(99, 102, 241, 0.1);
     }
     .autocomplete-item .ac-name {
@@ -2456,6 +2457,9 @@ try {
           <div class="controls-left">
             <h2 style="font-size:1.1rem; font-weight:800; color:var(--text-bright); font-family:var(--font-heading);">🚀 Versiones Oficiales CONTPAQi</h2>
           </div>
+          <div class="controls-right">
+            <button class="btn btn-ghost btn-sm" id="btnGenerarReporteVersiones" title="Reporte de empresas con sistemas o licencias desactualizadas">📋 Generar reporte</button>
+          </div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px; align-items:start;">
           <div class="card">
@@ -2975,10 +2979,8 @@ try {
           <div style="border-top:1px dashed rgba(255,255,255,0.06); margin-top:14px; padding-top:12px;">
             <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px;">📋 Información Adicional (opcional)</div>
             <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:12px;">
-              <div class="form-group"><label>Referido por</label><input id="form-tk-referido" placeholder="Nombre o fuente de referencia"></div>
               <div class="form-group"><label>Solicitado por</label><input id="form-tk-solicitado" placeholder="Nombre de quien solicita"></div>
               <div class="form-group"><label>Canalizado a</label><input id="form-tk-canalizado" placeholder="Área o persona destino"></div>
-              <div class="form-group"><label>SERVICIO REALIZADO POR</label><input id="form-tk-realizado" placeholder="Técnico o agente asignado"></div>
             </div>
           </div>
           <div class="form-group" style="margin-top:8px;">
@@ -3026,6 +3028,9 @@ try {
           </div>
           <div class="form-group" style="margin-top:12px;">
             <label>CC / CCO al crear (separar con coma)</label>
+            <select id="form-tk-cc-picker" style="margin-bottom:8px; width:100%; font-size:0.83rem;" disabled>
+              <option value="">Selecciona un contacto primero</option>
+            </select>
             <div style="display:flex; gap:10px;">
               <input id="form-tk-cc" placeholder="CC: correo1@mail.com, correo2@mail.com" style="flex:1;">
               <input id="form-tk-cco" placeholder="CCO: correo@mail.com" style="flex:1;">
@@ -4229,20 +4234,12 @@ try {
           <div id="det-tk-sistema">—</div>
         </div>
         <div>
-          <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:3px;">🔗 Referido por</div>
-          <input id="det-tk-referido" placeholder="—" style="width:100%; font-size:0.85rem; padding:5px 8px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-main);">
-        </div>
-        <div>
           <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:3px;">🙋 Solicitado por</div>
           <input id="det-tk-solicitado" placeholder="—" style="width:100%; font-size:0.85rem; padding:5px 8px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-main);">
         </div>
         <div>
           <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:3px;">📤 Canalizado a</div>
           <input id="det-tk-canalizado" placeholder="—" style="width:100%; font-size:0.85rem; padding:5px 8px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-main);">
-        </div>
-        <div>
-          <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:3px;">✅ SERVICIO REALIZADO POR</div>
-          <input id="det-tk-realizado" placeholder="—" style="width:100%; font-size:0.85rem; padding:5px 8px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-main);">
         </div>
       </div>
     </div>
@@ -4702,6 +4699,36 @@ try {
       <button class="btn btn-primary" id="btnExcelTodo" style="text-align:left; padding:14px 18px; font-size:0.88rem; margin-top:4px;">
         📦 Todo (Empresas + Contactos + Tickets)
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: Reporte de versiones y licencias desactualizadas ===== -->
+<div id="modal-reporte-versiones" class="modal-center" style="display:none;">
+  <div class="modal-box" style="width:760px; max-width:96%;">
+    <div class="modal-header">
+      <h2>📋 Reporte de Versiones y Licencias Desactualizadas</h2>
+      <button class="modal-close" id="btnCerrarReporteVersiones">×</button>
+    </div>
+    <div style="padding:14px 18px;">
+      <div class="table-wrap" style="max-height:360px;">
+        <table>
+          <thead>
+            <tr><th>Empresa</th><th>RFC</th><th>Contacto</th><th>Correo</th><th>Teléfono</th><th>Sistemas desactualizados</th><th>Licencias</th></tr>
+          </thead>
+          <tbody id="tabla-reporte-versiones-body"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:14px;">
+        <label style="font-size:0.78rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Enviar a</label>
+        <div id="reporte-versiones-usuarios" style="display:flex; flex-wrap:wrap; gap:10px; margin:8px 0;"></div>
+        <input id="reporte-versiones-extra" placeholder="Correos adicionales, separados por coma">
+      </div>
+      <div class="form-actions" style="margin-top:14px; justify-content:flex-end;">
+        <button class="btn btn-ghost btn-sm" id="btnEmailReporteVersiones">✉️ Enviar por correo</button>
+        <button class="btn btn-ghost btn-sm" id="btnImprimirReporteVersiones">🖨️ Imprimir</button>
+        <button class="btn btn-success btn-sm" id="btnExcelReporteVersiones">📊 Exportar Excel</button>
+      </div>
     </div>
   </div>
 </div>
@@ -5299,6 +5326,41 @@ verificarSesion();
     return (s === null || s === undefined) ? "" : String(s)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  // Navegación por teclado (↑/↓/Enter/Escape) para cualquier lista tipo autocomplete del CRM
+  // (buscador de contacto en tickets, empresa en contactos/cotizaciones/eventos, tarea rápida,
+  // catálogo de conceptos de cotización...). El resaltado se guarda como clase "highlighted" en
+  // el DOM en vez de un índice en una variable — así funciona igual para listas estáticas y para
+  // listas reconstruidas por delegación de eventos, sin que cada widget tenga que llevar su
+  // propio estado. getListEl puede ser el elemento de la lista o una función que lo devuelva
+  // (para los casos donde la lista se resuelve dinámicamente, ej. por fila de una tabla).
+  function attachAutocompleteKeyboardNav(inputEl, getListEl) {
+    if (!inputEl) return;
+    inputEl.addEventListener("keydown", (e) => {
+      const listEl = typeof getListEl === "function" ? getListEl(e) : getListEl;
+      if (!listEl || listEl.classList.contains("hidden")) return;
+      const items = Array.from(listEl.querySelectorAll(".autocomplete-item"));
+      if (!items.length) return;
+      const curIdx = items.findIndex(it => it.classList.contains("highlighted"));
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const next = Math.min(curIdx + 1, items.length - 1);
+        items.forEach((it, i) => it.classList.toggle("highlighted", i === next));
+        items[next]?.scrollIntoView({ block: "nearest" });
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const prev = Math.max(curIdx - 1, 0);
+        items.forEach((it, i) => it.classList.toggle("highlighted", i === prev));
+        items[prev]?.scrollIntoView({ block: "nearest" });
+      } else if (e.key === "Enter") {
+        if (curIdx < 0) return;
+        e.preventDefault();
+        items[curIdx].dispatchEvent(new Event("click", { bubbles: true }));
+      } else if (e.key === "Escape") {
+        listEl.classList.add("hidden");
+      }
+    });
   }
 
   // La descripción de un ticket sí se muestra como HTML real (viene del editor con
@@ -6598,8 +6660,8 @@ verificarSesion();
       const rows = tickets.map(t => ({
         Folio: t.numero, Asunto: t.asunto, Empresa: t.empresa, Contacto: t.contacto,
         Tipo: t.tipo, Sistema: t.sistema || "", Estado: t.estado, Facturación: t.facturado || "NO FACTURADO", Prioridad: t.prioridad, Grupo: t.grupo,
-        Agente: t.agente, Referido: t.referido, Solicitado: t.solicitado,
-        Canalizado: t.canalizado, "SERVICIO REALIZADO POR": t.realizado,
+        Agente: t.agente, Solicitado: t.solicitado,
+        Canalizado: t.canalizado,
         Descripción: (t.descripcion || "").replace(/<[^>]+>/g, ""),
         Creado: t.fechaCreacion ? new Date(t.fechaCreacion).toLocaleString('es-MX') : "",
         Actualizado: t.fechaActualizacion ? new Date(t.fechaActualizacion).toLocaleString('es-MX') : ""
@@ -6619,6 +6681,171 @@ verificarSesion();
   document.getElementById("btnExcelContactos")?.addEventListener("click", () => exportarExcel("contactos"));
   document.getElementById("btnExcelTickets")?.addEventListener("click", () => exportarExcel("tickets"));
   document.getElementById("btnExcelTodo")?.addEventListener("click", () => exportarExcel("todo"));
+
+  // ============================================================
+  // REPORTE DE VERSIONES Y LICENCIAS DESACTUALIZADAS
+  // ============================================================
+  let reporteVersionesActual: any[] = [];
+
+  function renderReporteVersionesUsuarios() {
+    const cont = document.getElementById("reporte-versiones-usuarios");
+    if (!cont) return;
+    const usuariosConCorreo = getUsuarios().filter(u => u.authEmail);
+    cont.innerHTML = usuariosConCorreo.length ? usuariosConCorreo.map(u => `
+      <label style="display:flex; align-items:center; gap:4px; font-size:0.78rem; cursor:pointer;">
+        <input type="checkbox" class="chk-reporte-versiones-dest" value="${escapeHtml(u.authEmail)}"> ${escapeHtml(u.nombre)}
+      </label>`).join("") : `<span style="font-size:0.76rem; color:var(--text-muted);">Ningún usuario tiene cuenta segura activada todavía.</span>`;
+  }
+
+  function renderReporteVersionesTabla() {
+    const tbody = document.getElementById("tabla-reporte-versiones-body");
+    if (!tbody) return;
+    if (!reporteVersionesActual.length) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text-muted);">✅ No se encontraron empresas con versiones o licencias por revisar.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = reporteVersionesActual.map(r => {
+      const sistemasTxt = r.sistemasDesactualizados.map(s => `${s.sistema}: ${s.versionInstalada} → ${s.versionOficial}`).join(", ") || "—";
+      const licenciasTxt = r.licenciasProblema.map(l => l.vencida ? `${l.sistema}: vencida hace ${Math.abs(l.dias)} días` : `${l.sistema}: vence en ${l.dias} días`).join(", ") || "—";
+      return `<tr>
+        <td>${escapeHtml(r.empresa)}</td>
+        <td>${escapeHtml(r.rfc)}</td>
+        <td>${escapeHtml(r.contacto)}</td>
+        <td>${escapeHtml(r.correo)}</td>
+        <td>${escapeHtml(r.telefono)}</td>
+        <td style="font-size:0.78rem;">${escapeHtml(sistemasTxt)}</td>
+        <td style="font-size:0.78rem;">${escapeHtml(licenciasTxt)}</td>
+      </tr>`;
+    }).join("");
+  }
+
+  document.getElementById("btnGenerarReporteVersiones")?.addEventListener("click", () => {
+    reporteVersionesActual = construirReporteVersionesDesactualizadas();
+    renderReporteVersionesTabla();
+    renderReporteVersionesUsuarios();
+    const m = document.getElementById("modal-reporte-versiones");
+    if (m) m.style.display = "flex";
+  });
+  document.getElementById("btnCerrarReporteVersiones")?.addEventListener("click", () => {
+    const m = document.getElementById("modal-reporte-versiones");
+    if (m) m.style.display = "none";
+  });
+
+  function construirWorkbookReporteVersiones(companies) {
+    const rows = [];
+    companies.forEach(c => {
+      c.sistemasDesactualizados.forEach(s => {
+        rows.push({ Empresa: c.empresa, RFC: c.rfc, Contacto: c.contacto, Correo: c.correo, Sistema: s.sistema, "Tipo Issue": "Versión desactualizada", Instalada: s.versionInstalada, "Oficial/Vencimiento": s.versionOficial, "Días": "" });
+      });
+      c.licenciasProblema.forEach(l => {
+        rows.push({ Empresa: c.empresa, RFC: c.rfc, Contacto: c.contacto, Correo: c.correo, Sistema: l.sistema, "Tipo Issue": l.vencida ? "Licencia vencida" : "Licencia por vencer", Instalada: "", "Oficial/Vencimiento": l.fechaVencimiento, "Días": l.dias });
+      });
+    });
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, "Versiones y Licencias");
+    return wb;
+  }
+
+  document.getElementById("btnExcelReporteVersiones")?.addEventListener("click", () => {
+    if (!reporteVersionesActual.length) { toast("⚠️ No hay datos en el reporte", "warning"); return; }
+    const wb = construirWorkbookReporteVersiones(reporteVersionesActual);
+    XLSX.writeFile(wb, `Reporte_Versiones_Licencias_${new Date().toISOString().slice(0,10)}.xlsx`);
+    logBitacora("Reporte de versiones/licencias exportado a Excel", "📊");
+    toast("📊 Reporte exportado a Excel");
+  });
+
+  function imprimirReporteVersiones(companies, incluirLogo = true) {
+    const win = window.open("", "_blank", "width=900,height=900");
+    if (!win) {
+      toast("⚠️ El navegador bloqueó la ventana de impresión — permite pop-ups para este sitio", "warning");
+      return;
+    }
+    const logoBase64 = incluirLogo ? (localStorage.getItem("crm_logo") || "") : "";
+    const filas = companies.map(c => {
+      const sistemasTxt = c.sistemasDesactualizados.map(s => `${s.sistema}: ${s.versionInstalada} → ${s.versionOficial}`).join("<br>") || "—";
+      const licenciasTxt = c.licenciasProblema.map(l => l.vencida ? `${l.sistema}: vencida hace ${Math.abs(l.dias)} días` : `${l.sistema}: vence en ${l.dias} días`).join("<br>") || "—";
+      return `<tr>
+        <td>${escapeHtml(c.empresa)}</td>
+        <td>${escapeHtml(c.rfc)}</td>
+        <td>${escapeHtml(c.contacto)}<br><span style="color:#6b7280; font-size:0.78em;">${escapeHtml(c.correo)}</span></td>
+        <td>${sistemasTxt}</td>
+        <td>${licenciasTxt}</td>
+      </tr>`;
+    }).join("");
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte de Versiones y Licencias Desactualizadas</title>
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; padding: 32px; margin: 0 auto; }
+  .encabezado { display: flex; align-items: center; gap: 14px; margin-bottom: 2px; }
+  .encabezado img { height: 48px; max-width: 180px; object-fit: contain; }
+  h1 { font-size: 1.3rem; color: #4f46e5; margin: 0; }
+  .sub { color: #6b7280; font-size: 0.85rem; margin-bottom: 20px; }
+  table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+  th, td { padding: 7px 10px; font-size: 0.82rem; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; }
+  footer { margin-top: 28px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 0.75rem; color: #9ca3af; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+  <div class="encabezado">
+    ${logoBase64 ? `<img src="${logoBase64}" alt="Logo">` : ""}
+    <h1>Reporte de Versiones y Licencias Desactualizadas</h1>
+  </div>
+  <div class="sub">${companies.length} empresa(s) con pendientes — generado el ${new Date().toLocaleString("es-MX")}</div>
+  <table>
+    <thead><tr><th>Empresa</th><th>RFC</th><th>Contacto</th><th>Sistemas desactualizados</th><th>Licencias</th></tr></thead>
+    <tbody>${filas}</tbody>
+  </table>
+  <footer>DATTASOFT BY INFOXPERT — Reporte de Versiones · Impreso el ${new Date().toLocaleString("es-MX")}</footer>
+</body>
+</html>`;
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => { win.focus(); win.print(); };
+  }
+
+  document.getElementById("btnImprimirReporteVersiones")?.addEventListener("click", () => {
+    if (!reporteVersionesActual.length) { toast("⚠️ No hay datos en el reporte", "warning"); return; }
+    const incluirLogo = (document.getElementById("chkImprimirLogo") as HTMLInputElement | null)?.checked ?? true;
+    imprimirReporteVersiones(reporteVersionesActual, incluirLogo);
+    logBitacora("Reporte de versiones/licencias impreso / exportado a PDF", "🖨️");
+  });
+
+  document.getElementById("btnEmailReporteVersiones")?.addEventListener("click", async () => {
+    if (!reporteVersionesActual.length) { toast("⚠️ No hay datos en el reporte", "warning"); return; }
+    const checked = Array.from(document.querySelectorAll<HTMLInputElement>(".chk-reporte-versiones-dest:checked")).map(el => el.value);
+    const extra = parseEmailList((document.getElementById("reporte-versiones-extra") as HTMLInputElement)?.value || "");
+    const destinatarios = [...new Set([...checked, ...extra])];
+    if (!destinatarios.length) { toast("⚠️ Selecciona al menos un destinatario o escribe un correo", "warning"); return; }
+    const wb = construirWorkbookReporteVersiones(reporteVersionesActual);
+    const base64 = XLSX.write(wb, { type: "base64", bookType: "xlsx" });
+    const filasHtml = reporteVersionesActual.map(c => `
+      <tr><td style="padding:6px 12px; border-bottom:1px solid #e5e7eb;">${escapeHtml(c.empresa)}</td>
+      <td style="padding:6px 12px; border-bottom:1px solid #e5e7eb; text-align:center;">${c.sistemasDesactualizados.length}</td>
+      <td style="padding:6px 12px; border-bottom:1px solid #e5e7eb; text-align:center;">${c.licenciasProblema.length}</td></tr>`).join("");
+    const htmlResumen = `
+      <h2 style="color:#4f46e5; font-family:sans-serif;">📋 Reporte de Versiones y Licencias Desactualizadas</h2>
+      <p style="font-family:sans-serif; font-size:14px; color:#374151;">${reporteVersionesActual.length} empresa(s) con pendientes. El detalle completo va adjunto en Excel.</p>
+      <table style="border-collapse:collapse; width:100%; font-family:sans-serif; font-size:14px;">
+        <tr><th style="padding:6px 12px; background:#f3f4f6; text-align:left;">Empresa</th><th style="padding:6px 12px; background:#f3f4f6;">Sistemas desactualizados</th><th style="padding:6px 12px; background:#f3f4f6;">Licencias</th></tr>
+        ${filasHtml}
+      </table>
+      <hr style="margin-top:24px; border:none; border-top:1px solid #e5e7eb;">
+      <p style="font-size:12px; color:#6b7280; font-family:sans-serif;">DATTASOFT BY INFOXPERT — Sistema de Versiones</p>
+    `;
+    const sent = await enviarEmailConProveedor({
+      to: destinatarios,
+      subject: `Reporte de Versiones y Licencias — ${new Date().toLocaleDateString("es-MX")}`,
+      html: htmlResumen,
+      attachment: [{ content: base64, name: "Reporte_Versiones_Licencias.xlsx" }]
+    });
+    if (sent?.ok) logBitacora(`Reporte de versiones/licencias enviado por correo a ${destinatarios.join(", ")}`, "📧");
+  });
 
   // ============================================================
   // MARKET VERSIONS
@@ -7273,6 +7500,7 @@ verificarSesion();
     if (e.target === document.getElementById("modal-nueva-tarea")) document.getElementById("modal-nueva-tarea").style.display = "none";
   });
   // Autocomplete empresa en modal tarea
+  attachAutocompleteKeyboardNav(document.getElementById("modal-tarea-empresa"), document.getElementById("modal-tarea-empresa-ac"));
   document.getElementById("modal-tarea-empresa")?.addEventListener("input", function() {
     const val = this.value.toLowerCase().trim();
     const ac = document.getElementById("modal-tarea-empresa-ac");
@@ -7325,6 +7553,40 @@ verificarSesion();
       if (busq && !(c.EMPRESA || "").toLowerCase().includes(busq) && !(c.CONTACTO || "").toLowerCase().includes(busq)) return false;
       return true;
     });
+  }
+
+  // Empresas con al menos un sistema desactualizado (versión instalada < oficial) o una
+  // licencia vencida/por vencer en ≤30 días — mismo criterio que ya usan el indicador de
+  // versiones (verEstado) y el badge de licencia de la tabla de Empresas más abajo, para que
+  // el reporte nunca muestre algo distinto de lo que esos indicadores ya reflejan.
+  function construirReporteVersionesDesactualizadas() {
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    return clientes.map(c => {
+      const sistemasDesactualizados = [];
+      listaSistemas.forEach(s => {
+        const sKey = s.toUpperCase().trim();
+        const vC = String(c.SISTEMAS?.[sKey] || "").trim();
+        const vO = String(versionesMercado[sKey] || "").trim();
+        if (!/\d/.test(vO)) return;
+        if (vC && vC.toUpperCase() !== "NO APLICA" && compararVersiones(vC, vO) < 0) {
+          sistemasDesactualizados.push({ sistema: s, versionInstalada: vC, versionOficial: vO });
+        }
+      });
+      const licenciasProblema = [];
+      if (c.VENCIMIENTOS) {
+        Object.entries(c.VENCIMIENTOS).forEach(([sis, fecha]) => {
+          if (!fecha) return;
+          const dias = Math.ceil((new Date(fecha + "T00:00:00") - hoy) / 86400000);
+          if (dias <= 30) licenciasProblema.push({ sistema: sis, fechaVencimiento: fecha, dias, vencida: dias < 0 });
+        });
+      }
+      if (!sistemasDesactualizados.length && !licenciasProblema.length) return null;
+      const info = getInfoContacto(c);
+      return {
+        empresa: c.EMPRESA, rfc: c.RFC || "", contacto: info.nombre, correo: info.correo, telefono: info.telefono1,
+        sistemasDesactualizados, licenciasProblema
+      };
+    }).filter(Boolean);
   }
 
   function renderEmpresas() {
@@ -8007,6 +8269,9 @@ verificarSesion();
         <tr><td style="padding:6px 12px; font-weight:bold; background:#f3f4f6;">Tipo</td><td style="padding:6px 12px;">${t.tipo || ""}</td></tr>
         <tr><td style="padding:6px 12px; font-weight:bold; background:#f3f4f6;">Prioridad</td><td style="padding:6px 12px;">${t.prioridad || ""}</td></tr>
         <tr><td style="padding:6px 12px; font-weight:bold; background:#f3f4f6;">Estado</td><td style="padding:6px 12px;">${t.estado || ""}</td></tr>
+        <tr><td style="padding:6px 12px; font-weight:bold; background:#f3f4f6;">Solicitado por</td><td style="padding:6px 12px;">${t.solicitado || ""}</td></tr>
+        <tr><td style="padding:6px 12px; font-weight:bold; background:#f3f4f6;">Canalizado a</td><td style="padding:6px 12px;">${t.canalizado || ""}</td></tr>
+        <tr><td style="padding:6px 12px; font-weight:bold; background:#f3f4f6;">Agente</td><td style="padding:6px 12px;">${t.agente || ""}</td></tr>
       </table>
       <h3 style="margin-top:16px; font-family:sans-serif;">Descripción</h3>
       <div style="background:#f9fafb; padding:12px; border-radius:6px; font-family:sans-serif;">${descripcionTicketAHtml(t.descripcion)}</div>
@@ -8271,21 +8536,27 @@ verificarSesion();
     }
   });
 
-  // Masivo Email
+  // Masivo Email — un correo individual y personalizado por empresa (misma plantilla y
+  // placeholders [contacto]/[empresa]/[sistemas_pendientes] que ya usa el WhatsApp masivo vía
+  // generarMensaje), no un solo envío genérico con el cuerpo vacío a todos los correos juntos —
+  // así cada empresa solo ve sus propios sistemas pendientes, y no un correo en blanco.
   document.getElementById("btnMailMasivo")?.addEventListener("click", async () => {
     if (seleccionadosIdx.length === 0) return alert("Selecciona al menos una empresa.");
-    const emails = seleccionadosIdx.map(i => clientes[i]?.CORREO).filter(Boolean);
-    if (emails.length === 0) return alert("Ninguna empresa seleccionada tiene correo.");
     const subject = "Actualización de Sistemas CONTPAQi";
-    const body = "";
-    const sent = await enviarEmailConProveedor({
-      to: emails,
-      subject,
-      text: body,
-    });
-    if (!sent?.ok) {
-      window.open(`mailto:${emails.join(",")}?subject=${encodeURIComponent(subject)}`, "_blank");
+    const sinCorreo = [];
+    const sinPendientes = [];
+    let enviados = 0;
+    for (const idx of seleccionadosIdx) {
+      const c = clientes[idx];
+      if (!c?.CORREO) { sinCorreo.push(c?.EMPRESA || "—"); continue; }
+      const mensaje = generarMensaje(c);
+      if (!mensaje) { sinPendientes.push(c.EMPRESA); continue; }
+      const sent = await enviarEmailConProveedor({ to: c.CORREO, subject, text: mensaje });
+      if (sent?.ok) enviados++;
     }
+    if (sinPendientes.length) toast(`ℹ️ ${sinPendientes.length} empresa(s) sin sistemas pendientes, se omitieron: ${sinPendientes.join(", ")}`, "warning");
+    if (sinCorreo.length) toast(`⚠️ ${sinCorreo.length} empresa(s) sin correo registrado, se omitieron.`, "warning");
+    if (enviados) logBitacora(`✉️ Email masivo de versiones enviado (personalizado) a ${enviados} empresa(s)`, "📧");
   });
 
   // ============================================================
@@ -8371,6 +8642,7 @@ verificarSesion();
   const ctEmpBuscar = document.getElementById("form-ct-empresa-buscar");
   const ctEmpHidden = document.getElementById("form-ct-empresa");
   const ctEmpList   = document.getElementById("ct-empresa-autocomplete");
+  attachAutocompleteKeyboardNav(ctEmpBuscar, ctEmpList);
 
   function setEmpresaContacto(nombre) {
     if (ctEmpBuscar) ctEmpBuscar.value = nombre;
@@ -8653,6 +8925,7 @@ verificarSesion();
     actualizarVisibilidadProgramacion();
     const avisoRec = document.getElementById("form-tk-recordatorio-aviso");
     if (avisoRec) avisoRec.style.display = "none";
+    populateCcPicker();
   }
 
   function actualizarVisibilidadProgramacion() {
@@ -8702,6 +8975,7 @@ verificarSesion();
   const tkCorreoContactoInput = document.getElementById("form-tk-correo-contacto");
   const tkAutoList = document.getElementById("tk-contacto-autocomplete");
   const tkEmpresaInput = document.getElementById("form-tk-empresa");
+  attachAutocompleteKeyboardNav(tkBuscarInput, tkAutoList);
 
   function limpiarContactoSeleccionado() {
     if (tkContactoInput) tkContactoInput.value = "";
@@ -8715,7 +8989,42 @@ verificarSesion();
     if (tkCorreoContactoInput) tkCorreoContactoInput.value = c.correo || "";
     if (tkEmpresaInput) tkEmpresaInput.value = c.empresa || "";
     tkAutoList?.classList.add("hidden");
+    populateCcPicker();
   }
+
+  // Lista desplegable de CC: solo contactos de la misma empresa del ticket, excluyendo al
+  // contacto principal y a quien ya esté en el campo de CC (el campo de texto libre sigue
+  // disponible para correos que no estén dados de alta).
+  function populateCcPicker() {
+    const sel = document.getElementById("form-tk-cc-picker") as HTMLSelectElement | null;
+    if (!sel) return;
+    const empresa = (tkEmpresaInput as HTMLInputElement)?.value.trim() || "";
+    const contactoActual = (tkContactoInput as HTMLInputElement)?.value.trim() || "";
+    if (!empresa) {
+      sel.innerHTML = '<option value="">Selecciona un contacto primero</option>';
+      sel.disabled = true;
+      return;
+    }
+    const ccActuales = ((document.getElementById("form-tk-cc") as HTMLInputElement)?.value || "")
+      .split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+    const opciones = contactos.filter(c =>
+      c.empresa === empresa && c.nombre !== contactoActual && c.correo && !ccActuales.includes(c.correo.toLowerCase())
+    );
+    sel.innerHTML = '<option value="">➕ Agregar contacto a CC...</option>' +
+      opciones.map(c => `<option value="${escapeHtml(c.correo)}">${escapeHtml(c.nombre)} — ${escapeHtml(c.correo)}</option>`).join("");
+    sel.disabled = false;
+  }
+
+  document.getElementById("form-tk-cc-picker")?.addEventListener("change", function() {
+    const val = (this as HTMLSelectElement).value;
+    if (!val) return;
+    const ccInp = document.getElementById("form-tk-cc") as HTMLInputElement;
+    const existentes = ccInp.value.split(",").map(e => e.trim()).filter(Boolean);
+    existentes.push(val);
+    ccInp.value = existentes.join(", ");
+    (this as HTMLSelectElement).value = "";
+    populateCcPicker();
+  });
 
   tkBuscarInput?.addEventListener("input", function() {
     const val = this.value.toLowerCase().trim();
@@ -8944,13 +9253,15 @@ verificarSesion();
     editTkIdx.value = "";
     ["form-tk-contacto-buscar", "form-tk-contacto", "form-tk-correo-contacto", "form-tk-empresa",
      "form-tk-asunto", "form-tk-cc", "form-tk-cco",
-     "form-tk-referido", "form-tk-solicitado", "form-tk-canalizado", "form-tk-realizado",
+     "form-tk-solicitado", "form-tk-canalizado",
      "form-tk-notas-internas", "form-tk-sistema-otro", "form-tk-fecha-programada"].forEach(id => {
       const el = document.getElementById(id) as HTMLInputElement | null;
       if (el) el.value = "";
     });
     const inputOtroReset = document.getElementById("form-tk-sistema-otro");
     if (inputOtroReset) inputOtroReset.style.display = "none";
+    const ccPicker = document.getElementById("form-tk-cc-picker") as HTMLSelectElement | null;
+    if (ccPicker) { ccPicker.innerHTML = '<option value="">Selecciona un contacto primero</option>'; ccPicker.disabled = true; }
     const rte = document.getElementById("form-tk-descripcion");
     if (rte) rte.innerHTML = "";
     adjuntosTicketActual = [];
@@ -9051,10 +9362,8 @@ verificarSesion();
     const descripcion = document.getElementById("form-tk-descripcion").innerHTML.trim();
     const cc = document.getElementById("form-tk-cc").value.trim();
     const cco = document.getElementById("form-tk-cco").value.trim();
-    const referido = document.getElementById("form-tk-referido")?.value.trim() || "";
     const solicitado = document.getElementById("form-tk-solicitado")?.value.trim() || "";
     const canalizado = document.getElementById("form-tk-canalizado")?.value.trim() || "";
-    const realizado = document.getElementById("form-tk-realizado")?.value.trim() || "";
     const notasInternas = document.getElementById("form-tk-notas-internas")?.value.trim() || "";
     const fechaProgramada = (document.getElementById("form-tk-fecha-programada") as HTMLInputElement)?.value || "";
     const horaProgramada = fechaProgramada ? ((document.getElementById("form-tk-hora-programada") as HTMLInputElement)?.value || "09:00") : "";
@@ -9088,7 +9397,7 @@ verificarSesion();
       const num = tickets.length > 0 ? Math.max(...tickets.map(t => t.numero)) + 1 : 1001;
       const nuevoTicket = {
         numero: num, asunto, empresa, contacto, contactoCorreo, tipo, sistema, estado, facturado, prioridad, grupo, agente,
-        descripcion, notasInternas, cc, cco, referido, solicitado, canalizado, realizado,
+        descripcion, notasInternas, cc, cco, solicitado, canalizado,
         fechaProgramada, horaProgramada, agenteAsignado, recordatorioDestinatariosIds,
         adjuntos: [...adjuntosTicketActual],
         fechaCreacion: new Date().toISOString(),
@@ -9135,7 +9444,7 @@ verificarSesion();
       const fechaProgAnterior = t.fechaProgramada || "", horaProgAnterior = t.horaProgramada || "";
       const recordatorioIdsAnterior = t.recordatorioDestinatariosIds || [];
       Object.assign(t, { asunto, empresa, contacto, contactoCorreo, tipo, sistema, estado, facturado, prioridad, grupo, agente,
-        descripcion, notasInternas, cc, cco, referido, solicitado, canalizado, realizado,
+        descripcion, notasInternas, cc, cco, solicitado, canalizado,
         fechaProgramada, horaProgramada, agenteAsignado, recordatorioDestinatariosIds,
         adjuntos: [...adjuntosExistentes, ...adjuntosTicketActual],
         fechaActualizacion: new Date().toISOString() });
@@ -9190,10 +9499,8 @@ verificarSesion();
     document.getElementById("form-tk-descripcion").innerHTML = sanitizeDescripcionHtml(t.descripcion);
     document.getElementById("form-tk-cc").value = t.cc || "";
     document.getElementById("form-tk-cco").value = t.cco || "";
-    const fRef = document.getElementById("form-tk-referido"); if (fRef) fRef.value = t.referido || "";
     const fSol = document.getElementById("form-tk-solicitado"); if (fSol) fSol.value = t.solicitado || "";
     const fCan = document.getElementById("form-tk-canalizado"); if (fCan) fCan.value = t.canalizado || "";
-    const fRea = document.getElementById("form-tk-realizado"); if (fRea) fRea.value = t.realizado || "";
     const fNI = document.getElementById("form-tk-notas-internas"); if (fNI) fNI.value = t.notasInternas || "";
     initTicketFormDropdowns(t);
     formTk?.classList.remove("hidden");
@@ -9274,10 +9581,8 @@ verificarSesion();
     document.getElementById("det-tk-grupo").textContent = t.grupo || "—";
     document.getElementById("det-tk-agente").textContent = t.agente || "—";
     document.getElementById("det-tk-sistema").textContent = (t.sistema && t.sistema !== "No aplica") ? t.sistema : "No aplica";
-    (document.getElementById("det-tk-referido") as HTMLInputElement).value = t.referido || "";
     (document.getElementById("det-tk-solicitado") as HTMLInputElement).value = t.solicitado || "";
     (document.getElementById("det-tk-canalizado") as HTMLInputElement).value = t.canalizado || "";
-    (document.getElementById("det-tk-realizado") as HTMLInputElement).value = t.realizado || "";
     document.getElementById("det-tk-descripcion").innerHTML = sanitizeDescripcionHtml(t.descripcion);
     const detNI = document.getElementById("det-tk-notas-internas") as HTMLTextAreaElement;
     if (detNI) detNI.value = t.notasInternas || "";
@@ -9438,12 +9743,9 @@ verificarSesion();
     if (!t) { toast("⚠️ Este ticket ya no existe (fue eliminado)", "error"); cerrarDetalleTicket(); return; }
     const nuevoEstado = document.getElementById("selectCambiarEstadoDetalle")?.value;
 
-    const nuevoReferido = (document.getElementById("det-tk-referido") as HTMLInputElement)?.value.trim() || "";
     const nuevoSolicitado = (document.getElementById("det-tk-solicitado") as HTMLInputElement)?.value.trim() || "";
     const nuevoCanalizado = (document.getElementById("det-tk-canalizado") as HTMLInputElement)?.value.trim() || "";
-    const nuevoRealizado = (document.getElementById("det-tk-realizado") as HTMLInputElement)?.value.trim() || "";
-    const camposGestionCambiaron = nuevoReferido !== (t.referido || "") || nuevoSolicitado !== (t.solicitado || "")
-      || nuevoCanalizado !== (t.canalizado || "") || nuevoRealizado !== (t.realizado || "");
+    const camposGestionCambiaron = nuevoSolicitado !== (t.solicitado || "") || nuevoCanalizado !== (t.canalizado || "");
 
     const nuevoNotasInternas = (document.getElementById("det-tk-notas-internas") as HTMLTextAreaElement)?.value.trim() || "";
     const notasInternasCambiaron = nuevoNotasInternas !== (t.notasInternas || "");
@@ -9452,7 +9754,7 @@ verificarSesion();
     const facturadoCambio = nuevoFacturado !== (t.facturado || "NO FACTURADO");
 
     if (nuevoEstado === t.estado && !camposGestionCambiaron && !notasInternasCambiaron && !facturadoCambio) {
-      alert("Cambia el estado, la facturación, o modifica algún campo de Referido/Solicitado/Canalizado/Realizado/Notas Internas.");
+      alert("Cambia el estado, la facturación, o modifica algún campo de Solicitado/Canalizado/Notas Internas.");
       return;
     }
 
@@ -9471,13 +9773,11 @@ verificarSesion();
       t.facturado = nuevoFacturado;
     }
 
-    if (camposGestionCambiaron) logBitacora(`Ticket #${t.numero}: datos de gestión actualizados (Referido/Solicitado/Canalizado/Realizado)`, "✏️");
+    if (camposGestionCambiaron) logBitacora(`Ticket #${t.numero}: datos de gestión actualizados (Solicitado/Canalizado)`, "✏️");
     if (notasInternasCambiaron) logBitacora(`Ticket #${t.numero}: notas internas actualizadas`, "🔒");
 
-    t.referido = nuevoReferido;
     t.solicitado = nuevoSolicitado;
     t.canalizado = nuevoCanalizado;
-    t.realizado = nuevoRealizado;
     t.notasInternas = nuevoNotasInternas;
 
     t.fechaActualizacion = new Date().toISOString();
@@ -11049,8 +11349,11 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           if (Array.isArray(data.interacciones) && data.interacciones.length) resumen += `• Interacciones: <strong>${data.interacciones.length}</strong><br>`;
           if (Array.isArray(data.tareas) && data.tareas.length) resumen += `• Tareas: <strong>${data.tareas.length}</strong><br>`;
           if (Array.isArray(data.filtrosGuardados) && data.filtrosGuardados.length) resumen += `• Filtros guardados: <strong>${data.filtrosGuardados.length}</strong><br>`;
+          if (Array.isArray(data.cotizaciones) && data.cotizaciones.length) resumen += `• Cotizaciones: <strong>${data.cotizaciones.length}</strong><br>`;
           if (data.configTickets) resumen += `• Configuración de tickets<br>`;
           if (data.configCorreo) resumen += `• Configuración de correo<br>`;
+          if (data.configCotizaciones) resumen += `• Catálogo de conceptos de cotización<br>`;
+          if (data.configN8n) resumen += `• Configuración de automatizaciones (n8n)<br>`;
           if (data.acercaDe) resumen += `• Acerca de<br>`;
           if (data.logoEmpresa) resumen += `• Logo de empresa<br>`;
         }
@@ -11135,6 +11438,14 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           msg += `✅ ${nuevosFiltros.length} filtros importados. `;
         }
       }
+      if (Array.isArray(jsonImportData.cotizaciones) && jsonImportData.cotizaciones.length) {
+        const nuevasCot = jsonImportData.cotizaciones.filter((c: any) => !cotizaciones.find((x: any) => x.id === c.id));
+        if (nuevasCot.length) {
+          cotizaciones.push(...nuevasCot);
+          if (crmLocalOnly) guardarLocal("crm_cotizaciones", cotizaciones); else await guardarCotizaciones(cotizaciones);
+          msg += `✅ ${nuevasCot.length} cotizaciones importadas. `;
+        }
+      }
       if (Array.isArray(jsonImportData.knowledge_base) && jsonImportData.knowledge_base.length && !crmLocalOnly) {
         let nKB = 0;
         for (const doc of jsonImportData.knowledge_base) {
@@ -11153,6 +11464,16 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         configCorreo = jsonImportData.configCorreo;
         if (!crmLocalOnly) await guardarConfigCorreo(configCorreo);
         msg += `✅ Configuración de correo restaurada. `;
+      }
+      if (jsonImportData.configCotizaciones) {
+        configCotizaciones = jsonImportData.configCotizaciones;
+        if (!crmLocalOnly) await guardarConfigCotizaciones(configCotizaciones);
+        msg += `✅ Catálogo de conceptos de cotización restaurado. `;
+      }
+      if (jsonImportData.configN8n) {
+        configN8n = jsonImportData.configN8n;
+        if (!crmLocalOnly) await guardarConfigN8n(configN8n);
+        msg += `✅ Configuración de automatizaciones restaurada. `;
       }
       if (jsonImportData.acercaDe) {
         acercaDe = jsonImportData.acercaDe;
@@ -11189,6 +11510,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     renderEmpresas();
     renderContactos();
     renderTickets();
+    renderCotizaciones();
   });
 
   // ============================================================
@@ -11213,7 +11535,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
   async function descargarBackupCompleto() {
     const backup = {
-      version: "2.1",
+      version: "2.2",
       app: "CRM DATTASOFT",
       fecha: new Date().toISOString(),
       datos: {
@@ -11235,6 +11557,9 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         tareas,
         filtrosGuardados,
         alertasVencimiento,
+        cotizaciones,
+        configCotizaciones,
+        configN8n,
         logoEmpresa: localStorage.getItem("crm_logo") || ""
       }
     };
@@ -11686,6 +12011,12 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
   // Eventos delegados en la tabla de conceptos — se registran UNA sola vez (no dentro de
   // renderConceptosCotizacion) para no reconstruir el <tbody> en cada tecleo.
+  attachAutocompleteKeyboardNav(tablaCotConceptosBody, (e: Event) => {
+    const target = e.target as HTMLElement;
+    if (!target.classList?.contains("cot-concepto-desc")) return null;
+    const i = (target as HTMLInputElement).dataset.cidx;
+    return tablaCotConceptosBody?.querySelector(`.cot-concepto-catalogo-list[data-cidx="${i}"]`);
+  });
   tablaCotConceptosBody?.addEventListener("input", (e) => {
     const target = e.target as HTMLInputElement;
     const i = parseInt(target.dataset.cidx || "");
@@ -11745,6 +12076,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   const cotEmpBuscar = document.getElementById("form-cot-empresa-buscar");
   const cotEmpHidden = document.getElementById("form-cot-empresa") as HTMLInputElement | null;
   const cotEmpList = document.getElementById("cot-empresa-autocomplete");
+  attachAutocompleteKeyboardNav(cotEmpBuscar, cotEmpList);
 
   function setEmpresaCotizacion(c: any) {
     const nombre = typeof c === "string" ? c : (c.EMPRESA || "");
@@ -12419,7 +12751,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           prioridad: tp.prioridad || "Media",
           grupo: "", agente: "",
           descripcion: (tp.descripcion || "").replace(/\n/g, "<br>"),
-          referido: "Portal Público", solicitado: "", canalizado: "", realizado: "",
+          solicitado: "", canalizado: "",
           adjuntos: tp.adjuntos || [],
           actividad: [],
           fechaCreacion: tp.fechaCreacion || new Date().toISOString(),
@@ -12910,6 +13242,8 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       });
     });
   }
+
+  attachAutocompleteKeyboardNav(document.getElementById("ev-buscar-empresa"), document.getElementById("ev-empresas-autocomplete"));
 
   // Event delegation: escucha input y focus en el documento, filtra por id
   document.addEventListener("input", (e: Event) => {
