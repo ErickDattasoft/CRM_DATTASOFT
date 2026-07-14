@@ -2777,6 +2777,7 @@ try {
             <button class="btn btn-primary" id="btnGuardarCotizacionBorrador">💾 Guardar borrador</button>
             <button class="btn btn-secondary" id="btnGuardarCotizacionPDF">📄 Guardar y generar PDF</button>
             <button class="btn btn-ghost hidden" id="btnCrearTicketDesdeCot">🎫 Crear ticket desde esta cotización</button>
+            <button type="button" class="btn btn-ghost hidden" id="btnVerTicketDeCotizacion" style="background:rgba(99,102,241,0.12); color:#a5b4fc;">🎫 Ver ticket #<span id="form-cot-ticket-numero"></span> →</button>
             <button class="btn btn-secondary" id="btnCancelarCotizacion">Cancelar</button>
           </div>
         </div>
@@ -3043,11 +3044,10 @@ try {
             </div>
             <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">Cuando un cliente crea un ticket desde el portal público, la notificación llega a este o estos correos (sepáralos con coma, ej. <code>erick.casas@dattasoft.mx, soporte@dattasoft.mx</code>). El primer correo de la lista también se usa como remitente en confirmaciones al cliente.</span>
           </div>
-          <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
-            <input id="cfg-resumen-semanal-activo" type="checkbox" style="width:auto; cursor:pointer;" checked>
-            <label for="cfg-resumen-semanal-activo" style="cursor:pointer; text-transform:none; font-size:0.85rem; color:var(--text-main); font-weight:500;">
-              📊 Enviar resumen semanal automático (cada lunes) a los correos de soporte
-            </label>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+            <button id="btn-enviar-resumen-semanal" class="btn btn-secondary btn-sm" style="white-space:nowrap;">📊 Enviar resumen ahora</button>
+            <span style="font-size:0.72rem; color:var(--text-muted);">Envía a los correos de soporte de arriba un resumen de tickets abiertos, tareas y licencias por vencer.</span>
+            <span id="cfg-resumen-semanal-ultimo" style="font-size:0.72rem; color:var(--text-muted); width:100%;"></span>
           </div>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; padding:12px 14px; background:rgba(99,102,241,0.06); border-radius:8px; border:1px solid rgba(99,102,241,0.15);">
             <span style="font-size:0.8rem; font-weight:600; color:var(--brand-primary-hover); white-space:nowrap;">🧪 Prueba de correo</span>
@@ -4129,6 +4129,7 @@ try {
         <label style="display:flex; align-items:center; gap:4px; font-size:0.75rem; color:var(--text-muted); cursor:pointer; white-space:nowrap;" title="Incluir el logotipo de la empresa al imprimir">
           <input type="checkbox" id="chkImprimirLogo" checked style="width:auto; cursor:pointer;"> Logo
         </label>
+        <button class="btn btn-ghost btn-sm" id="btnCotizarTicket" title="Generar una cotización a partir de este ticket">🧾 Cotizar</button>
         <button class="btn btn-ghost btn-sm" id="btnImprimirTicket" title="Imprimir o guardar como PDF">🖨️ Imprimir</button>
         <button class="btn btn-ghost btn-sm" id="btnReenviarCorreoTicket" title="Reenviar correo de notificación al contacto">✉️ Reenviar correo</button>
         <button class="modal-close" id="btnCerrarDetalle">×</button>
@@ -4136,10 +4137,11 @@ try {
     </div>
     <div>
       <h3 id="det-tk-asunto" style="color:var(--text-bright); font-size:1.15rem; margin-bottom:10px;">Asunto</h3>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
         <span class="badge" id="det-tk-prioridad-badge">Media</span>
         <span class="badge" id="det-tk-estado-badge">Abierto</span>
         <span class="badge" id="det-tk-tipo-badge" style="background:rgba(99,102,241,0.15); color:#a5b4fc;">General</span>
+        <button class="btn btn-ghost btn-xs hidden" id="btnVerCotizacionDeTicket" style="background:rgba(16,185,129,0.12); color:#10b981;">🧾 Cotización: <span id="det-tk-cotizacion-numero"></span></button>
       </div>
     </div>
     <div style="border-top:1px solid var(--border-color); padding-top:14px;">
@@ -5126,7 +5128,6 @@ verificarSesion();
     facturacion: ["NO FACTURADO", "FACTURADO"],
     correoSoporte: "erick.casas@dattasoft.mx",
     sla: { Urgente: 4, Alta: 8, Media: 24, Baja: 72 },
-    resumenSemanalActivo: true,
     resumenSemanalUltimoEnvio: ""
   };
 
@@ -5445,6 +5446,11 @@ verificarSesion();
     cerrarFormContacto();
     cerrarFormTicket();
     cerrarFormCotizacion();
+    // Limpia cualquier vínculo Ticket↔Cotización a medias de un puente que se abandonó sin
+    // guardar — los handlers que sí completan el puente (cotizarDesdeTicket, crearTicketDesdeCotizacion)
+    // vuelven a setear la variable DESPUÉS de llamar navegarA(), así que no se pisan entre sí.
+    cotizandoDesdeTicketNumero = null;
+    cotizacionOrigenParaTicket = null;
 
     navItems.forEach(n => n.classList.toggle("active", n.dataset.section === sectionId));
     sections.forEach(s => s.classList.toggle("active", s.id === `section-${sectionId}`));
@@ -8849,7 +8855,12 @@ verificarSesion();
     formTk?.classList.remove("hidden");
   });
 
-  document.getElementById("btnCancelarTicket")?.addEventListener("click", cerrarFormTicket);
+  document.getElementById("btnCancelarTicket")?.addEventListener("click", () => {
+    // Cancelar de verdad: si venía de "Crear ticket desde esta cotización" sin guardar, no debe
+    // quedar arrastrado el vínculo para el próximo ticket que se cree sin relación alguna.
+    cotizacionOrigenParaTicket = null;
+    cerrarFormTicket();
+  });
 
   // Rich text toolbar
   document.getElementById("rte-toolbar-desc")?.addEventListener("click", (e) => {
@@ -8961,6 +8972,20 @@ verificarSesion();
       registrarActividadTicket(nuevoTicket, `Ticket creado${agente ? ` y asignado a ${agente}` : ""}`);
       logBitacora(`Ticket #${num} creado: "${asunto}" — ${empresa || contacto}`, "🎫");
       dispararN8n("ticket_creado_equipo", datosEventoTicket(nuevoTicket));
+
+      // Puente Cotización → Ticket: si este ticket nació de "🎫 Crear ticket desde esta cotización",
+      // se guarda el vínculo cruzado (nunca cambia el estado del ticket, ver plan: solo nace normal).
+      if (cotizacionOrigenParaTicket !== null) {
+        const cotOrigen = cotizaciones.find(c => c.id === cotizacionOrigenParaTicket);
+        if (cotOrigen) {
+          nuevoTicket.cotizacionId = cotOrigen.id;
+          nuevoTicket.cotizacionNumero = cotOrigen.numero;
+          cotOrigen.ticketNumero = nuevoTicket.numero;
+          logBitacora(`Ticket #${nuevoTicket.numero} vinculado a cotización ${cotOrigen.numero}`, "🧾");
+          if (crmLocalOnly) guardarLocal("crm_cotizaciones", cotizaciones); else await guardarCotizaciones(cotizaciones);
+        }
+        cotizacionOrigenParaTicket = null;
+      }
       await procesarCierreTicket(nuevoTicket, "");
       await procesarFacturacion(nuevoTicket, "", "");
       if (fechaProgramada && recordatorioDestinatariosIds.length) await enviarRecordatorioN8n("programar", nuevoTicket);
@@ -9073,6 +9098,10 @@ verificarSesion();
   // abierto otro dispositivo crea/edita/mueve tickets, tickets[idx] podría ya no ser el mismo
   // ticket que se está viendo — buscar por folio es estable sin importar el orden del arreglo.
   let ticketDetalleNumero: number | null = null;
+  // Puente Ticket↔Cotización: recuerdan el origen mientras el usuario completa el formulario del
+  // otro lado, para poder guardar el vínculo cruzado en cuanto guarde. Se limpian tras usarse.
+  let cotizandoDesdeTicketNumero: number | null = null;
+  let cotizacionOrigenParaTicket: string | null = null;
   function ticketPorNumero(numero: number | null) { return tickets.find(t => t.numero === numero) || null; }
   const modalDetalle = document.getElementById("modal-detalle-ticket");
 
@@ -9136,6 +9165,16 @@ verificarSesion();
 
     const bTipo = document.getElementById("det-tk-tipo-badge");
     bTipo.textContent = t.tipo || "General";
+
+    const cotVinculada = t.cotizacionId ? cotizaciones.find(c => c.id === t.cotizacionId) : null;
+    const btnVerCot = document.getElementById("btnVerCotizacionDeTicket");
+    if (cotVinculada) {
+      document.getElementById("det-tk-cotizacion-numero").textContent = cotVinculada.numero;
+      btnVerCot?.classList.remove("hidden");
+    } else {
+      btnVerCot?.classList.add("hidden");
+    }
+    document.getElementById("btnCotizarTicket")?.classList.toggle("hidden", !!cotVinculada && cotVinculada.estado !== "rechazada");
 
     populateSelectOptions("selectCambiarEstadoDetalle", configTickets.estados, t.estado);
     populateSelectOptions("det-tk-facturado", configTickets.facturacion, t.facturado || "NO FACTURADO");
@@ -9223,6 +9262,30 @@ verificarSesion();
     if (!t) { toast("⚠️ Este ticket ya no existe (fue eliminado)", "error"); return; }
     imprimirTicket(t, chkImprimirLogo ? chkImprimirLogo.checked : true);
     logBitacora(`Ticket #${t.numero} impreso / exportado a PDF`, "🖨️");
+  });
+
+  // ----- Puente a Cotizaciones -----
+  // Igual que el puente inverso (Cotización → Ticket): nunca crea la cotización sola, solo
+  // prellena el formulario y recuerda el ticket de origen para guardar el vínculo al guardar.
+  document.getElementById("btnCotizarTicket")?.addEventListener("click", () => {
+    if (ticketDetalleNumero === null) return;
+    const t = ticketPorNumero(ticketDetalleNumero);
+    if (!t) { toast("⚠️ Este ticket ya no existe (fue eliminado)", "error"); return; }
+    cerrarDetalleTicket();
+    navegarA("cotizaciones");
+    cotizandoDesdeTicketNumero = t.numero;
+    abrirNuevaCotizacion(t.asunto);
+    setEmpresaCotizacion(t.empresa || "");
+    (document.getElementById("form-cot-contacto") as HTMLInputElement).value = t.contacto || "";
+    (document.getElementById("form-cot-correo") as HTMLInputElement).value = t.contactoCorreo || "";
+  });
+
+  document.getElementById("btnVerCotizacionDeTicket")?.addEventListener("click", () => {
+    if (ticketDetalleNumero === null) return;
+    const t = ticketPorNumero(ticketDetalleNumero);
+    if (!t?.cotizacionId) return;
+    cerrarDetalleTicket();
+    abrirCotizacionPorId(t.cotizacionId);
   });
 
   document.getElementById("btnReenviarCorreoTicket")?.addEventListener("click", async (e) => {
@@ -9375,8 +9438,12 @@ verificarSesion();
   function renderConfig() {
     actualizarUIBackup();
     document.getElementById("cfg-correo-soporte").value = configTickets.correoSoporte || "";
-    const resumenSemanalCheckbox = document.getElementById("cfg-resumen-semanal-activo") as HTMLInputElement | null;
-    if (resumenSemanalCheckbox) resumenSemanalCheckbox.checked = configTickets.resumenSemanalActivo !== false;
+    const resumenSemanalUltimoEl = document.getElementById("cfg-resumen-semanal-ultimo");
+    if (resumenSemanalUltimoEl) {
+      resumenSemanalUltimoEl.textContent = configTickets.resumenSemanalUltimoEnvio
+        ? `Último envío: ${configTickets.resumenSemanalUltimoEnvio}`
+        : "Aún no se ha enviado ningún resumen.";
+    }
     renderConfigSLA();
     renderConfigCotizaciones();
 
@@ -9502,8 +9569,6 @@ verificarSesion();
       }
     });
     configTickets.correoSoporte = document.getElementById("cfg-correo-soporte").value.trim();
-    const resumenSemanalCheckboxGuardar = document.getElementById("cfg-resumen-semanal-activo") as HTMLInputElement | null;
-    if (resumenSemanalCheckboxGuardar) configTickets.resumenSemanalActivo = resumenSemanalCheckboxGuardar.checked;
 
     const selectedProvider = document.querySelector('input[name="cfg-mail-provider"]:checked')?.value || "";
     const apiKeyVal = document.getElementById("cfg-mail-apikey")?.value.trim() || "";
@@ -9552,8 +9617,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       agentes: configTickets.agentes,
       sistemas: configTickets.sistemas,
       facturacion: configTickets.facturacion,
-      correoSoporte: configTickets.correoSoporte,
-      resumenSemanalActivo: configTickets.resumenSemanalActivo
+      correoSoporte: configTickets.correoSoporte
     });
     if (ok) { toast("💾 Configuración guardada"); ocultarEstado(); sincronizarConfigPublica(); renderConfig(); }
     else { guardarLocal("crm_config_tickets", configTickets); mostrarEstado("⚠️ Guardado localmente", 3000); }
@@ -9561,15 +9625,13 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
   document.getElementById("btn-guardar-correo-soporte")?.addEventListener("click", async () => {
     configTickets.correoSoporte = document.getElementById("cfg-correo-soporte").value.trim();
-    const resumenSemanalCheckboxRapido = document.getElementById("cfg-resumen-semanal-activo") as HTMLInputElement | null;
-    if (resumenSemanalCheckboxRapido) configTickets.resumenSemanalActivo = resumenSemanalCheckboxRapido.checked;
     updateMailProviderHelp();
     if (crmLocalOnly) {
       guardarLocal("crm_config_tickets", configTickets);
       toast("💾 Correo de soporte guardado (Local)");
       return;
     }
-    const ok = await guardarConfigTickets({ correoSoporte: configTickets.correoSoporte, resumenSemanalActivo: configTickets.resumenSemanalActivo });
+    const ok = await guardarConfigTickets({ correoSoporte: configTickets.correoSoporte });
     if (ok) { toast("💾 Correo de soporte guardado"); sincronizarConfigPublica(); }
     else { guardarLocal("crm_config_tickets", configTickets); toast("⚠️ Sin conexión — guardado solo localmente", "warning"); }
   });
@@ -11555,9 +11617,11 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     conceptosCotActual = [];
     renderConceptosCotizacion();
     document.getElementById("btnCrearTicketDesdeCot")?.classList.add("hidden");
+    document.getElementById("btnVerTicketDeCotizacion")?.classList.add("hidden");
   }
 
-  document.getElementById("btnNuevaCotizacion")?.addEventListener("click", () => {
+  // conceptoInicial permite prellenar el primer renglón de conceptos (usado al cotizar desde un ticket).
+  function abrirNuevaCotizacion(conceptoInicial?: string) {
     cerrarFormCotizacion();
     const tituloEl = document.getElementById("form-cot-titulo");
     if (tituloEl) tituloEl.textContent = "➕ Nueva Cotización";
@@ -11570,17 +11634,21 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     (document.getElementById("form-cot-fecha-creacion") as HTMLInputElement).value = fechaISO(hoy);
     (document.getElementById("form-cot-fecha-vigencia") as HTMLInputElement).value = fechaISO(vigencia);
     (document.getElementById("form-cot-notas") as HTMLTextAreaElement).value = configCotizaciones.terminos || "";
-    conceptosCotActual = [{ descripcion: "", cantidad: 1, precioUnitario: 0, descuento: 0, tieneIVA: true }];
+    conceptosCotActual = [{ descripcion: conceptoInicial || "", cantidad: 1, precioUnitario: 0, descuento: 0, tieneIVA: true }];
     renderConceptosCotizacion();
     formCot?.classList.remove("hidden");
     formCot?.scrollIntoView({ behavior: "smooth" });
+  }
+  document.getElementById("btnNuevaCotizacion")?.addEventListener("click", () => abrirNuevaCotizacion());
+
+  document.getElementById("btnCancelarCotizacion")?.addEventListener("click", () => {
+    // Cancelar de verdad: si venía de "🧾 Cotizar" en un ticket sin guardar, no debe quedar
+    // arrastrado el vínculo para la próxima cotización que se cree sin relación alguna.
+    cotizandoDesdeTicketNumero = null;
+    cerrarFormCotizacion();
   });
 
-  document.getElementById("btnCancelarCotizacion")?.addEventListener("click", cerrarFormCotizacion);
-
-  function prepararEdicionCotizacion(e) {
-    const idx = parseInt((e.target as HTMLElement).closest("button")!.getAttribute("data-idx") || "");
-    const c = cotizaciones[idx];
+  function abrirCotizacionParaEditar(c) {
     if (!c) return;
     cerrarFormCotizacion();
     const tituloEl = document.getElementById("form-cot-titulo");
@@ -11603,8 +11671,25 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     conceptosCotActual = (c.conceptos || []).map((x: any) => ({ ...x }));
     renderConceptosCotizacion();
     document.getElementById("btnCrearTicketDesdeCot")?.classList.remove("hidden");
+    const btnVerTk = document.getElementById("btnVerTicketDeCotizacion");
+    if (c.ticketNumero) {
+      document.getElementById("form-cot-ticket-numero").textContent = String(c.ticketNumero);
+      btnVerTk?.classList.remove("hidden");
+    } else {
+      btnVerTk?.classList.add("hidden");
+    }
     formCot?.classList.remove("hidden");
     formCot?.scrollIntoView({ behavior: "smooth" });
+  }
+
+  function prepararEdicionCotizacion(e) {
+    const idx = parseInt((e.target as HTMLElement).closest("button")!.getAttribute("data-idx") || "");
+    abrirCotizacionParaEditar(cotizaciones[idx]);
+  }
+
+  function abrirCotizacionPorId(id: string) {
+    navegarA("cotizaciones");
+    abrirCotizacionParaEditar(cotizaciones.find(c => c.id === id));
   }
 
   async function reservarFolioCotizacion() {
@@ -11665,6 +11750,28 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       } else {
         logBitacora(`Cotización ${cot.numero} actualizada`, "📋");
       }
+
+      // Reacción automática del ticket vinculado al aceptar/rechazar (nunca crea nada nuevo,
+      // solo cambia el estado del ticket que el propio usuario ligó a esta cotización).
+      if (estadoWrapVisible && cot.estado !== estadoAnterior && cot.ticketNumero) {
+        const tLigado = ticketPorNumero(cot.ticketNumero);
+        if (tLigado) {
+          if (cot.estado === "aceptada") {
+            if (tLigado.estado === "Pendiente cotización") {
+              tLigado.estado = tLigado.estadoPreCotizacion || "Abierto";
+              delete tLigado.estadoPreCotizacion;
+            }
+            registrarActividadTicket(tLigado, `Cotización ${cot.numero} aceptada — ticket reanudado automáticamente (estado: "${tLigado.estado}")`);
+            logBitacora(`Cotización ${cot.numero} aceptada → ticket #${tLigado.numero} reanudado`, "✅");
+            if (crmLocalOnly) guardarLocal("crm_tickets", tickets); else await guardarTickets(tickets);
+          } else if (cot.estado === "rechazada") {
+            registrarActividadTicket(tLigado, `Cotización ${cot.numero} fue rechazada por el cliente`);
+            logBitacora(`Cotización ${cot.numero} rechazada — ticket #${tLigado.numero} sigue pendiente, requiere revisión manual`, "⚠️");
+            if (crmLocalOnly) guardarLocal("crm_tickets", tickets); else await guardarTickets(tickets);
+            toast(`⚠️ Ticket #${tLigado.numero} sigue en "Pendiente cotización" — decide si recotizar o cerrarlo`, "warning");
+          }
+        }
+      }
     } else {
       const res = await reservarFolioCotizacion();
       if (!res.ok) { toast("⚠️ No se pudo generar el folio, intenta de nuevo"); return; }
@@ -11680,6 +11787,28 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       logBitacora(`Cotización ${cot.numero} creada para ${cot.empresaNombre}`, "📋");
       if (editCotId) editCotId.value = cot.id;
       (document.getElementById("form-cot-numero") as HTMLInputElement).value = cot.numero;
+
+      // Puente Ticket → Cotización: si esta cotización nació de "🧾 Cotizar" en un ticket,
+      // se guarda el vínculo cruzado y el ticket se pausa hasta que el cliente responda.
+      if (cotizandoDesdeTicketNumero !== null) {
+        const tOrigen = ticketPorNumero(cotizandoDesdeTicketNumero);
+        if (tOrigen) {
+          if (!configTickets.estados.includes("Pendiente cotización")) {
+            configTickets.estados.push("Pendiente cotización");
+            if (crmLocalOnly) guardarLocal("crm_config_tickets", configTickets);
+            else guardarConfigTickets({ estados: configTickets.estados }).catch(() => {});
+          }
+          tOrigen.estadoPreCotizacion = tOrigen.estado;
+          tOrigen.estado = "Pendiente cotización";
+          tOrigen.cotizacionId = cot.id;
+          tOrigen.cotizacionNumero = cot.numero;
+          cot.ticketNumero = tOrigen.numero;
+          registrarActividadTicket(tOrigen, `Cotización ${cot.numero} generada — ticket en espera de aceptación del cliente`);
+          logBitacora(`Ticket #${tOrigen.numero} pasó a "Pendiente cotización" (${cot.numero})`, "🧾");
+          if (crmLocalOnly) guardarLocal("crm_tickets", tickets); else await guardarTickets(tickets);
+        }
+        cotizandoDesdeTicketNumero = null;
+      }
     }
 
     if (rfc) sincronizarRFCEmpresaDesdeCotizacion(empresaNombre, rfc);
@@ -11747,6 +11876,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const cot = cotizaciones.find(c => c.id === id);
     if (!cot) return;
     navegarA("tickets");
+    cotizacionOrigenParaTicket = cot.id;
     cerrarFormTicket();
     const tituloTk = document.getElementById("form-tk-titulo");
     if (tituloTk) tituloTk.textContent = "➕ Crear Ticket de Soporte";
@@ -11759,6 +11889,16 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     formTk?.scrollIntoView({ behavior: "smooth" });
   }
   document.getElementById("btnCrearTicketDesdeCot")?.addEventListener("click", crearTicketDesdeCotizacion);
+
+  document.getElementById("btnVerTicketDeCotizacion")?.addEventListener("click", () => {
+    const id = editCotId?.value;
+    const cot = cotizaciones.find(c => c.id === id);
+    if (!cot?.ticketNumero) return;
+    const idx = tickets.findIndex(t => t.numero === cot.ticketNumero);
+    if (idx === -1) { toast("⚠️ El ticket vinculado ya no existe", "error"); return; }
+    navegarA("tickets");
+    mostrarDetalleTicket(idx);
+  });
 
   // ----- PDF -----
   function cargarLogoPDF() {
@@ -14365,7 +14505,6 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   // Ejecutar cada vez que se re-renderizan los datos
   document.addEventListener("crm:datosFirebase", () => {
     setTimeout(verificarAlertasVencimiento, 1000);
-    setTimeout(enviarResumenSemanal, 4000);
     setTimeout(migrarContactosDeEmpresas, 2000);
   }, { once: true });
 
@@ -14426,22 +14565,22 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   });
 
   // ============================================================
-  // F_WEEKLY: RESUMEN SEMANAL (lunes automático)
+  // F_WEEKLY: RESUMEN DEL CRM (envío manual)
   // ============================================================
+  // Envío manual (botón "📊 Enviar resumen ahora" en Configuración → Correo de Soporte).
+  // Antes se disparaba solo al cargar datos de Firebase (cada login/recarga de página), con un
+  // candado de "ya enviado hoy" en configTickets — pero varias sesiones abiertas casi al mismo
+  // tiempo (mismo lunes) podían leer el candado antes de que la primera terminara de guardarlo,
+  // así que igual llegaban varios correos duplicados el mismo día. Se quitó el disparo automático
+  // por completo: ahora solo se envía cuando alguien lo pide explícitamente.
   async function enviarResumenSemanal() {
-    if (configTickets.resumenSemanalActivo === false) return; // Desactivado en Configuración
-    const hoy = new Date();
-    if (hoy.getDay() !== 1) return; // Solo lunes
-    const hoyStr = hoy.toISOString().split("T")[0];
-    // El candado de "ya enviado" se guarda en configTickets (Firestore), no en localStorage:
-    // localStorage es por navegador/dispositivo, así que con varios dispositivos abriendo el
-    // CRM el mismo lunes, cada uno lo veía como "no enviado" y mandaba su propio correo.
-    if (configTickets.resumenSemanalUltimoEnvio === hoyStr) return; // Ya se envió hoy
     const correos = parseEmailList(configTickets.correoSoporte);
-    if (!correos.length || !firebaseEnabled) return;
+    if (!correos.length) { toast("⚠️ Configura al menos un correo de soporte antes de enviar el resumen", "warning"); return; }
+    if (!firebaseEnabled) { toast("⚠️ No se puede enviar sin conexión a Firebase", "warning"); return; }
 
-    const lunes = new Date(hoy); lunes.setDate(hoy.getDate());
-    const domingo = new Date(hoy); domingo.setDate(hoy.getDate() + 6);
+    const hoy = new Date();
+    const hoyStr = hoyLocalStr();
+    const fin = new Date(hoy); fin.setDate(hoy.getDate() + 6);
     const fmtFecha = (d: Date) => d.toLocaleDateString("es-MX", { day:"numeric", month:"long" });
 
     const abiertos   = tickets.filter(t => t.estado === "Abierto" || t.estado === "Pendiente");
@@ -14475,37 +14614,55 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
     const html = `<div style="font-family:'Segoe UI',sans-serif;max-width:640px;margin:0 auto;">
   <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);padding:24px 28px;border-radius:12px 12px 0 0;">
-    <h1 style="color:#fff;font-size:1.2rem;font-weight:800;margin:0;">📊 Resumen Semanal — CRM</h1>
-    <p style="color:rgba(255,255,255,0.8);font-size:0.85rem;margin:6px 0 0;">Semana del ${fmtFecha(lunes)} al ${fmtFecha(domingo)}</p>
+    <h1 style="color:#fff;font-size:1.2rem;font-weight:800;margin:0;">📊 Resumen del CRM</h1>
+    <p style="color:rgba(255,255,255,0.8);font-size:0.85rem;margin:6px 0 0;">Próximos 7 días — del ${fmtFecha(hoy)} al ${fmtFecha(fin)}</p>
   </div>
   <div style="background:#f8fafc;padding:24px 28px;border:1px solid #e2e8f0;">
 
     <h2 style="color:#1e293b;font-size:1rem;margin:0 0 10px;">🎫 Tickets Abiertos (${abiertos.length})</h2>
-    ${abiertos.length ? `<table style="width:100%;border-collapse:collapse;font-size:0.85rem;"><thead><tr style="background:#e2e8f0;"><th style="padding:6px 10px;text-align:left;">No.</th><th style="padding:6px 10px;text-align:left;">Asunto</th><th style="padding:6px 10px;text-align:left;">Empresa</th><th style="padding:6px 10px;text-align:left;">Prioridad</th></tr></thead><tbody>${rowsTickets}</tbody></table>` : "<p style='color:#64748b;font-size:0.85rem;'>✅ Sin tickets pendientes esta semana.</p>"}
+    ${abiertos.length ? `<table style="width:100%;border-collapse:collapse;font-size:0.85rem;"><thead><tr style="background:#e2e8f0;"><th style="padding:6px 10px;text-align:left;">No.</th><th style="padding:6px 10px;text-align:left;">Asunto</th><th style="padding:6px 10px;text-align:left;">Empresa</th><th style="padding:6px 10px;text-align:left;">Prioridad</th></tr></thead><tbody>${rowsTickets}</tbody></table>` : "<p style='color:#64748b;font-size:0.85rem;'>✅ Sin tickets pendientes.</p>"}
     ${abiertos.length > 10 ? `<p style="font-size:0.78rem;color:#94a3b8;margin-top:4px;">...y ${abiertos.length - 10} más en el CRM.</p>` : ""}
 
-    <h2 style="color:#1e293b;font-size:1rem;margin:24px 0 10px;">📌 Tareas que vencen esta semana (${tareasEsta.length})</h2>
-    ${tareasEsta.length ? `<table style="width:100%;border-collapse:collapse;font-size:0.85rem;"><thead><tr style="background:#e2e8f0;"><th style="padding:6px 10px;text-align:left;">Empresa</th><th style="padding:6px 10px;text-align:left;">Tarea</th><th style="padding:6px 10px;text-align:left;">Vence</th><th style="padding:6px 10px;text-align:left;">Asignado a</th></tr></thead><tbody>${rowsTareas}</tbody></table>` : "<p style='color:#64748b;font-size:0.85rem;'>✅ Sin tareas por vencer esta semana.</p>"}
+    <h2 style="color:#1e293b;font-size:1rem;margin:24px 0 10px;">📌 Tareas que vencen en los próximos 7 días (${tareasEsta.length})</h2>
+    ${tareasEsta.length ? `<table style="width:100%;border-collapse:collapse;font-size:0.85rem;"><thead><tr style="background:#e2e8f0;"><th style="padding:6px 10px;text-align:left;">Empresa</th><th style="padding:6px 10px;text-align:left;">Tarea</th><th style="padding:6px 10px;text-align:left;">Vence</th><th style="padding:6px 10px;text-align:left;">Asignado a</th></tr></thead><tbody>${rowsTareas}</tbody></table>` : "<p style='color:#64748b;font-size:0.85rem;'>✅ Sin tareas por vencer en los próximos 7 días.</p>"}
 
     <h2 style="color:#1e293b;font-size:1rem;margin:24px 0 10px;">⚠️ Licencias que vencen en 30 días (${licencias.length})</h2>
     ${licencias.length ? `<table style="width:100%;border-collapse:collapse;font-size:0.85rem;"><thead><tr style="background:#e2e8f0;"><th style="padding:6px 10px;text-align:left;">Empresa</th><th style="padding:6px 10px;text-align:left;">Sistema</th><th style="padding:6px 10px;text-align:left;">Días restantes</th></tr></thead><tbody>${rowsLic}</tbody></table>` : "<p style='color:#64748b;font-size:0.85rem;'>✅ Sin licencias por vencer este mes.</p>"}
 
   </div>
   <div style="background:#f1f5f9;padding:14px 28px;border-radius:0 0 12px 12px;text-align:center;">
-    <p style="font-size:0.75rem;color:#94a3b8;margin:0;">Resumen generado automáticamente — DATTASOFT CRM · ${hoy.toLocaleDateString("es-MX")}</p>
+    <p style="font-size:0.75rem;color:#94a3b8;margin:0;">Resumen generado desde el CRM — DATTASOFT · ${hoy.toLocaleDateString("es-MX")}</p>
   </div>
 </div>`;
 
     try {
       await fetch("/send-email", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to: correos, subject: `📊 Resumen Semanal CRM — ${fmtFecha(lunes)} al ${fmtFecha(domingo)}`, html })
+        body: JSON.stringify({ to: correos, subject: `📊 Resumen del CRM — ${fmtFecha(hoy)} al ${fmtFecha(fin)}`, html })
       });
       configTickets.resumenSemanalUltimoEnvio = hoyStr;
       if (!crmLocalOnly) guardarConfigTickets({ resumenSemanalUltimoEnvio: hoyStr }).catch(() => {});
-      toast("📊 Resumen semanal enviado a " + correos.join(", "));
-    } catch(e) { console.warn("[ResumenSemanal] Error al enviar:", e); }
+      const elUltimo = document.getElementById("cfg-resumen-semanal-ultimo");
+      if (elUltimo) elUltimo.textContent = `Último envío: ${hoyStr}`;
+      toast("📊 Resumen enviado a " + correos.join(", "));
+    } catch(e) {
+      console.warn("[ResumenSemanal] Error al enviar:", e);
+      toast("❌ No se pudo enviar el resumen — revisa la consola", "error");
+    }
   }
+
+  document.getElementById("btn-enviar-resumen-semanal")?.addEventListener("click", async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    btn.disabled = true;
+    const textoOriginal = btn.textContent;
+    btn.textContent = "Enviando...";
+    try {
+      await enviarResumenSemanal();
+    } finally {
+      btn.disabled = false;
+      btn.textContent = textoOriginal;
+    }
+  });
 
   // ============================================================
   // BÚSQUEDA GLOBAL — Ctrl+K
