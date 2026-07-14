@@ -2935,7 +2935,7 @@ try {
               <div class="form-group"><label>Referido por</label><input id="form-tk-referido" placeholder="Nombre o fuente de referencia"></div>
               <div class="form-group"><label>Solicitado por</label><input id="form-tk-solicitado" placeholder="Nombre de quien solicita"></div>
               <div class="form-group"><label>Canalizado a</label><input id="form-tk-canalizado" placeholder="Área o persona destino"></div>
-              <div class="form-group"><label>Realizado por</label><input id="form-tk-realizado" placeholder="Técnico o agente asignado"></div>
+              <div class="form-group"><label>SERVICIO REALIZADO POR</label><input id="form-tk-realizado" placeholder="Técnico o agente asignado"></div>
             </div>
           </div>
           <div class="form-group" style="margin-top:8px;">
@@ -4185,7 +4185,7 @@ try {
           <input id="det-tk-canalizado" placeholder="—" style="width:100%; font-size:0.85rem; padding:5px 8px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-main);">
         </div>
         <div>
-          <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:3px;">✅ Realizado por</div>
+          <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:3px;">✅ SERVICIO REALIZADO POR</div>
           <input id="det-tk-realizado" placeholder="—" style="width:100%; font-size:0.85rem; padding:5px 8px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-main);">
         </div>
       </div>
@@ -6490,7 +6490,7 @@ verificarSesion();
         Folio: t.numero, Asunto: t.asunto, Empresa: t.empresa, Contacto: t.contacto,
         Tipo: t.tipo, Sistema: t.sistema || "", Estado: t.estado, Facturación: t.facturado || "NO FACTURADO", Prioridad: t.prioridad, Grupo: t.grupo,
         Agente: t.agente, Referido: t.referido, Solicitado: t.solicitado,
-        Canalizado: t.canalizado, Realizado: t.realizado,
+        Canalizado: t.canalizado, "SERVICIO REALIZADO POR": t.realizado,
         Descripción: (t.descripcion || "").replace(/<[^>]+>/g, ""),
         Creado: t.fechaCreacion ? new Date(t.fechaCreacion).toLocaleString('es-MX') : "",
         Actualizado: t.fechaActualizacion ? new Date(t.fechaActualizacion).toLocaleString('es-MX') : ""
