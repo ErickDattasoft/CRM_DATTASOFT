@@ -2928,18 +2928,30 @@ try {
             <input id="form-tk-contacto-buscar" placeholder="Escribe el nombre de la empresa, contacto o correo..." autocomplete="off" style="font-size:0.83rem;">
             <div class="autocomplete-list hidden" id="tk-contacto-autocomplete"></div>
           </div>
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:12px; margin-bottom:16px; background:rgba(99,102,241,0.05); border:1px solid rgba(99,102,241,0.15); border-radius:var(--radius-md); padding:12px;">
-            <div class="form-group">
-              <label>Nombre del Contacto <span class="required">*</span></label>
-              <input id="form-tk-contacto" placeholder="Nombre del contacto" style="font-size:0.83rem;">
+          <div style="margin-bottom:16px; background:rgba(99,102,241,0.05); border:1px solid rgba(99,102,241,0.15); border-radius:var(--radius-md); padding:12px;">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:12px;">
+              <div class="form-group">
+                <label>Nombre del Contacto <span class="required">*</span></label>
+                <input id="form-tk-contacto" placeholder="Nombre del contacto" style="font-size:0.83rem;">
+              </div>
+              <div class="form-group">
+                <label style="color:var(--brand-secondary);">✉️ Correo de Contacto</label>
+                <input id="form-tk-correo-contacto" placeholder="correo@empresa.com" style="color:var(--brand-secondary); font-size:0.83rem;">
+              </div>
+              <div class="form-group">
+                <label>Empresa</label>
+                <input id="form-tk-empresa" placeholder="Nombre de la empresa" style="font-size:0.83rem;">
+              </div>
             </div>
-            <div class="form-group">
-              <label style="color:var(--brand-secondary);">✉️ Correo (para notificaciones)</label>
-              <input id="form-tk-correo-contacto" placeholder="correo@empresa.com" style="color:var(--brand-secondary); font-size:0.83rem;">
-            </div>
-            <div class="form-group">
-              <label>Empresa</label>
-              <input id="form-tk-empresa" placeholder="Nombre de la empresa" style="font-size:0.83rem;">
+            <div class="form-group" style="margin-top:12px; margin-bottom:0;">
+              <label>CC / CCO al crear (separar con coma)</label>
+              <select id="form-tk-cc-picker" style="margin-bottom:8px; width:100%; font-size:0.83rem;" disabled>
+                <option value="">Selecciona un contacto primero</option>
+              </select>
+              <div style="display:flex; gap:10px;">
+                <input id="form-tk-cc" placeholder="CC: correo1@mail.com, correo2@mail.com" style="flex:1;">
+                <input id="form-tk-cco" placeholder="CCO: correo@mail.com" style="flex:1;">
+              </div>
             </div>
           </div>
 
@@ -3025,16 +3037,6 @@ try {
               <input type="file" id="tk-attachment-input" multiple accept=".png,.jpg,.jpeg,.pdf,.xml" style="display:none;">
             </div>
             <div class="attachment-list" id="tk-attachment-list"></div>
-          </div>
-          <div class="form-group" style="margin-top:12px;">
-            <label>CC / CCO al crear (separar con coma)</label>
-            <select id="form-tk-cc-picker" style="margin-bottom:8px; width:100%; font-size:0.83rem;" disabled>
-              <option value="">Selecciona un contacto primero</option>
-            </select>
-            <div style="display:flex; gap:10px;">
-              <input id="form-tk-cc" placeholder="CC: correo1@mail.com, correo2@mail.com" style="flex:1;">
-              <input id="form-tk-cco" placeholder="CCO: correo@mail.com" style="flex:1;">
-            </div>
           </div>
           <div class="form-actions" style="align-items:center; gap:16px;">
             <button class="btn btn-primary" id="btnGuardarTicket">💾 Guardar Ticket</button>
