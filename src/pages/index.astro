@@ -362,6 +362,7 @@ try {
     .stat-card.stat-pending::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
     .stat-card.stat-resolved::before { background: linear-gradient(90deg, #10b981, #34d399); }
     .stat-card.stat-closed::before { background: linear-gradient(90deg, #64748b, #94a3b8); }
+    .stat-card.stat-others::before { background: linear-gradient(90deg, #14b8a6, #2dd4bf); }
     .stat-card.stat-companies::before { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
     .stat-card.stat-contacts::before { background: linear-gradient(90deg, #ec4899, #f472b6); }
 
@@ -2301,6 +2302,11 @@ try {
             <div class="stat-icon">🔒</div>
             <span class="stat-value" id="dash-tickets-cerrados">0</span>
             <span class="stat-label">Cerrados</span>
+          </div>
+          <div class="stat-card stat-others" data-nav="tickets" title="Ver tickets en otros estados" style="display:none;">
+            <div class="stat-icon">🏷️</div>
+            <span class="stat-value" id="dash-tickets-otros">0</span>
+            <span class="stat-label">Otros</span>
           </div>
         </div>
 
@@ -5689,9 +5695,9 @@ verificarSesion();
       }
       // Si Firebase devuelve array vacío, conservamos eventos locales (evita borrar si FB aún no confirmó)
     }
-    // Bitácora NO se toca aquí — se carga solo en primeraCargaFB y se actualiza
-    // únicamente desde logBitacora(), para evitar que writes ajenos sobreescriban
-    // entradas recientes aún no confirmadas por el servidor.
+    // Bitácora NO se toca aquí — se fusiona aparte vía fusionarBitacoraFirebase()
+    // (primera carga, actualización remota, y botón "Actualizar" manual), porque usa
+    // una lógica de fusión distinta a la sobreescritura directa que hace el resto de campos.
     if (datos.papelera) papelera = datos.papelera;
     if (datos.acercaDe) acercaDe = datos.acercaDe;
     if (datos.configCorreo) configCorreo = datos.configCorreo;
@@ -5885,6 +5891,10 @@ verificarSesion();
 
           const enConfiguracion = document.querySelector(".nav-item.active")?.dataset.section === "configuracion";
           aplicarDatosFirebase(datos, enConfiguracion);
+          // Bitácora se fusiona aparte (no dentro de aplicarDatosFirebase): arrayUnion ya
+          // garantiza que el servidor nunca pierde entradas, así que es seguro traer la
+          // actividad de otros usuarios/dispositivos sin esperar a un refresh manual.
+          fusionarBitacoraFirebase(datos.bitacora);
 
           if (hayFormularioActivo()) return; // Form abierto: datos listos en memoria, UI se actualiza al cerrar
           if (enConfiguracion) return; // Edición de config en progreso: no sobreescribir UI
@@ -6604,10 +6614,19 @@ verificarSesion();
     el("dash-total-empresas").textContent = clientes.length;
     el("dash-total-contactos").textContent = contactos.length;
     el("dash-total-tickets").textContent = tickets.length;
-    el("dash-tickets-abiertos").textContent = tickets.filter(t => t.estado === "Abierto").length;
-    el("dash-tickets-pendientes").textContent = tickets.filter(t => t.estado === "Pendiente").length;
-    el("dash-tickets-resueltos").textContent = tickets.filter(t => t.estado === "Resuelto").length;
-    el("dash-tickets-cerrados").textContent = tickets.filter(t => t.estado === "Cerrado").length;
+    const nTkAbiertos = tickets.filter(t => t.estado === "Abierto").length;
+    const nTkPendientes = tickets.filter(t => t.estado === "Pendiente").length;
+    const nTkResueltos = tickets.filter(t => t.estado === "Resuelto").length;
+    const nTkCerrados = tickets.filter(t => t.estado === "Cerrado").length;
+    el("dash-tickets-abiertos").textContent = nTkAbiertos;
+    el("dash-tickets-pendientes").textContent = nTkPendientes;
+    el("dash-tickets-resueltos").textContent = nTkResueltos;
+    el("dash-tickets-cerrados").textContent = nTkCerrados;
+    // Estados fuera de los 4 principales (ej. "Garantía", "Pendiente cotización") — evita que Total no cuadre con el desglose
+    const nTkOtros = tickets.length - nTkAbiertos - nTkPendientes - nTkResueltos - nTkCerrados;
+    const cardTkOtros = document.querySelector(".stat-card.stat-others");
+    el("dash-tickets-otros").textContent = nTkOtros;
+    if (cardTkOtros) cardTkOtros.style.display = nTkOtros > 0 ? "flex" : "none";
 
     // Sidebar badges
     el("badge-empresas").textContent = clientes.length;
