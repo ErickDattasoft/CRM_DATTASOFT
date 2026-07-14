@@ -3159,7 +3159,7 @@ try {
           </div>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
             <button id="btn-backup-completo" class="btn btn-primary btn-sm">🛡️ Descargar Backup Completo</button>
-            <span style="font-size:0.72rem; color:var(--text-muted);">Archivo: <code>crm-backup-AAAA-MM-DD.json</code></span>
+            <span style="font-size:0.72rem; color:var(--text-muted);">Archivo: <code>crm-backup-AAAA-MM-DD_HH-MM-SS.json</code></span>
           </div>
           <div id="backup-alerta" style="display:none; margin-top:12px; padding:10px 14px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px; font-size:0.8rem; color:#f59e0b;">
             ⚠️ <span id="backup-alerta-msg"></span> — Se recomienda hacer backup cada semana.
@@ -11566,7 +11566,11 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       }
     };
     const json = JSON.stringify(backup, null, 2);
-    const filename = `crm-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    // Incluye hora además de la fecha — dos backups el mismo día ya no se sobreescriben.
+    const ahora = new Date();
+    const pad2 = (n) => String(n).padStart(2, "0");
+    const timestamp = `${ahora.getFullYear()}-${pad2(ahora.getMonth() + 1)}-${pad2(ahora.getDate())}_${pad2(ahora.getHours())}-${pad2(ahora.getMinutes())}-${pad2(ahora.getSeconds())}`;
+    const filename = `crm-backup-${timestamp}.json`;
 
     if ("showSaveFilePicker" in window) {
       try {
