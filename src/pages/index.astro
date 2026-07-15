@@ -4769,6 +4769,9 @@ try {
         Marca los sistemas que quieres avisar por correo. Los ya avisados para la versión oficial
         actual aparecen desmarcados, pero puedes volver a marcarlos si quieres reinsistir.
       </div>
+      <div id="seleccion-aviso-auto-banner" style="display:none; align-items:center; gap:10px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px; padding:10px 14px; margin-bottom:10px; font-size:0.8rem; color:#fbbf24;">
+        🔔 Estas empresas se detectaron automáticamente por tener sistemas sin avisar — no las seleccionaste tú en la tabla.
+      </div>
       <div id="seleccion-aviso-body" style="max-height:420px; overflow-y:auto;"></div>
       <div class="form-actions" style="margin-top:14px; justify-content:flex-end;">
         <button class="btn btn-ghost btn-sm" id="btnCancelarSeleccionAviso">Cancelar</button>
@@ -8507,6 +8510,8 @@ verificarSesion();
       return { cliente: c, items };
     }).filter(g => g.items.length > 0);
     if (!seleccionAvisoState.length) { toast("✅ No hay sistemas pendientes de notificar.", "success"); return; }
+    const banner = document.getElementById("seleccion-aviso-auto-banner");
+    if (banner) banner.style.display = soloNoAvisados ? "flex" : "none";
     renderSeleccionAvisoModal();
     const m = document.getElementById("modal-seleccion-aviso-versiones");
     if (m) m.style.display = "flex";
