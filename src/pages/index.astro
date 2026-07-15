@@ -8271,7 +8271,7 @@ verificarSesion();
   function abrirWhatsApp(tel: string, nombre: string = "") {
     const num = tel.replace(/\D/g, "");
     if (!num) return;
-    window.open(`https://web.whatsapp.com/send?phone=${num}`, "_blank");
+    window.open(`https://wa.me/${num}`, "_blank");
   }
 
   function sincronizarEmpresaDesdeContactos(empresaNombre: string) {
@@ -8297,11 +8297,11 @@ verificarSesion();
     const idx = parseInt(e.target.closest("button").dataset.idx);
     const c = clientes[idx];
     const ci = getInfoContacto(c);
-    const tel = ci.telefono1 || ci.telefono2;
+    const tel = (ci.telefono1 || ci.telefono2 || "").replace(/\D/g, "");
     if (!tel) return alert("No tiene teléfono.");
     const msg = generarMensaje(c);
     const encoded = msg ? encodeURIComponent(msg) : "";
-    window.open(`https://web.whatsapp.com/send?phone=${tel}${encoded ? `&text=${encoded}` : ""}`, "_blank");
+    window.open(`https://wa.me/${tel}${encoded ? `?text=${encoded}` : ""}`, "_blank");
   }
 
   function getMailProviderConfig() {
@@ -8639,13 +8639,13 @@ verificarSesion();
           toast("❌ Error al enviar a n8n — revisa el webhook", "error");
         }
       } else {
-        if (!configN8n.webhookUrl) toast("⚠️ n8n no está configurado — abriendo WhatsApp Web para enviar manualmente.", "warning");
+        if (!configN8n.webhookUrl) toast("⚠️ n8n no está configurado — abriendo WhatsApp para enviar manualmente.", "warning");
         gruposConTel.forEach((g, i) => {
           setTimeout(() => {
-            const tel = g.cliente.TELEFONO_1 || g.cliente.TELEFONO_2;
+            const tel = (g.cliente.TELEFONO_1 || g.cliente.TELEFONO_2 || "").replace(/\D/g, "");
             const msg = generarMensaje(g.cliente, g.items);
             const encoded = msg ? encodeURIComponent(msg) : "";
-            window.open(`https://web.whatsapp.com/send?phone=${tel}${encoded ? `&text=${encoded}` : ""}`, "_blank");
+            window.open(`https://wa.me/${tel}${encoded ? `?text=${encoded}` : ""}`, "_blank");
           }, i * 500);
         });
         logBitacora(`📢 WhatsApp de versiones abierto para ${gruposConTel.length} empresa(s) — por ${usuario}`, "📢");
