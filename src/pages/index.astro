@@ -4104,16 +4104,19 @@ try {
             <div class="manual-subtitulo">🧾 Facturación</div>
             <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;margin-bottom:8px;">Junto a Estado hay un campo <strong>Facturación</strong> (editable también desde el detalle del ticket): <strong>NO FACTURADO</strong> por defecto, o <strong>FACTURADO</strong>. En cuanto un ticket queda a la vez en estado <strong>Cerrado</strong> y en <strong>FACTURADO</strong> — sin importar cuál de los dos cambies primero, incluso si el ticket ya llevaba tiempo cerrado y solo marcas Facturación después — el CRM manda automáticamente un correo a <strong>Configuración → Correo de soporte</strong> avisando del cierre facturado, y — si está configurado — dispara el evento <code>ticket_cerrado_facturado</code> hacia n8n. Solo se manda una vez esa combinación; no se repite en ediciones posteriores mientras el ticket siga Cerrado y FACTURADO. Las opciones de este campo se administran igual que Tipos/Estados/Prioridades en Configuración → Tickets.</p>
 
-            <div class="manual-subtitulo">⏱️ Tiempo trabajado</div>
-            <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;margin-bottom:8px;">Dentro del detalle de cada ticket hay una caja que mide cuánto tardó desde que se creó hasta que se marcó <strong>Resuelto</strong>. Se calcula sola, no hay que hacer nada.</p>
+            <div class="manual-subtitulo">⏱️ Tiempo del ticket</div>
+            <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;margin-bottom:8px;">Dentro del detalle de cada ticket hay una <strong>línea de tiempo visual</strong> — un punto por cada cambio de estado, con fecha y duración — visible desde el momento en que se crea el ticket, no solo cuando se resuelve.</p>
+            <div class="manual-paso"><div class="manual-paso-num">1</div><div class="manual-paso-txt">Los tramos en <strong>"Abierto"</strong> o <strong>"Pendiente"</strong> se marcan como espera (⏳, no cuentan) — son estados donde el ticket está en pausa (recién creado, esperando cotización, esperando algo de CONTPAQi, etc.), no trabajo activo.</div></div>
+            <div class="manual-paso"><div class="manual-paso-num">2</div><div class="manual-paso-txt">Cualquier otro estado sí cuenta como trabajo (✅) — incluyendo estados nuevos que agregues en Configuración → Tickets → Estados (ej. "Inicio") para marcar claramente cuándo arranca el trabajo real. No hace falta pedir cambios en el sistema para eso, es solo texto de configuración.</div></div>
+            <div class="manual-paso"><div class="manual-paso-num">3</div><div class="manual-paso-txt">Al marcar el ticket como <strong>Resuelto</strong>, abajo de la línea de tiempo aparece el <strong>total facturable</strong> (la suma de todos los tramos que sí cuentan).</div></div>
             <table class="manual-tabla">
-              <tr><th>Color de la caja</th><th>Significado</th></tr>
+              <tr><th>Color del total</th><th>Significado</th></tr>
               <tr><td><span class="manual-badge" style="background:rgba(16,185,129,.15);color:#34d399;">💼 Verde — Consultoría</span></td><td>Solo para tickets de tipo <strong>Consultoría Sitio</strong> o <strong>Consultoría Remoto</strong>. Indica que ese tiempo es facturable por hora.</td></tr>
               <tr><td><span class="manual-badge" style="background:rgba(234,179,8,.12);color:#ca8a04;">ℹ️ Amarillo — Referencia</span></td><td>Cualquier otro tipo de ticket. El tiempo se muestra solo como dato informativo, no se factura por hora.</td></tr>
             </table>
-            <div class="manual-paso"><div class="manual-paso-num">1</div><div class="manual-paso-txt"><strong>✏️ Editar:</strong> si el tiempo automático no refleja el trabajo real (ej. el ticket quedó abierto toda la noche), puedes escribir horas/minutos manualmente. El valor automático no se pierde — se sigue mostrando entre paréntesis como referencia.</div></div>
-            <div class="manual-paso"><div class="manual-paso-num">2</div><div class="manual-paso-txt"><strong>➕ Incluir en descripción:</strong> agrega una línea con el tiempo trabajado directamente en la descripción del ticket (útil si vas a reenviar el ticket o su PDF al cliente). Si editaste el tiempo, se incluyen ambos valores: el total transcurrido y el tiempo facturable.</div></div>
-            <div class="manual-aviso"><span class="manual-tip-icon">⚠️</span><span>El cronómetro no se pausa mientras el ticket está en Pendiente — mide de principio a fin. Para eso existe la edición manual, por si el tiempo real de trabajo fue menor al tiempo total que estuvo abierto el ticket.</span></div>
+            <div class="manual-paso"><div class="manual-paso-num">4</div><div class="manual-paso-txt"><strong>✏️ Editar:</strong> si el tiempo automático no refleja el trabajo real, puedes escribir horas/minutos manualmente. El valor automático no se pierde — se sigue mostrando entre paréntesis como referencia.</div></div>
+            <div class="manual-paso"><div class="manual-paso-num">5</div><div class="manual-paso-txt"><strong>➕ Incluir en descripción:</strong> agrega una línea con el tiempo trabajado directamente en la descripción del ticket (útil si vas a reenviar el ticket o su PDF al cliente). Si editaste el tiempo, se incluyen ambos valores: el total automático y el editado.</div></div>
+            <div class="manual-aviso"><span class="manual-tip-icon">⚠️</span><span>La regla de qué estados "no cuentan" (Abierto y Pendiente) está fija en el sistema por nombre — si algún día renombras esos estados en Configuración, hay que avisar para ajustar la regla.</span></div>
           </div>
 
           <!-- ── CONTACTOS ──────────────────────────────────── -->
@@ -8651,17 +8654,23 @@ verificarSesion();
     if (seAcabaDeCerrar) dispararN8n("ticket_cerrado", datosEventoTicket(t));
   }
 
-  // Calcula el tiempo trabajado total cada vez que un ticket pasa a "Resuelto". NO cuenta el
-  // tiempo que el ticket pasó en "Abierto" (esperando cotización, acceso del cliente, etc.) —
-  // suma solo los tramos de t.historialEstados donde el estado de partida es distinto de
-  // "Abierto". Si el ticket entra y sale de "Abierto" varias veces (se reabre y vuelve a
-  // esperar), esos tramos también se excluyen cada vez. Se recalcula por completo y borra
-  // cualquier edición manual previa (una nueva resolución implica un nuevo cálculo).
+  // Estados que se consideran "de espera" y NO cuentan como tiempo trabajado: "Abierto" (recién
+  // creado, sin atender) y "Pendiente" (en pausa por algo externo — cotización, respuesta de
+  // CONTPAQi, etc., no trabajo activo). Cualquier otro estado sí cuenta — incluyendo uno nuevo
+  // que se agregue en Configuración (ej. "Inicio") para marcar el arranque real del trabajo, sin
+  // necesidad de tocar este código otra vez.
+  const ESTADOS_TIEMPO_ESPERA = ["abierto", "pendiente"];
+
+  // Calcula el tiempo trabajado total cada vez que un ticket pasa a "Resuelto". Suma solo los
+  // tramos de t.historialEstados cuyo estado de partida NO está en ESTADOS_TIEMPO_ESPERA. Si el
+  // ticket entra y sale de espera varias veces (se reabre, vuelve a pausa), esos tramos también
+  // se excluyen cada vez. Se recalcula por completo y borra cualquier edición manual previa (una
+  // nueva resolución implica un nuevo cálculo).
   function calcularTiempoTrabajadoAuto(t) {
     const hist = (t.historialEstados && t.historialEstados.length) ? t.historialEstados : [{ estado: t.estado, fecha: t.fechaCreacion }];
     let totalMs = 0;
     for (let i = 0; i < hist.length - 1; i++) {
-      if ((hist[i].estado || "").toLowerCase() === "abierto") continue;
+      if (ESTADOS_TIEMPO_ESPERA.includes((hist[i].estado || "").toLowerCase())) continue;
       totalMs += new Date(hist[i + 1].fecha).getTime() - new Date(hist[i].fecha).getTime();
     }
     t.tiempoTrabajadoAutoSegundos = Math.max(0, Math.round(totalMs / 1000));
@@ -10347,7 +10356,7 @@ verificarSesion();
     const hist = (t.historialEstados && t.historialEstados.length) ? t.historialEstados : [{ estado: t.estado, fecha: t.fechaCreacion }];
     const filas = hist.map((h, i) => {
       const esUltimo = i === hist.length - 1;
-      const esperaTramo = (h.estado || "").toLowerCase() === "abierto";
+      const esperaTramo = ESTADOS_TIEMPO_ESPERA.includes((h.estado || "").toLowerCase());
       let segmentoHtml = "";
       if (!esUltimo) {
         const durSeg = (new Date(hist[i + 1].fecha).getTime() - new Date(h.fecha).getTime()) / 1000;
@@ -10383,7 +10392,7 @@ verificarSesion();
     let totalHtml;
 
     if (t.tiempoTrabajadoAutoSegundos == null) {
-      totalHtml = `<div style="font-size:0.78rem; color:var(--text-muted); margin-top:10px;">El total facturable se calcula al marcar el ticket como <strong>Resuelto</strong> (no cuenta el tiempo que pase en "Abierto").</div>`;
+      totalHtml = `<div style="font-size:0.78rem; color:var(--text-muted); margin-top:10px;">El total facturable se calcula al marcar el ticket como <strong>Resuelto</strong> (no cuenta el tiempo en "Abierto" ni en "Pendiente").</div>`;
     } else {
       const consultoria = esConsultoria(t.tipo);
       const colorBorder = consultoria ? "rgba(16,185,129,0.35)" : "rgba(234,179,8,0.35)";
