@@ -2485,7 +2485,8 @@ try {
             <div class="comodin-list" style="margin-bottom:10px; font-size:0.8rem;">
               • <strong>[contacto]</strong> → Nombre del contacto<br>
               • <strong>[empresa]</strong> → Razón Social<br>
-              • <strong>[sistemas_pendientes]</strong> → Lista de sistemas desactualizados
+              • <strong>[sistemas_pendientes]</strong> → Lista de sistemas desactualizados (incluye versión y link de carta técnica si está configurado)<br>
+              • <strong>[contacto_soporte]</strong> → Lista de agentes/teléfonos de soporte (Configuración → Correo de Soporte)
             </div>
             <textarea id="txtPlantillaMensaje" rows="10" style="font-size:0.82rem; resize:vertical;"></textarea>
           </div>
@@ -3134,6 +3135,16 @@ try {
               <button id="btn-guardar-correo-soporte" class="btn btn-primary btn-sm" style="white-space:nowrap;">💾 Guardar</button>
             </div>
             <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">Cuando un cliente crea un ticket desde el portal público, la notificación llega a este o estos correos (sepáralos con coma, ej. <code>erick.casas@dattasoft.mx, soporte@dattasoft.mx</code>). El primer correo de la lista también se usa como remitente en confirmaciones al cliente.</span>
+          </div>
+          <div class="form-group" style="max-width:460px; margin-bottom:16px;">
+            <label>📞 Contactos de soporte (para solicitar actualización de sistemas)</label>
+            <div id="cfg-contactos-soporte-list" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
+            <div style="display:flex; gap:8px; align-items:flex-start;">
+              <input id="cfg-nuevo-contacto-nombre" type="text" placeholder="Nombre del agente" style="flex:1;">
+              <input id="cfg-nuevo-contacto-telefono" type="text" placeholder="Teléfono" style="flex:1;">
+              <button id="btn-agregar-contacto-soporte" class="btn btn-secondary btn-sm" style="white-space:nowrap;">➕ Agregar</button>
+            </div>
+            <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">Se muestran en el correo/WhatsApp de aviso de versiones desactualizadas con el comodín <code>[contacto_soporte]</code>, para que el cliente sepa a quién contactar.</span>
           </div>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
             <button id="btn-enviar-resumen-semanal" class="btn btn-secondary btn-sm" style="white-space:nowrap;">📊 Enviar resumen ahora</button>
@@ -5268,7 +5279,7 @@ verificarSesion();
   let primeraCargaFB = true;
   let adjuntosTicketActual = []; // archivos adjuntos en formulario activo
   let filtroAgendaActivo = false; // tab "📅 Agenda": solo tickets con fecha programada, orden asc
-  let plantillaMensaje = "Hola [contacto] de [empresa].\n\nTe saludamos de parte del equipo de DATTASOFT By INFOXPERT. Te escribimos para comentarte que ya se encuentran disponibles las últimas versiones oficiales y estables para tus sistemas CONTPAQi.\n\nRevisando tu perfil, notamos que tienes la oportunidad de actualizar los siguientes módulos:\n\n[sistemas_pendientes]\n\nMantenerlos al día te garantiza la mayor estabilidad, seguridad y el cumplimiento de los cambios fiscales más recientes. Estamos para atenderles con gusto.\n\nSaludos cordiales,\nEquipo DATTASOFT BY INFOXPERT";
+  let plantillaMensaje = "Hola [contacto] de [empresa].\n\nTe saludamos de parte del equipo de DATTASOFT By INFOXPERT. Te escribimos para comentarte que ya se encuentran disponibles las últimas versiones oficiales y estables para tus sistemas CONTPAQi.\n\nRevisando tu perfil, notamos que tienes la oportunidad de actualizar los siguientes módulos:\n\n[sistemas_pendientes]\n\nMantenerlos al día te garantiza la mayor estabilidad, seguridad y el cumplimiento de los cambios fiscales más recientes.\n\nSi deseas agendar la actualización, contáctanos:\n[contacto_soporte]\n\nEstamos para atenderles con gusto.\n\nSaludos cordiales,\nEquipo DATTASOFT BY INFOXPERT";
 
   // Si Firebase está disponible, siempre forzar modo Firebase (ignorar flag local accidental)
   let crmLocalOnly = firebaseEnabled ? false : (localStorage.getItem("crm_local_only") === "true");
@@ -5284,7 +5295,8 @@ verificarSesion();
     facturacion: ["NO FACTURADO", "FACTURADO"],
     correoSoporte: "erick.casas@dattasoft.mx",
     sla: { Urgente: 4, Alta: 8, Media: 24, Baja: 72 },
-    resumenSemanalUltimoEnvio: ""
+    resumenSemanalUltimoEnvio: "",
+    contactosSoporte: [] // [{nombre, telefono}] — se muestran en el aviso de versiones vía [contacto_soporte]
   };
 
   let interacciones = [];
@@ -5593,7 +5605,8 @@ verificarSesion();
       const vC = String(cliente.SISTEMAS?.[sKey] || "").trim();
       const vO = String(versionesMercado[sKey] || "").trim();
       if (vC && vC !== "" && vC.toUpperCase() !== "NO APLICA" && esVersionMenor(vC, vO)) {
-        pendientes.push(`• ${s}: ${vC} → ${vO}`);
+        const link = cartasTecnicas[sKey] ? ` — Carta técnica: ${cartasTecnicas[sKey]}` : "";
+        pendientes.push(`• ${s}: ${vC} → ${vO}${link}`);
       }
     });
     return pendientes;
@@ -5609,7 +5622,7 @@ verificarSesion();
       const vC = String(cliente.SISTEMAS?.[sKey] || "").trim();
       const vO = String(versionesMercado[sKey] || "").trim();
       if (vC && vC !== "" && vC.toUpperCase() !== "NO APLICA" && esVersionMenor(vC, vO)) {
-        pendientes.push({ sistema: s, versionInstalada: vC, versionOficial: vO });
+        pendientes.push({ sistema: s, versionInstalada: vC, versionOficial: vO, cartaTecnica: cartasTecnicas[sKey] || "" });
       }
     });
     return pendientes;
@@ -5617,13 +5630,17 @@ verificarSesion();
 
   function generarMensaje(cliente, sistemasSeleccionados) {
     const pendientes = sistemasSeleccionados
-      ? sistemasSeleccionados.map(s => `• ${s.sistema}: ${s.versionInstalada} → ${s.versionOficial}`)
+      ? sistemasSeleccionados.map(s => `• ${s.sistema}: ${s.versionInstalada} → ${s.versionOficial}${s.cartaTecnica ? ` — Carta técnica: ${s.cartaTecnica}` : ""}`)
       : getSistemasPendientes(cliente);
     if (pendientes.length === 0) return null;
+    const contactoSoporte = (configTickets.contactosSoporte || []).length
+      ? (configTickets.contactosSoporte || []).map(ct => `• ${ct.nombre}: ${ct.telefono}`).join("\n")
+      : "";
     return plantillaMensaje
       .replace(/\[contacto\]/g, cliente.CONTACTO || "Estimado cliente")
       .replace(/\[empresa\]/g, cliente.EMPRESA || "")
-      .replace(/\[sistemas_pendientes\]/g, pendientes.join("\n"));
+      .replace(/\[sistemas_pendientes\]/g, pendientes.join("\n"))
+      .replace(/\[contacto_soporte\]/g, contactoSoporte);
   }
 
   // ============================================================
@@ -10136,6 +10153,7 @@ verificarSesion();
     }
     renderConfigSLA();
     renderConfigCotizaciones();
+    renderConfigContactosSoporte();
 
     // Cargar proveedor de correo guardado
     const providerRadio = document.querySelector(`input[name="cfg-mail-provider"][value="${configCorreo.provider || "brevo"}"]`);
@@ -10324,6 +10342,43 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const ok = await guardarConfigTickets({ correoSoporte: configTickets.correoSoporte });
     if (ok) { toast("💾 Correo de soporte guardado"); sincronizarConfigPublica(); }
     else { guardarLocal("crm_config_tickets", configTickets); toast("⚠️ Sin conexión — guardado solo localmente", "warning"); }
+  });
+
+  function renderConfigContactosSoporte() {
+    const cont = document.getElementById("cfg-contactos-soporte-list");
+    if (!cont) return;
+    const lista = configTickets.contactosSoporte || [];
+    cont.innerHTML = lista.length ? lista.map((ct, idx) => `
+      <div style="display:flex; gap:8px; align-items:center;">
+        <span style="flex:1; font-size:0.82rem; color:var(--text-bright);">${escapeHtml(ct.nombre || "")}</span>
+        <span style="flex:1; font-size:0.82rem; color:var(--text-muted);">${escapeHtml(ct.telefono || "")}</span>
+        <button class="btn btn-danger btn-xs btn-del-contacto-soporte" data-idx="${idx}">🗑️</button>
+      </div>`).join("") : `<div style="font-size:0.78rem; color:var(--text-muted);">Sin contactos agregados.</div>`;
+    cont.querySelectorAll(".btn-del-contacto-soporte").forEach(b => b.addEventListener("click", async function () {
+      const idx = parseInt(this.dataset.idx);
+      configTickets.contactosSoporte.splice(idx, 1);
+      renderConfigContactosSoporte();
+      await guardarContactosSoporte();
+    }));
+  }
+
+  async function guardarContactosSoporte() {
+    if (crmLocalOnly) { guardarLocal("crm_config_tickets", configTickets); return; }
+    const ok = await guardarConfigTickets({ contactosSoporte: configTickets.contactosSoporte });
+    if (!ok) guardarLocal("crm_config_tickets", configTickets);
+  }
+
+  document.getElementById("btn-agregar-contacto-soporte")?.addEventListener("click", async () => {
+    const nombreInp = document.getElementById("cfg-nuevo-contacto-nombre") as HTMLInputElement;
+    const telInp = document.getElementById("cfg-nuevo-contacto-telefono") as HTMLInputElement;
+    const nombre = nombreInp?.value.trim() || "";
+    const telefono = telInp?.value.trim() || "";
+    if (!nombre || !telefono) { toast("⚠️ Escribe nombre y teléfono", "warning"); return; }
+    configTickets.contactosSoporte = [...(configTickets.contactosSoporte || []), { nombre, telefono }];
+    nombreInp.value = ""; telInp.value = "";
+    renderConfigContactosSoporte();
+    await guardarContactosSoporte();
+    toast("💾 Contacto de soporte agregado");
   });
 
   // SLA config load
