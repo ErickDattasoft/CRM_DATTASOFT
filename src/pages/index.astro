@@ -3173,6 +3173,21 @@ try {
           </div>
         </div>
 
+        <div class="card" id="cfg-card-whatsapp">
+          <div class="card-title">📱 WhatsApp</div>
+          <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:14px;">Cómo abrir los enlaces de WhatsApp en esta computadora/navegador — es una preferencia local, cada quien puede dejar la suya distinta.</p>
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <label class="cfg-wsp-modo" data-value="web" style="display:flex; align-items:center; gap:8px; padding:10px 14px; border:1px solid var(--border-color); border-radius:var(--radius-md); cursor:pointer; max-width:260px;">
+              <input type="radio" name="cfg-wsp-modo" value="web" id="cfg-wsp-web" style="width:auto; accent-color:var(--brand-primary);">
+              <span style="font-weight:600; color:var(--text-main); font-size:0.85rem;">🌐 Navegador (WhatsApp Web)</span>
+            </label>
+            <label class="cfg-wsp-modo" data-value="app" style="display:flex; align-items:center; gap:8px; padding:10px 14px; border:1px solid var(--border-color); border-radius:var(--radius-md); cursor:pointer; max-width:260px;">
+              <input type="radio" name="cfg-wsp-modo" value="app" id="cfg-wsp-app" style="width:auto; accent-color:var(--brand-primary);">
+              <span style="font-weight:600; color:var(--text-main); font-size:0.85rem;">📲 App instalada</span>
+            </label>
+          </div>
+        </div>
+
         <div class="card" style="display:none;">
           <div class="card-title">📡 Almacenamiento y Conexión</div>
           <div class="form-group" style="flex-direction: row; align-items: center; gap: 10px;">
@@ -8268,10 +8283,38 @@ verificarSesion();
     if (!crmLocalOnly) await guardarClientes(clientes);
   }
 
+  // Preferencia local (por navegador/computadora, no compartida vía Firestore) de cómo abrir los
+  // enlaces de WhatsApp — cada persona del equipo puede tener instalada la app o no.
+  function getWhatsAppModo() {
+    return localStorage.getItem("crm_whatsapp_modo") || "web";
+  }
+  function abrirWhatsAppLink(numero: string, texto: string = "") {
+    if (!numero) return;
+    const encoded = texto ? `?text=${encodeURIComponent(texto)}` : "";
+    const url = getWhatsAppModo() === "app"
+      ? `https://wa.me/${numero}${encoded}`
+      : `https://web.whatsapp.com/send?phone=${numero}${texto ? `&text=${encodeURIComponent(texto)}` : ""}`;
+    window.open(url, "_blank");
+  }
+  function renderWspModoUI() {
+    const modo = getWhatsAppModo();
+    document.querySelectorAll(".cfg-wsp-modo").forEach((label: any) => {
+      const input = label.querySelector("input");
+      if (input) input.checked = input.value === modo;
+      label.style.borderColor = input?.checked ? "var(--brand-primary)" : "var(--border-color)";
+    });
+  }
+  document.querySelectorAll('input[name="cfg-wsp-modo"]').forEach(inp => {
+    inp.addEventListener("change", function (this: HTMLInputElement) {
+      localStorage.setItem("crm_whatsapp_modo", this.value);
+      renderWspModoUI();
+      toast(`📱 WhatsApp se abrirá con: ${this.value === "app" ? "la app instalada" : "el navegador"}`);
+    });
+  });
+
   function abrirWhatsApp(tel: string, nombre: string = "") {
     const num = tel.replace(/\D/g, "");
-    if (!num) return;
-    window.open(`https://wa.me/${num}`, "_blank");
+    abrirWhatsAppLink(num);
   }
 
   function sincronizarEmpresaDesdeContactos(empresaNombre: string) {
@@ -8300,8 +8343,7 @@ verificarSesion();
     const tel = (ci.telefono1 || ci.telefono2 || "").replace(/\D/g, "");
     if (!tel) return alert("No tiene teléfono.");
     const msg = generarMensaje(c);
-    const encoded = msg ? encodeURIComponent(msg) : "";
-    window.open(`https://wa.me/${tel}${encoded ? `?text=${encoded}` : ""}`, "_blank");
+    abrirWhatsAppLink(tel, msg || "");
   }
 
   function getMailProviderConfig() {
@@ -8644,8 +8686,7 @@ verificarSesion();
           setTimeout(() => {
             const tel = (g.cliente.TELEFONO_1 || g.cliente.TELEFONO_2 || "").replace(/\D/g, "");
             const msg = generarMensaje(g.cliente, g.items);
-            const encoded = msg ? encodeURIComponent(msg) : "";
-            window.open(`https://wa.me/${tel}${encoded ? `?text=${encoded}` : ""}`, "_blank");
+            abrirWhatsAppLink(tel, msg || "");
           }, i * 500);
         });
         logBitacora(`📢 WhatsApp de versiones abierto para ${gruposConTel.length} empresa(s) — por ${usuario}`, "📢");
@@ -10156,6 +10197,7 @@ verificarSesion();
     renderConfigSLA();
     renderConfigCotizaciones();
     renderConfigContactosSoporte();
+    renderWspModoUI();
 
     // Cargar proveedor de correo guardado
     const providerRadio = document.querySelector(`input[name="cfg-mail-provider"][value="${configCorreo.provider || "brevo"}"]`);
