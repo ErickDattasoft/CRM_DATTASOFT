@@ -2496,6 +2496,18 @@ try {
             <textarea id="txtPlantillaMensaje" rows="10" style="font-size:0.82rem; resize:vertical;"></textarea>
             <button class="btn btn-success btn-sm" id="btnGuardarPlantilla" style="margin-top:10px;">💾 Guardar Plantilla</button>
           </div>
+
+          <div class="card">
+            <div class="card-title" style="font-size:0.88rem;">🔒 Plantilla de Notificación de Licencias</div>
+            <div class="comodin-list" style="margin-bottom:10px; font-size:0.8rem;">
+              • <strong>[contacto]</strong> → Nombre del contacto<br>
+              • <strong>[empresa]</strong> → Razón Social<br>
+              • <strong>[licencias_pendientes]</strong> → Lista de licencias vencidas o por vencer (≤30 días)<br>
+              • <strong>[contacto_soporte]</strong> → Lista de agentes/teléfonos de soporte (Configuración → Correo de Soporte)
+            </div>
+            <textarea id="txtPlantillaLicencias" rows="10" style="font-size:0.82rem; resize:vertical;"></textarea>
+            <button class="btn btn-success btn-sm" id="btnGuardarPlantillaLicencias" style="margin-top:10px;">💾 Guardar Plantilla</button>
+          </div>
         </div>
 
         <div class="card" style="margin-top:16px;">
@@ -2512,7 +2524,7 @@ try {
           <div class="table-wrap" style="max-height:400px;">
             <table>
               <thead>
-                <tr><th>Empresa</th><th>Sistema</th><th>Versión avisada</th><th>Canal</th><th>Fecha/hora</th><th>Enviado por</th></tr>
+                <tr><th>Empresa</th><th>Sistema</th><th>Tipo</th><th>Detalle</th><th>Canal</th><th>Fecha/hora</th><th>Enviado por</th></tr>
               </thead>
               <tbody id="tabla-historial-avisos-body"><tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:16px;">Sin avisos registrados aún.</td></tr></tbody>
             </table>
@@ -2545,6 +2557,9 @@ try {
                 <button class="btn btn-whatsapp btn-sm" id="btnWspMasivo">📢 WhatsApp (<span class="lblCountSel">0</span>)</button>
                 <button class="btn btn-email btn-sm" id="btnMailMasivo">✉️ Email (<span class="lblCountSel">0</span>)</button>
                 <button class="btn btn-ghost btn-sm" id="btnPendientesAviso" title="Empresas con sistemas desactualizados que aún no se les ha avisado">🔔 Pendientes de aviso (<span id="lblCountPendientesAviso">0</span>)</button>
+                <button class="btn btn-whatsapp btn-sm" id="btnWspLicencias" title="Avisar por WhatsApp licencias vencidas o por vencer">📢🔒 WhatsApp Licencias (<span class="lblCountSel">0</span>)</button>
+                <button class="btn btn-email btn-sm" id="btnMailLicencias" title="Avisar por correo licencias vencidas o por vencer">✉️🔒 Email Licencias (<span class="lblCountSel">0</span>)</button>
+                <button class="btn btn-ghost btn-sm" id="btnLicenciasPendientes" title="Empresas con licencias vencidas o por vencer que aún no se les ha avisado">⏰ Licencias por vencer (<span id="lblCountLicenciasPendientes">0</span>)</button>
                 <button class="btn btn-primary btn-sm" id="btnNuevoEmpresa">➕ Registrar Empresa</button>
               </div>
             </div>
@@ -4814,10 +4829,34 @@ try {
   </div>
 </div>
 
+<!-- ===== MODAL: Selección de licencias a notificar (flujo separado del de versiones) ===== -->
+<div id="modal-seleccion-aviso-licencias" class="modal-center" style="display:none;">
+  <div class="modal-box" style="width:640px; max-width:96%;">
+    <div class="modal-header">
+      <h2>🔒 Seleccionar licencias a notificar</h2>
+      <button class="modal-close" id="btnCerrarSeleccionLicencia">×</button>
+    </div>
+    <div style="padding:14px 18px;">
+      <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:10px;">
+        Marca las licencias vencidas o por vencer que quieres avisar. Las ya avisadas para esa misma
+        fecha de vencimiento aparecen desmarcadas, pero puedes volver a marcarlas si quieres reinsistir.
+      </div>
+      <div id="seleccion-licencia-auto-banner" style="display:none; align-items:center; gap:10px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px; padding:10px 14px; margin-bottom:10px; font-size:0.8rem; color:#fbbf24;">
+        🔔 Estas empresas se detectaron automáticamente por tener licencias sin avisar — no las seleccionaste tú en la tabla.
+      </div>
+      <div id="seleccion-licencia-body" style="max-height:420px; overflow-y:auto;"></div>
+      <div class="form-actions" style="margin-top:14px; justify-content:flex-end;">
+        <button class="btn btn-ghost btn-sm" id="btnCancelarSeleccionLicencia">Cancelar</button>
+        <button class="btn btn-primary btn-sm" id="btnConfirmarSeleccionLicencia">✉️ Enviar (<span id="lblCountSeleccionLicencia">0</span>)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones } from "../data/firebase.js";
+import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias } from "../data/firebase.js";
 
 // ── Modal confirmación (reemplaza confirm() — funciona en móvil) ──
 function confirmar(msg: string, icon = "⚠️"): Promise<boolean> {
@@ -5294,6 +5333,8 @@ verificarSesion();
   let avisosVersionesInited = false;
   let seleccionAvisoState = []; // grupos {cliente, items:[{sistema, versionInstalada, versionOficial, marcado, fechaPrevia}]} del modal de selección de aviso abierto
   let seleccionAvisoCanal = "email"; // "email" (Brevo) | "whatsapp" (n8n o WhatsApp Web) — decide qué hace el botón "Enviar" del modal
+  let seleccionLicenciaState = []; // igual que seleccionAvisoState, pero para licencias — flujo totalmente separado del de versiones
+  let seleccionLicenciaCanal = "email";
   let acercaDe = { version: "v3.1.0", fecha: "Julio 2026", notas: "" };
   let configCorreo = { provider: "brevo", apiKey: "" };
   let configN8n = { webhookUrl: "", destinatarios: [], reglas: [] };
@@ -5302,6 +5343,7 @@ verificarSesion();
   let adjuntosTicketActual = []; // archivos adjuntos en formulario activo
   let filtroAgendaActivo = false; // tab "📅 Agenda": solo tickets con fecha programada, orden asc
   let plantillaMensaje = "Hola [contacto] de [empresa].\n\nTe saludamos de parte del equipo de DATTASOFT By INFOXPERT. Te escribimos para comentarte que ya se encuentran disponibles las últimas versiones oficiales y estables para tus sistemas CONTPAQi.\n\nRevisando tu perfil, notamos que tienes la oportunidad de actualizar los siguientes módulos:\n\n[sistemas_pendientes]\n\nMantenerlos al día te garantiza la mayor estabilidad, seguridad y el cumplimiento de los cambios fiscales más recientes.\n\nSi deseas agendar la actualización, contáctanos:\n[contacto_soporte]\n\nEstamos para atenderles con gusto.\n\nSaludos cordiales,\nEquipo DATTASOFT BY INFOXPERT";
+  let plantillaLicencias = "Hola [contacto] de [empresa].\n\nTe saludamos de parte del equipo de DATTASOFT By INFOXPERT. Te escribimos para recordarte el estado de las licencias de tus sistemas CONTPAQi:\n\n[licencias_pendientes]\n\nSi ya venció o está por vencer, contáctanos para renovarla y evitar interrupciones en el servicio:\n[contacto_soporte]\n\nEstamos para atenderles con gusto.\n\nSaludos cordiales,\nEquipo DATTASOFT BY INFOXPERT";
 
   // Si Firebase está disponible, siempre forzar modo Firebase (ignorar flag local accidental)
   let crmLocalOnly = firebaseEnabled ? false : (localStorage.getItem("crm_local_only") === "true");
@@ -5515,6 +5557,7 @@ verificarSesion();
     versionesMercado = safeParseLocal("crm_versiones", {});
     cartasTecnicas = safeParseLocal("crm_cartas", {});
     plantillaMensaje = localStorage.getItem("crm_plantilla") || plantillaMensaje;
+    plantillaLicencias = localStorage.getItem("crm_plantilla_licencias") || plantillaLicencias;
     tickets = safeParseLocal("crm_tickets", []);
     contactos = safeParseLocal("crm_contactos", unificarContactosIniciales());
     cotizaciones = safeParseLocal("crm_cotizaciones", []);
@@ -5574,6 +5617,7 @@ verificarSesion();
     }
 
     document.getElementById("txtPlantillaMensaje").value = plantillaMensaje;
+    document.getElementById("txtPlantillaLicencias").value = plantillaLicencias;
     initMarketForms();
     renderDashboard();
     renderEmpresas();
@@ -5648,6 +5692,35 @@ verificarSesion();
       }
     });
     return pendientes;
+  }
+
+  // Licencias vencidas o por vencer en ≤30 días — mismo criterio que ya usan el badge de
+  // licencias de la tabla de Empresas y el reporte administrativo interno.
+  function getLicenciasPendientesDetalle(cliente) {
+    const pendientes = [];
+    if (!cliente.VENCIMIENTOS) return pendientes;
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    Object.entries(cliente.VENCIMIENTOS).forEach(([sistema, fecha]: [string, any]) => {
+      if (!fecha) return;
+      const dias = Math.ceil((new Date(fecha + "T00:00:00").getTime() - hoy.getTime()) / 86400000);
+      if (dias <= 30) pendientes.push({ sistema, fechaVencimiento: fecha, dias, vencida: dias < 0 });
+    });
+    return pendientes;
+  }
+
+  function generarMensajeLicencias(cliente, licenciasSeleccionadas) {
+    const licencias = licenciasSeleccionadas || getLicenciasPendientesDetalle(cliente);
+    if (!licencias.length) return null;
+    const fechaFmt = (f: string) => new Date(f + "T00:00:00").toLocaleDateString("es-MX");
+    const lineas = licencias.map(l => `• ${l.sistema}: ${l.vencida ? `vencida hace ${Math.abs(l.dias)} día(s)` : `vence en ${l.dias} día(s)`} (${fechaFmt(l.fechaVencimiento)})`);
+    const contactoSoporte = (configTickets.contactosSoporte || []).length
+      ? (configTickets.contactosSoporte || []).map(ct => `• ${ct.nombre}: ${ct.telefono}`).join("\n")
+      : "";
+    return plantillaLicencias
+      .replace(/\[contacto\]/g, cliente.CONTACTO || "Estimado cliente")
+      .replace(/\[empresa\]/g, cliente.EMPRESA || "")
+      .replace(/\[licencias_pendientes\]/g, lineas.join("\n"))
+      .replace(/\[contacto_soporte\]/g, contactoSoporte);
   }
 
   function generarMensaje(cliente, sistemasSeleccionados) {
@@ -5934,6 +6007,7 @@ verificarSesion();
     if (datos.versionesMercado !== undefined && Object.values(datos.versionesMercado).some((v: any) => v)) versionesMercado = datos.versionesMercado;
     if (datos.cartasTecnicas !== undefined && Object.values(datos.cartasTecnicas).some((v: any) => v)) cartasTecnicas = datos.cartasTecnicas;
     if (datos.plantillaMensaje !== undefined) plantillaMensaje = datos.plantillaMensaje;
+    if (datos.plantillaLicencias !== undefined) plantillaLicencias = datos.plantillaLicencias;
     if (datos.tickets !== undefined && (datos.tickets.length > 0 || tickets.length === 0)) tickets = datos.tickets || [];
     if (datos.contactos !== undefined && (datos.contactos.length > 0 || contactos.length === 0)) contactos = datos.contactos || [];
     if (datos.cotizaciones !== undefined && (datos.cotizaciones.length > 0 || cotizaciones.length === 0)) cotizaciones = datos.cotizaciones || [];
@@ -6123,6 +6197,7 @@ verificarSesion();
               versionesMercado = safeParseLocal("crm_versiones", {});
               cartasTecnicas = safeParseLocal("crm_cartas", {});
               plantillaMensaje = localStorage.getItem("crm_plantilla") || plantillaMensaje;
+              plantillaLicencias = localStorage.getItem("crm_plantilla_licencias") || plantillaLicencias;
               await guardarClientes(clientes);
               await guardarContactos(contactos);
               await guardarTickets(tickets);
@@ -6141,6 +6216,7 @@ verificarSesion();
             if (cartasTecnicas[k] === undefined) cartasTecnicas[k] = "";
           });
           document.getElementById("txtPlantillaMensaje").value = plantillaMensaje;
+          document.getElementById("txtPlantillaLicencias").value = plantillaLicencias;
           initMarketForms();
           renderDashboard();
           renderEmpresas();
@@ -7063,6 +7139,21 @@ verificarSesion();
   document.getElementById("txtPlantillaMensaje")?.addEventListener("change", guardarPlantillaUI);
   document.getElementById("btnGuardarPlantilla")?.addEventListener("click", guardarPlantillaUI);
 
+  async function guardarPlantillaLicenciasUI() {
+    plantillaLicencias = (document.getElementById("txtPlantillaLicencias") as HTMLTextAreaElement)?.value || "";
+    if (crmLocalOnly) {
+      localStorage.setItem("crm_plantilla_licencias", plantillaLicencias);
+      toast("💾 Plantilla de licencias guardada (Local)");
+      return;
+    }
+    mostrarEstado("💾 Guardando plantilla de licencias...");
+    const ok = await guardarPlantillaLicencias(plantillaLicencias);
+    if (ok) { toast("💾 Plantilla de licencias guardada"); ocultarEstado(); }
+    else { localStorage.setItem("crm_plantilla_licencias", plantillaLicencias); mostrarEstado("⚠️ Guardado localmente", 3000); }
+  }
+  document.getElementById("txtPlantillaLicencias")?.addEventListener("change", guardarPlantillaLicenciasUI);
+  document.getElementById("btnGuardarPlantillaLicencias")?.addEventListener("click", guardarPlantillaLicenciasUI);
+
   // ============================================================
   // DASHBOARD
   // ============================================================
@@ -7854,6 +7945,7 @@ verificarSesion();
             <button class="btn btn-ghost btn-xs btn-toggle-versiones" data-idx="${idx}" title="Versiones" style="${verBtnStyle} font-size:0.65rem;font-weight:700;padding:2px 3px;grid-column:span 2;">${verIcon} Ver</button>
             <button class="btn btn-ghost btn-xs btn-historial-emp" data-idx="${idx}" title="Ver historial de interacciones" style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;padding:2px 3px;font-size:0.65rem;display:flex;align-items:center;gap:2px;position:relative;">📋<span style="font-size:0.6rem;line-height:1;">Hist.</span>${interacciones.filter((i:any)=>i.empresa===c.EMPRESA).length > 0 ? `<span style="position:absolute;top:-5px;right:-5px;background:#6366f1;color:white;border-radius:10px;font-size:0.58rem;padding:0 4px;font-weight:800;min-width:14px;text-align:center;">${interacciones.filter((i:any)=>i.empresa===c.EMPRESA).length}</span>` : ""}</button>
             <button class="btn btn-ghost btn-xs btn-tareas-emp" data-idx="${idx}" title="Ver tareas pendientes" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:#34d399;padding:2px 3px;font-size:0.65rem;display:flex;align-items:center;gap:2px;position:relative;">📌<span style="font-size:0.6rem;line-height:1;">Tar.</span>${tareas.filter((t:any)=>t.empresa===c.EMPRESA&&!t.completada).length > 0 ? `<span style="position:absolute;top:-5px;right:-5px;background:#10b981;color:white;border-radius:10px;font-size:0.58rem;padding:0 4px;font-weight:800;min-width:14px;text-align:center;">${tareas.filter((t:any)=>t.empresa===c.EMPRESA&&!t.completada).length}</span>` : ""}</button>
+            <button class="btn btn-ghost btn-xs btn-mail-licencia-emp" data-idx="${idx}" title="Avisar licencia por correo" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:3px 5px;grid-column:span 4;">🔒 Licencia</button>
           </div>
         </td>
       `;
@@ -8547,8 +8639,29 @@ verificarSesion();
     if (dashLbl) dashLbl.textContent = String(n);
   }
 
+  // Igual que avisoYaRegistrado, pero para licencias: si la fecha de vencimiento cambió desde el
+  // último aviso (se renovó y luego volvió a vencer, o se corrigió), se vuelve a considerar pendiente.
+  function licenciaYaRegistrada(empresa, sistema, fechaVencimiento) {
+    const match = avisosVersionesLog.find(a => a.tipo === "licencia" && a.empresa === empresa && a.sistema === sistema && a.fechaVencimiento === fechaVencimiento);
+    if (!match) return null;
+    const seg = segundosFecha(match.fecha);
+    return seg ? new Date(seg * 1000).toLocaleDateString("es-MX") : "una fecha anterior";
+  }
+
+  function calcularLicenciasPendientesDeAviso() {
+    return clientes
+      .map(c => ({ cliente: c, items: getLicenciasPendientesDetalle(c).filter(it => !licenciaYaRegistrada(c.EMPRESA, it.sistema, it.fechaVencimiento)) }))
+      .filter(g => g.items.length > 0);
+  }
+
+  function actualizarBadgeLicenciasPendientes() {
+    const n = calcularLicenciasPendientesDeAviso().length;
+    const lbl = document.getElementById("lblCountLicenciasPendientes");
+    if (lbl) lbl.textContent = String(n);
+  }
+
   async function initAvisosVersiones() {
-    if (avisosVersionesInited) { renderHistorialAvisos(); actualizarBadgePendientesAviso(); return; }
+    if (avisosVersionesInited) { renderHistorialAvisos(); actualizarBadgePendientesAviso(); actualizarBadgeLicenciasPendientes(); return; }
     avisosVersionesInited = true;
     if (firebaseEnabled) {
       const docs = await cargarAvisosVersiones();
@@ -8557,6 +8670,7 @@ verificarSesion();
     }
     renderHistorialAvisos();
     actualizarBadgePendientesAviso();
+    actualizarBadgeLicenciasPendientes();
   }
 
   function renderHistorialAvisos() {
@@ -8571,18 +8685,25 @@ verificarSesion();
     if (hasta) filas = filas.filter(a => segundosFecha(a.fecha) <= new Date(hasta + "T23:59:59").getTime() / 1000);
     filas.sort((a, b) => segundosFecha(b.fecha) - segundosFecha(a.fecha));
     if (!filas.length) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:16px;">Sin avisos registrados aún.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:16px;">Sin avisos registrados aún.</td></tr>`;
       return;
     }
-    tbody.innerHTML = filas.map(a => `
+    tbody.innerHTML = filas.map(a => {
+      const esLicencia = a.tipo === "licencia";
+      const detalle = esLicencia
+        ? `Vence: ${a.fechaVencimiento ? new Date(a.fechaVencimiento + "T00:00:00").toLocaleDateString("es-MX") : "—"}`
+        : `${escapeHtml(a.versionInstalada || "")} → ${escapeHtml(a.versionOficial || "")}`;
+      return `
       <tr>
         <td>${escapeHtml(a.empresa || "")}</td>
         <td>${escapeHtml(a.sistema || "")}</td>
-        <td>${escapeHtml(a.versionInstalada || "")} → ${escapeHtml(a.versionOficial || "")}</td>
+        <td title="${esLicencia ? "Licencia" : "Sistema"}">${esLicencia ? "🔒" : "🖥️"}</td>
+        <td>${detalle}</td>
         <td title="${a.canal === "whatsapp" ? "WhatsApp" : "Correo"}">${a.canal === "whatsapp" ? "📢" : "✉️"}</td>
         <td>${segundosFecha(a.fecha) ? new Date(segundosFecha(a.fecha) * 1000).toLocaleString("es-MX") : ""}</td>
         <td>${escapeHtml(a.enviadoPor || "")}</td>
-      </tr>`).join("");
+      </tr>`;
+    }).join("");
   }
 
   document.getElementById("btnActualizarHistorialAvisos")?.addEventListener("click", async () => {
@@ -8675,7 +8796,7 @@ verificarSesion();
         for (const g of gruposConTel) {
           const correoG = getInfoContacto(g.cliente).correo || "";
           for (const it of g.items) {
-            const registro = { empresa: g.cliente.EMPRESA, sistema: it.sistema, versionInstalada: it.versionInstalada, versionOficial: it.versionOficial, correo: correoG, enviadoPor: usuario, canal: "whatsapp" };
+            const registro = { empresa: g.cliente.EMPRESA, sistema: it.sistema, versionInstalada: it.versionInstalada, versionOficial: it.versionOficial, correo: correoG, enviadoPor: usuario, canal: "whatsapp", tipo: "sistema" };
             registrarAvisoVersion(registro).catch(() => {});
             avisosVersionesLog.unshift({ ...registro, fecha: fechaLocal });
           }
@@ -8738,7 +8859,7 @@ verificarSesion();
         enviados++;
         const fechaLocal = { seconds: Math.floor(Date.now() / 1000) };
         for (const it of g.items) {
-          const registro = { empresa: c.EMPRESA, sistema: it.sistema, versionInstalada: it.versionInstalada, versionOficial: it.versionOficial, correo: ci.correo, enviadoPor: usuario, canal: "email" };
+          const registro = { empresa: c.EMPRESA, sistema: it.sistema, versionInstalada: it.versionInstalada, versionOficial: it.versionOficial, correo: ci.correo, enviadoPor: usuario, canal: "email", tipo: "sistema" };
           registrarAvisoVersion(registro).catch(() => {});
           avisosVersionesLog.unshift({ ...registro, fecha: fechaLocal });
         }
@@ -8761,6 +8882,176 @@ verificarSesion();
     const grupos = calcularPendientesDeAviso();
     if (!grupos.length) { toast("✅ No hay avisos pendientes — todo al día.", "success"); return; }
     abrirModalSeleccionAviso(grupos.map(g => g.cliente), true);
+  });
+
+  // ============================================================
+  // AVISOS DE LICENCIAS — flujo separado del de versiones (misma mecánica, plantilla y
+  // colección/historial distintos por tipo)
+  // ============================================================
+  function abrirModalSeleccionLicencia(listaClientes, soloNoAvisadas = false, canal = "email") {
+    seleccionLicenciaState = listaClientes.map(c => {
+      let items = getLicenciasPendientesDetalle(c).map(it => {
+        const fechaPrevia = licenciaYaRegistrada(c.EMPRESA, it.sistema, it.fechaVencimiento);
+        return { ...it, marcado: !fechaPrevia, fechaPrevia };
+      });
+      if (soloNoAvisadas) items = items.filter(it => !it.fechaPrevia);
+      return { cliente: c, items };
+    }).filter(g => g.items.length > 0);
+    if (!seleccionLicenciaState.length) { toast("✅ No hay licencias pendientes de notificar.", "success"); return; }
+    seleccionLicenciaCanal = canal;
+    const banner = document.getElementById("seleccion-licencia-auto-banner");
+    if (banner) banner.style.display = soloNoAvisadas ? "flex" : "none";
+    renderSeleccionLicenciaModal();
+    const m = document.getElementById("modal-seleccion-aviso-licencias");
+    if (m) m.style.display = "flex";
+  }
+
+  function renderSeleccionLicenciaModal() {
+    const cont = document.getElementById("seleccion-licencia-body");
+    if (!cont) return;
+    const fechaFmt = (f: string) => new Date(f + "T00:00:00").toLocaleDateString("es-MX");
+    cont.innerHTML = seleccionLicenciaState.map((g, gi) => `
+      <div style="margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--border-subtle);">
+        <div style="font-weight:700; font-size:0.85rem; margin-bottom:6px;">${escapeHtml(g.cliente.EMPRESA)}</div>
+        ${g.items.map((it, ii) => `
+          <label style="display:grid; grid-template-columns:18px 1fr; align-items:start; gap:8px; font-size:0.8rem; padding:4px 0; cursor:pointer; width:100%; text-align:left;">
+            <input type="checkbox" class="chk-seleccion-licencia" data-gi="${gi}" data-ii="${ii}" ${it.marcado ? "checked" : ""} style="margin-top:2px;">
+            <span>${escapeHtml(it.sistema)}: ${it.vencida ? `vencida hace ${Math.abs(it.dias)} día(s)` : `vence en ${it.dias} día(s)`} (${fechaFmt(it.fechaVencimiento)})${it.fechaPrevia ? `<br><span style="color:var(--text-muted); font-size:0.72rem;">— ya avisado el ${it.fechaPrevia}</span>` : ""}</span>
+          </label>`).join("")}
+      </div>`).join("");
+    cont.querySelectorAll(".chk-seleccion-licencia").forEach(chk => {
+      chk.addEventListener("change", function () {
+        const gi = parseInt(this.dataset.gi), ii = parseInt(this.dataset.ii);
+        seleccionLicenciaState[gi].items[ii].marcado = this.checked;
+        actualizarContadorSeleccionLicencia();
+      });
+    });
+    actualizarContadorSeleccionLicencia();
+  }
+
+  function actualizarContadorSeleccionLicencia() {
+    const n = seleccionLicenciaState.reduce((acc, g) => acc + g.items.filter(it => it.marcado).length, 0);
+    const btnConfirmar = document.getElementById("btnConfirmarSeleccionLicencia");
+    if (btnConfirmar) {
+      btnConfirmar.innerHTML = seleccionLicenciaCanal === "whatsapp"
+        ? `📢 Enviar por WhatsApp (<span id="lblCountSeleccionLicencia">${n}</span>)`
+        : `✉️ Enviar (<span id="lblCountSeleccionLicencia">${n}</span>)`;
+    }
+  }
+
+  function cerrarModalSeleccionLicencia() {
+    const m = document.getElementById("modal-seleccion-aviso-licencias");
+    if (m) m.style.display = "none";
+  }
+  document.getElementById("btnCerrarSeleccionLicencia")?.addEventListener("click", cerrarModalSeleccionLicencia);
+  document.getElementById("btnCancelarSeleccionLicencia")?.addEventListener("click", cerrarModalSeleccionLicencia);
+
+  document.getElementById("btnConfirmarSeleccionLicencia")?.addEventListener("click", async () => {
+    const grupos = seleccionLicenciaState.map(g => ({ cliente: g.cliente, items: g.items.filter(it => it.marcado) })).filter(g => g.items.length > 0);
+    if (!grupos.length) { toast("⚠️ Selecciona al menos una licencia.", "warning"); return; }
+    const usuario = getUsuarioActual()?.nombre || "Sistema";
+
+    if (seleccionLicenciaCanal === "whatsapp") {
+      const sinTelefono = [];
+      const gruposConTel = grupos.filter(g => {
+        const tel = g.cliente.TELEFONO_1 || g.cliente.TELEFONO_2;
+        if (!tel) { sinTelefono.push(g.cliente.EMPRESA); return false; }
+        return true;
+      });
+      if (sinTelefono.length) toast(`⚠️ ${sinTelefono.length} empresa(s) sin teléfono, se omitieron: ${sinTelefono.join(", ")}`, "warning");
+      if (!gruposConTel.length) { cerrarModalSeleccionLicencia(); return; }
+
+      const fechaLocal = { seconds: Math.floor(Date.now() / 1000) };
+      const registrarEnvios = () => {
+        for (const g of gruposConTel) {
+          const correoG = getInfoContacto(g.cliente).correo || "";
+          for (const it of g.items) {
+            const registro = { empresa: g.cliente.EMPRESA, sistema: it.sistema, fechaVencimiento: it.fechaVencimiento, correo: correoG, enviadoPor: usuario, canal: "whatsapp", tipo: "licencia" };
+            registrarAvisoVersion(registro).catch(() => {});
+            avisosVersionesLog.unshift({ ...registro, fecha: fechaLocal });
+          }
+        }
+        localStorage.setItem("crm_avisos_versiones", JSON.stringify(avisosVersionesLog));
+        renderHistorialAvisos();
+        actualizarBadgeLicenciasPendientes();
+      };
+
+      const reglaLicencias = (configN8n.reglas || []).find(r => r.id === "licencia_whatsapp_clientes");
+      const n8nListo = !!(configN8n.webhookUrl && reglaLicencias?.activo);
+      if (n8nListo) {
+        const empresas = gruposConTel.map(g => ({
+          nombre: g.cliente.EMPRESA || "", contacto: g.cliente.CONTACTO || "",
+          telefono: g.cliente.TELEFONO_1 || g.cliente.TELEFONO_2, correo: g.cliente.CORREO || "",
+          licenciasPendientes: g.items.map(it => `• ${it.sistema}: ${it.vencida ? `vencida hace ${Math.abs(it.dias)} día(s)` : `vence en ${it.dias} día(s)`}`).join("\n"),
+        }));
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
+          await fetch(configN8n.webhookUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ evento: "licencia_whatsapp_clientes", plantillaLicencias, empresas, totalEmpresas: empresas.length, enviadoPor: usuario, fecha: new Date().toISOString() }),
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+          toast(`📢 WhatsApp enviado a ${empresas.length} empresa(s) vía n8n`);
+          logBitacora(`📢 WhatsApp de licencias enviado a ${empresas.length} empresa(s) vía n8n — por ${usuario}`, "📢");
+          registrarEnvios();
+        } catch (err) {
+          toast("❌ Error al enviar a n8n — revisa el webhook", "error");
+        }
+      } else {
+        if (!configN8n.webhookUrl) toast("⚠️ n8n no está configurado — abriendo WhatsApp para enviar manualmente.", "warning");
+        gruposConTel.forEach((g, i) => {
+          setTimeout(() => {
+            const tel = (g.cliente.TELEFONO_1 || g.cliente.TELEFONO_2 || "").replace(/\D/g, "");
+            const msg = generarMensajeLicencias(g.cliente, g.items);
+            abrirWhatsAppLink(tel, msg || "");
+          }, i * 500);
+        });
+        logBitacora(`📢 WhatsApp de licencias abierto para ${gruposConTel.length} empresa(s) — por ${usuario}`, "📢");
+        registrarEnvios();
+      }
+      cerrarModalSeleccionLicencia();
+      return;
+    }
+
+    let enviados = 0;
+    const sinCorreo = [];
+    for (const g of grupos) {
+      const c = g.cliente;
+      const ci = getInfoContacto(c);
+      if (!ci.correo) { sinCorreo.push(c.EMPRESA); continue; }
+      const subject = `Licencias por vencer — ${c.EMPRESA}`;
+      const msg = generarMensajeLicencias(c, g.items);
+      const sent = await enviarEmailConProveedor({ to: ci.correo, subject, text: msg || "" });
+      if (sent?.ok) {
+        enviados++;
+        const fechaLocal = { seconds: Math.floor(Date.now() / 1000) };
+        for (const it of g.items) {
+          const registro = { empresa: c.EMPRESA, sistema: it.sistema, fechaVencimiento: it.fechaVencimiento, correo: ci.correo, enviadoPor: usuario, canal: "email", tipo: "licencia" };
+          registrarAvisoVersion(registro).catch(() => {});
+          avisosVersionesLog.unshift({ ...registro, fecha: fechaLocal });
+        }
+      } else if (grupos.length === 1) {
+        window.open(`mailto:${ci.correo}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(msg || "")}`, "_blank");
+      }
+    }
+    localStorage.setItem("crm_avisos_versiones", JSON.stringify(avisosVersionesLog));
+    if (sinCorreo.length) toast(`⚠️ ${sinCorreo.length} empresa(s) sin correo, se omitieron: ${sinCorreo.join(", ")}`, "warning");
+    if (enviados) {
+      logBitacora(`✉️ Aviso de licencias enviado a ${enviados} empresa(s)`, "📧");
+      toast(`✅ Aviso enviado a ${enviados} empresa(s)`);
+    }
+    cerrarModalSeleccionLicencia();
+    renderHistorialAvisos();
+    actualizarBadgeLicenciasPendientes();
+  });
+
+  document.getElementById("btnLicenciasPendientes")?.addEventListener("click", () => {
+    const grupos = calcularLicenciasPendientesDeAviso();
+    if (!grupos.length) { toast("✅ No hay licencias pendientes de aviso — todo al día.", "success"); return; }
+    abrirModalSeleccionLicencia(grupos.map(g => g.cliente), true);
   });
 
   document.getElementById("btnIrContactosEmp")?.addEventListener("click", () => {
@@ -8892,6 +9183,37 @@ verificarSesion();
     if (sinPendientes.length) toast(`ℹ️ ${sinPendientes.length} empresa(s) sin sistemas pendientes, se omitieron: ${sinPendientes.join(", ")}`, "warning");
     if (!empresasConPendientes.length) { toast("⚠️ Ninguna empresa seleccionada tiene sistemas pendientes.", "warning"); return; }
     abrirModalSeleccionAviso(empresasConPendientes, false);
+  });
+
+  // Masivo WhatsApp Licencias — mismo mecanismo que el masivo de versiones, pero con licencias
+  // (flujo totalmente separado: propio modal, propia plantilla, propio historial por tipo).
+  document.getElementById("btnWspLicencias")?.addEventListener("click", () => {
+    if (seleccionadosIdx.length === 0) return alert("Selecciona al menos una empresa.");
+    const sinPendientes = [];
+    const empresasConPendientes = [];
+    seleccionadosIdx.forEach(idx => {
+      const c = clientes[idx];
+      if (getLicenciasPendientesDetalle(c).length > 0) empresasConPendientes.push(c);
+      else sinPendientes.push(c?.EMPRESA || "—");
+    });
+    if (sinPendientes.length) toast(`ℹ️ ${sinPendientes.length} empresa(s) sin licencias pendientes, se omitieron: ${sinPendientes.join(", ")}`, "warning");
+    if (!empresasConPendientes.length) { toast("⚠️ Ninguna empresa seleccionada tiene licencias pendientes.", "warning"); return; }
+    abrirModalSeleccionLicencia(empresasConPendientes, false, "whatsapp");
+  });
+
+  // Masivo Email Licencias
+  document.getElementById("btnMailLicencias")?.addEventListener("click", () => {
+    if (seleccionadosIdx.length === 0) return alert("Selecciona al menos una empresa.");
+    const sinPendientes = [];
+    const empresasConPendientes = [];
+    seleccionadosIdx.forEach(idx => {
+      const c = clientes[idx];
+      if (getLicenciasPendientesDetalle(c).length > 0) empresasConPendientes.push(c);
+      else sinPendientes.push(c?.EMPRESA || "—");
+    });
+    if (sinPendientes.length) toast(`ℹ️ ${sinPendientes.length} empresa(s) sin licencias pendientes, se omitieron: ${sinPendientes.join(", ")}`, "warning");
+    if (!empresasConPendientes.length) { toast("⚠️ Ninguna empresa seleccionada tiene licencias pendientes.", "warning"); return; }
+    abrirModalSeleccionLicencia(empresasConPendientes, false);
   });
 
   // ============================================================
@@ -10188,6 +10510,23 @@ verificarSesion();
     abrirModalSeleccionAviso([c], false);
   });
 
+  // Botón individual de licencia por empresa — mismo mecanismo que el de sistemas, pero con
+  // getLicenciasPendientesDetalle/abrirModalSeleccionLicencia.
+  document.addEventListener("click", e => {
+    const btn = e.target.closest(".btn-mail-licencia-emp");
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.idx);
+    const c = clientes[idx];
+    if (!c) return;
+    const ci = getInfoContacto(c);
+    if (!ci.correo) { toast("⚠️ Esta empresa no tiene correo electrónico registrado.", "warning"); return; }
+    if (getLicenciasPendientesDetalle(c).length === 0) {
+      toast(`ℹ️ ${c.EMPRESA} no tiene licencias vencidas o por vencer registradas.`, "info");
+      return;
+    }
+    abrirModalSeleccionLicencia([c], false);
+  });
+
   // ============================================================
   // CONFIGURACIÓN
   // ============================================================
@@ -10934,7 +11273,20 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           </div>
         </div>`;
 
-      reglasEl.innerHTML = seccionesHtml + versionesHtml;
+      const reglaLicencias = configN8n.reglas.find(r => r.id === "licencia_whatsapp_clientes") || { activo: false };
+      const licenciasHtml = `
+        <div>
+          <div style="font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px; letter-spacing:0.03em;">Licencias CONTPAQi</div>
+          <div class="n8n-regla-row" data-id="licencia_whatsapp_clientes" style="padding:10px; background:rgba(255,255,255,0.03); border-radius:8px;">
+            <label style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:0.85rem; cursor:pointer;">
+              <input type="checkbox" class="n8n-regla-activo" ${reglaLicencias.activo?"checked":""}> WhatsApp masivo a clientes
+            </label>
+            <div style="font-size:0.72rem; color:var(--text-muted); margin:4px 0 0 26px;">WhatsApp masivo a clientes con licencias vencidas o por vencer (manual, requiere selección)</div>
+            <div style="font-size:0.72rem; color:#818cf8; margin:8px 0 0 26px;">📌 Este evento envía mensajes a los teléfonos de las empresas clientes, no al equipo interno. La configuración del envío (servicio de WhatsApp) se hace directamente en n8n.</div>
+          </div>
+        </div>`;
+
+      reglasEl.innerHTML = seccionesHtml + versionesHtml + licenciasHtml;
 
       reglasEl.querySelectorAll<HTMLElement>(".n8n-regla-row").forEach(row => {
         const id = row.dataset.id!;
@@ -11891,6 +12243,10 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       if (jsonImportData.plantillaMensaje) {
         plantillaMensaje = jsonImportData.plantillaMensaje;
         if (!crmLocalOnly) await guardarPlantilla(plantillaMensaje);
+      }
+      if (jsonImportData.plantillaLicencias) {
+        plantillaLicencias = jsonImportData.plantillaLicencias;
+        if (!crmLocalOnly) await guardarPlantillaLicencias(plantillaLicencias);
       }
     }
 

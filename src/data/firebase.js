@@ -167,6 +167,17 @@ export async function guardarPlantilla(plantillaMensaje) {
   }
 }
 
+export async function guardarPlantillaLicencias(plantillaLicencias) {
+  try {
+    const docRef = doc(db, "agenda", "datos");
+    await setDoc(docRef, { plantillaLicencias }, { merge: true });
+    return true;
+  } catch (error) {
+    avisarErrorGuardado("plantilla de licencias", error);
+    return false;
+  }
+}
+
 /**
  * Guarda los tickets de soporte en Firestore.
  */
