@@ -2489,6 +2489,7 @@ try {
               • <strong>[contacto_soporte]</strong> → Lista de agentes/teléfonos de soporte (Configuración → Correo de Soporte)
             </div>
             <textarea id="txtPlantillaMensaje" rows="10" style="font-size:0.82rem; resize:vertical;"></textarea>
+            <button class="btn btn-success btn-sm" id="btnGuardarPlantilla" style="margin-top:10px;">💾 Guardar Plantilla</button>
           </div>
         </div>
 
@@ -7020,8 +7021,8 @@ verificarSesion();
     renderEmpresas();
   });
 
-  document.getElementById("txtPlantillaMensaje")?.addEventListener("change", async (e) => {
-    plantillaMensaje = e.target.value;
+  async function guardarPlantillaUI() {
+    plantillaMensaje = (document.getElementById("txtPlantillaMensaje") as HTMLTextAreaElement)?.value || "";
     if (crmLocalOnly) {
       localStorage.setItem("crm_plantilla", plantillaMensaje);
       toast("💾 Plantilla guardada (Local)");
@@ -7031,7 +7032,9 @@ verificarSesion();
     const ok = await guardarPlantilla(plantillaMensaje);
     if (ok) { toast("💾 Plantilla guardada"); ocultarEstado(); }
     else { localStorage.setItem("crm_plantilla", plantillaMensaje); mostrarEstado("⚠️ Guardado localmente", 3000); }
-  });
+  }
+  document.getElementById("txtPlantillaMensaje")?.addEventListener("change", guardarPlantillaUI);
+  document.getElementById("btnGuardarPlantilla")?.addEventListener("click", guardarPlantillaUI);
 
   // ============================================================
   // DASHBOARD
@@ -10089,7 +10092,7 @@ verificarSesion();
     const ci = getInfoContacto(c);
     if (!ci.correo) { toast("⚠️ Esta empresa no tiene correo electrónico registrado.", "warning"); return; }
     if (getSistemasPendientesDetalle(c).length === 0) {
-      abrirZohoMail({ to: ci.correo, subject: "", body: "" });
+      toast(`ℹ️ ${c.EMPRESA} no tiene sistemas con versión desactualizada registrada.`, "info");
       return;
     }
     abrirModalSeleccionAviso([c], false);
