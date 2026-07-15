@@ -2491,7 +2491,7 @@ try {
               • <strong>[contacto]</strong> → Nombre del contacto<br>
               • <strong>[empresa]</strong> → Razón Social<br>
               • <strong>[sistemas_pendientes]</strong> → Lista de sistemas desactualizados (incluye versión y link de carta técnica si está configurado)<br>
-              • <strong>[contacto_soporte]</strong> → Lista de agentes/teléfonos de soporte (Configuración → Correo de Soporte)
+              • <strong>[contacto_soporte]</strong> → Agente(s) de soporte para Versiones (Configuración → Correo de Soporte → "Versiones/Actualizaciones")
             </div>
             <textarea id="txtPlantillaMensaje" rows="10" style="font-size:0.82rem; resize:vertical;"></textarea>
             <button class="btn btn-success btn-sm" id="btnGuardarPlantilla" style="margin-top:10px;">💾 Guardar Plantilla</button>
@@ -2503,7 +2503,7 @@ try {
               • <strong>[contacto]</strong> → Nombre del contacto<br>
               • <strong>[empresa]</strong> → Razón Social<br>
               • <strong>[licencias_pendientes]</strong> → Lista de licencias vencidas o por vencer (≤30 días)<br>
-              • <strong>[contacto_soporte]</strong> → Lista de agentes/teléfonos de soporte (Configuración → Correo de Soporte)
+              • <strong>[contacto_soporte]</strong> → Agente(s) de soporte para Licencias (Configuración → Correo de Soporte → "Licencias")
             </div>
             <textarea id="txtPlantillaLicencias" rows="10" style="font-size:0.82rem; resize:vertical;"></textarea>
             <button class="btn btn-success btn-sm" id="btnGuardarPlantillaLicencias" style="margin-top:10px;">💾 Guardar Plantilla</button>
@@ -3159,14 +3159,24 @@ try {
             <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">Cuando un cliente crea un ticket desde el portal público, la notificación llega a este o estos correos (sepáralos con coma, ej. <code>erick.casas@dattasoft.mx, soporte@dattasoft.mx</code>). El primer correo de la lista también se usa como remitente en confirmaciones al cliente.</span>
           </div>
           <div class="form-group" style="max-width:460px; margin-bottom:16px;">
-            <label>📞 Contactos de soporte (para solicitar actualización de sistemas)</label>
-            <div id="cfg-contactos-soporte-list" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
+            <label>📞 Contactos de soporte — Versiones/Actualizaciones</label>
+            <div id="cfg-contactos-soporte-versiones-list" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
             <div style="display:flex; gap:8px; align-items:flex-start;">
-              <input id="cfg-nuevo-contacto-nombre" type="text" placeholder="Nombre del agente" style="flex:1;">
-              <input id="cfg-nuevo-contacto-telefono" type="text" placeholder="Teléfono" style="flex:1;">
-              <button id="btn-agregar-contacto-soporte" class="btn btn-secondary btn-sm" style="white-space:nowrap;">➕ Agregar</button>
+              <input id="cfg-nuevo-contacto-versiones-nombre" type="text" placeholder="Nombre del agente" style="flex:1;">
+              <input id="cfg-nuevo-contacto-versiones-telefono" type="text" placeholder="Teléfono" style="flex:1;">
+              <button id="btn-agregar-contacto-soporte-versiones" class="btn btn-secondary btn-sm" style="white-space:nowrap;">➕ Agregar</button>
             </div>
-            <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">Se muestran en el correo/WhatsApp de aviso de versiones desactualizadas con el comodín <code>[contacto_soporte]</code>, para que el cliente sepa a quién contactar.</span>
+            <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">Se muestran en el correo/WhatsApp de aviso de <strong>versiones desactualizadas</strong> con el comodín <code>[contacto_soporte]</code>. Puedes dejar uno o varios agentes; se listan todos.</span>
+          </div>
+          <div class="form-group" style="max-width:460px; margin-bottom:16px;">
+            <label>📞 Contactos de soporte — Licencias</label>
+            <div id="cfg-contactos-soporte-licencias-list" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
+            <div style="display:flex; gap:8px; align-items:flex-start;">
+              <input id="cfg-nuevo-contacto-licencias-nombre" type="text" placeholder="Nombre del agente" style="flex:1;">
+              <input id="cfg-nuevo-contacto-licencias-telefono" type="text" placeholder="Teléfono" style="flex:1;">
+              <button id="btn-agregar-contacto-soporte-licencias" class="btn btn-secondary btn-sm" style="white-space:nowrap;">➕ Agregar</button>
+            </div>
+            <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">Se muestran en el correo/WhatsApp de aviso de <strong>licencias por vencer</strong> con el comodín <code>[contacto_soporte]</code>. Puedes dejar uno o varios agentes; se listan todos.</span>
           </div>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
             <button id="btn-enviar-resumen-semanal" class="btn btn-secondary btn-sm" style="white-space:nowrap;">📊 Enviar resumen ahora</button>
@@ -4328,6 +4338,9 @@ try {
       <div class="attachment-list" id="det-tk-adjuntos"></div>
     </div>
     <div style="border-top:1px solid var(--border-color); padding-top:12px;">
+      <div id="det-tk-tiempo-trabajado"></div>
+    </div>
+    <div style="border-top:1px solid var(--border-color); padding-top:12px;">
       <details id="det-tk-actividad-details">
         <summary style="cursor:pointer; font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; user-select:none;">🕵️ Actividad del ticket (<span id="det-tk-actividad-count">0</span>)</summary>
         <div id="det-tk-actividad" style="margin-top:10px; display:flex; flex-direction:column; gap:8px; max-height:180px; overflow-y:auto;"></div>
@@ -5360,8 +5373,21 @@ verificarSesion();
     correoSoporte: "erick.casas@dattasoft.mx",
     sla: { Urgente: 4, Alta: 8, Media: 24, Baja: 72 },
     resumenSemanalUltimoEnvio: "",
-    contactosSoporte: [] // [{nombre, telefono}] — se muestran en el aviso de versiones vía [contacto_soporte]
+    contactosSoporte: [], // LEGACY: lista única compartida (deprecada, solo se usa como respaldo de migración)
+    contactosSoporteVersiones: [], // [{nombre, telefono}] — agente(s) que aparecen en el aviso de versiones vía [contacto_soporte]
+    contactosSoporteLicencias: [] // [{nombre, telefono}] — agente(s) que aparecen en el aviso de licencias vía [contacto_soporte]
   };
+
+  // Migración en memoria: si aún no existen las listas separadas pero sí la lista legacy
+  // compartida, se usa como punto de partida (no se guarda hasta que el usuario edite alguna).
+  function migrarContactosSoporte() {
+    if (configTickets.contactosSoporteVersiones === undefined || configTickets.contactosSoporteVersiones === null) {
+      configTickets.contactosSoporteVersiones = configTickets.contactosSoporte ? [...configTickets.contactosSoporte] : [];
+    }
+    if (configTickets.contactosSoporteLicencias === undefined || configTickets.contactosSoporteLicencias === null) {
+      configTickets.contactosSoporteLicencias = configTickets.contactosSoporte ? [...configTickets.contactosSoporte] : [];
+    }
+  }
 
   let interacciones = [];
   let tareas = [];
@@ -5522,6 +5548,22 @@ verificarSesion();
       .replace(/^-+|-+$/g, "");
   }
 
+  // Los tickets de Consultoría (Sitio/Remoto) se cobran por hora — son los únicos donde el
+  // tiempo trabajado se marca como facturable; el resto solo lo muestra como referencia.
+  function esConsultoria(tipo) {
+    return tipo === "Consultoría Sitio" || tipo === "Consultoría Remoto";
+  }
+
+  function formatearDuracion(totalSegundos) {
+    const seg = Math.max(0, Math.round(totalSegundos));
+    const h = Math.floor(seg / 3600), m = Math.floor((seg % 3600) / 60), s = seg % 60;
+    const partes = [];
+    if (h) partes.push(`${h}h`);
+    if (h || m) partes.push(`${m}m`);
+    partes.push(`${s}s`);
+    return partes.join(" ");
+  }
+
   // Documento público reducido (agenda/publico) para que las páginas sin login
   // (registro-evento.astro, ticket-publico.astro) dejen de leer agenda/datos completo
   // (clientes, tickets con notas internas, todo) solo para sacar logo/nombre/correo/eventos.
@@ -5600,6 +5642,7 @@ verificarSesion();
     }
     const cfgLocal = safeParseLocal("crm_config_tickets", null);
     if (cfgLocal) configTickets = { ...configTickets, ...cfgLocal };
+    migrarContactosSoporte();
 
     listaSistemas.forEach(s => {
       const k = s.toUpperCase().trim();
@@ -5713,8 +5756,8 @@ verificarSesion();
     if (!licencias.length) return null;
     const fechaFmt = (f: string) => new Date(f + "T00:00:00").toLocaleDateString("es-MX");
     const lineas = licencias.map(l => `• ${l.sistema}: ${l.vencida ? `vencida hace ${Math.abs(l.dias)} día(s)` : `vence en ${l.dias} día(s)`} (${fechaFmt(l.fechaVencimiento)})`);
-    const contactoSoporte = (configTickets.contactosSoporte || []).length
-      ? (configTickets.contactosSoporte || []).map(ct => `• ${ct.nombre}: ${ct.telefono}`).join("\n")
+    const contactoSoporte = (configTickets.contactosSoporteLicencias || []).length
+      ? (configTickets.contactosSoporteLicencias || []).map(ct => `• ${ct.nombre}: ${ct.telefono}`).join("\n")
       : "";
     return plantillaLicencias
       .replace(/\[contacto\]/g, cliente.CONTACTO || "Estimado cliente")
@@ -5728,8 +5771,8 @@ verificarSesion();
       ? sistemasSeleccionados.map(s => `• ${s.sistema}: ${s.versionInstalada} → ${s.versionOficial}${s.cartaTecnica ? ` — Carta técnica: ${s.cartaTecnica}` : ""}`)
       : getSistemasPendientes(cliente);
     if (pendientes.length === 0) return null;
-    const contactoSoporte = (configTickets.contactosSoporte || []).length
-      ? (configTickets.contactosSoporte || []).map(ct => `• ${ct.nombre}: ${ct.telefono}`).join("\n")
+    const contactoSoporte = (configTickets.contactosSoporteVersiones || []).length
+      ? (configTickets.contactosSoporteVersiones || []).map(ct => `• ${ct.nombre}: ${ct.telefono}`).join("\n")
       : "";
     return plantillaMensaje
       .replace(/\[contacto\]/g, cliente.CONTACTO || "Estimado cliente")
@@ -6014,7 +6057,7 @@ verificarSesion();
     if (datos.configCotizaciones && !preservarConfig) configCotizaciones = { terminos: "", catalogo: [], ...datos.configCotizaciones };
     // Si el usuario está en la sección de configuración y aún no ha guardado, preservar
     // los cambios en memoria para no pisar ediciones en progreso (prioridades, estados, etc.)
-    if (datos.configTickets && !preservarConfig) configTickets = { ...configTickets, ...datos.configTickets };
+    if (datos.configTickets && !preservarConfig) { configTickets = { ...configTickets, ...datos.configTickets }; migrarContactosSoporte(); }
     // Mismo cuidado que configTickets: si un admin está en el panel de Usuarios (a punto de
     // resetear una contraseña o cambiar un rol), una actualización remota de otro dispositivo
     // no debe pisar la lista en memoria a media edición.
@@ -8578,6 +8621,18 @@ verificarSesion();
     if (seAcabaDeCerrar) dispararN8n("ticket_cerrado", datosEventoTicket(t));
   }
 
+  // Calcula el tiempo trabajado (creación → resuelto) cada vez que un ticket pasa a "Resuelto".
+  // Se recalcula desde fechaCreacion aunque el ticket ya se hubiera reabierto antes, y borra
+  // cualquier edición manual previa (una nueva resolución implica un nuevo cálculo).
+  function procesarTiempoTrabajado(t, nuevoEstado) {
+    if ((nuevoEstado || "").toLowerCase() !== "resuelto") return;
+    const inicio = new Date(t.fechaCreacion).getTime();
+    const fin = Date.now();
+    t.tiempoTrabajadoAutoSegundos = Math.max(0, Math.round((fin - inicio) / 1000));
+    t.fechaResuelto = new Date(fin).toISOString();
+    t.tiempoTrabajadoEditadoSegundos = null;
+  }
+
   // Correo + evento n8n de "cerrado y facturado" — se dispara la primera vez que la combinación
   // (estado === Cerrado) Y (facturación === FACTURADO) se cumple, sin importar cuál de los dos
   // campos fue el que acaba de cambiar: cerrar un ticket ya marcado FACTURADO, o marcar FACTURADO
@@ -10106,7 +10161,7 @@ verificarSesion();
         fechaProgramada, horaProgramada, agenteAsignado, recordatorioDestinatariosIds,
         adjuntos: [...adjuntosExistentes, ...adjuntosTicketActual],
         fechaActualizacion: new Date().toISOString() });
-      if (estado !== estadoAnterior) registrarActividadTicket(t, `Estado cambiado: "${estadoAnterior}" → "${estado}"`);
+      if (estado !== estadoAnterior) { registrarActividadTicket(t, `Estado cambiado: "${estadoAnterior}" → "${estado}"`); procesarTiempoTrabajado(t, estado); }
       if (agente !== agenteAnterior) registrarActividadTicket(t, `Asignado cambiado: "${agenteAnterior || "sin asignar"}" → "${agente || "sin asignar"}"`);
       if (prioridad !== prioridadAnterior) registrarActividadTicket(t, `Prioridad cambiada: "${prioridadAnterior}" → "${prioridad}"`);
       if (facturado !== facturadoAnterior) registrarActividadTicket(t, `Facturación cambiada: "${facturadoAnterior}" → "${facturado}"`);
@@ -10222,6 +10277,76 @@ verificarSesion();
     `).join("");
   }
 
+  // Igual al patrón repetido en btnGuardarTicket/btnAgregarNotaTicket para persistir el array
+  // completo de tickets — se reutiliza aquí para los ajustes de tiempo trabajado.
+  async function persistirTickets() {
+    guardarLocal("crm_tickets", tickets);
+    if (crmLocalOnly) return;
+    await guardarTickets(tickets);
+  }
+
+  function renderTiempoTrabajadoTicket(t) {
+    const cont = document.getElementById("det-tk-tiempo-trabajado");
+    if (!cont) return;
+
+    if (t.tiempoTrabajadoAutoSegundos == null) {
+      cont.innerHTML = `<div style="font-size:0.78rem; color:var(--text-muted); padding:10px 12px; border:1px dashed var(--border-color); border-radius:6px;">⏱️ Cronómetro corriendo desde ${new Date(t.fechaCreacion).toLocaleString("es-MX")} — el tiempo trabajado se calcula al marcar el ticket como <strong>Resuelto</strong>.</div>`;
+      return;
+    }
+
+    const consultoria = esConsultoria(t.tipo);
+    const colorBorder = consultoria ? "rgba(16,185,129,0.35)" : "rgba(234,179,8,0.35)";
+    const colorBg = consultoria ? "rgba(16,185,129,0.08)" : "rgba(234,179,8,0.07)";
+    const colorText = consultoria ? "#10b981" : "#ca8a04";
+    const etiqueta = consultoria ? "💼 Consultoría — facturable por horas" : "ℹ️ Referencia — no se factura por horas";
+    const editado = t.tiempoTrabajadoEditadoSegundos;
+    const valorMostrado = editado != null ? editado : t.tiempoTrabajadoAutoSegundos;
+
+    cont.innerHTML = `
+      <div style="border:1px solid ${colorBorder}; background:${colorBg}; border-radius:8px; padding:12px 14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <div>
+            <div style="font-size:0.72rem; text-transform:uppercase; font-weight:700; color:${colorText};">⏱️ Tiempo trabajado — ${etiqueta}</div>
+            <div style="font-size:1.05rem; font-weight:700; margin-top:2px; color:var(--text-bright);">${formatearDuracion(valorMostrado)}
+              ${editado != null ? `<span style="font-size:0.72rem; font-weight:400; color:var(--text-muted);">(editado · automático: ${formatearDuracion(t.tiempoTrabajadoAutoSegundos)})</span>` : ""}
+            </div>
+          </div>
+          <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+            <input id="tk-tiempo-edit-h" type="number" min="0" placeholder="h" style="width:52px; font-size:0.78rem; padding:4px 6px;">
+            <input id="tk-tiempo-edit-m" type="number" min="0" max="59" placeholder="m" style="width:52px; font-size:0.78rem; padding:4px 6px;">
+            <button class="btn btn-ghost btn-xs" id="btnGuardarTiempoTrabajado">✏️ Editar</button>
+            <button class="btn btn-ghost btn-xs" id="btnIncluirTiempoDescripcion">➕ Incluir en descripción</button>
+          </div>
+        </div>
+      </div>`;
+
+    document.getElementById("btnGuardarTiempoTrabajado")?.addEventListener("click", async () => {
+      const tk = ticketPorNumero(ticketDetalleNumero);
+      if (!tk) return;
+      const h = parseInt((document.getElementById("tk-tiempo-edit-h") as HTMLInputElement).value) || 0;
+      const m = parseInt((document.getElementById("tk-tiempo-edit-m") as HTMLInputElement).value) || 0;
+      if (!h && !m) { toast("⚠️ Escribe horas y/o minutos", "warning"); return; }
+      tk.tiempoTrabajadoEditadoSegundos = h * 3600 + m * 60;
+      renderTiempoTrabajadoTicket(tk);
+      await persistirTickets();
+      toast("💾 Tiempo trabajado actualizado");
+    });
+
+    document.getElementById("btnIncluirTiempoDescripcion")?.addEventListener("click", async () => {
+      const tk = ticketPorNumero(ticketDetalleNumero);
+      if (!tk || tk.tiempoTrabajadoAutoSegundos == null) return;
+      const linea = tk.tiempoTrabajadoEditadoSegundos != null
+        ? `⏱ Tiempo total transcurrido: ${formatearDuracion(tk.tiempoTrabajadoAutoSegundos)} — Tiempo de soporte facturable: ${formatearDuracion(tk.tiempoTrabajadoEditadoSegundos)}`
+        : `⏱ Tiempo trabajado: ${formatearDuracion(tk.tiempoTrabajadoAutoSegundos)}`;
+      const bloque = `<p data-tiempo-trabajado="1">${escapeHtml(linea)}</p>`;
+      const marcador = /<p data-tiempo-trabajado="1">.*?<\/p>/;
+      tk.descripcion = marcador.test(tk.descripcion || "") ? tk.descripcion.replace(marcador, bloque) : (tk.descripcion || "") + bloque;
+      document.getElementById("det-tk-descripcion").innerHTML = sanitizeDescripcionHtml(tk.descripcion);
+      await persistirTickets();
+      toast("💾 Tiempo incluido en la descripción");
+    });
+  }
+
   function abrirDetalleTicket(e) {
     const idx = parseInt(e.target.closest("button").dataset.idx);
     mostrarDetalleTicket(idx);
@@ -10270,6 +10395,7 @@ verificarSesion();
     populateSelectOptions("selectCambiarEstadoDetalle", configTickets.estados, t.estado);
     populateSelectOptions("det-tk-facturado", configTickets.facturacion, t.facturado || "NO FACTURADO");
     renderActividadTicket(t);
+    renderTiempoTrabajadoTicket(t);
 
     if (modalDetalle) modalDetalle.style.display = "flex";
   }
@@ -10421,6 +10547,7 @@ verificarSesion();
     if (nuevoEstado && nuevoEstado !== t.estado) {
       registrarActividadTicket(t, `Estado cambiado: "${estadoAnterior}" → "${nuevoEstado}"`);
       logBitacora(`Ticket #${t.numero} cambió de estado: "${estadoAnterior}" → "${nuevoEstado}"`, "🔄");
+      procesarTiempoTrabajado(t, nuevoEstado);
       t.estado = nuevoEstado;
       document.getElementById("det-tk-estado-badge").textContent = nuevoEstado;
       document.getElementById("det-tk-estado-badge").className = `badge badge-${slugBadge(nuevoEstado)}`;
@@ -10582,7 +10709,8 @@ verificarSesion();
     }
     renderConfigSLA();
     renderConfigCotizaciones();
-    renderConfigContactosSoporte();
+    renderConfigContactosSoporte("Versiones");
+    renderConfigContactosSoporte("Licencias");
     renderWspModoUI();
 
     // Cargar proveedor de correo guardado
@@ -10774,41 +10902,48 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     else { guardarLocal("crm_config_tickets", configTickets); toast("⚠️ Sin conexión — guardado solo localmente", "warning"); }
   });
 
-  function renderConfigContactosSoporte() {
-    const cont = document.getElementById("cfg-contactos-soporte-list");
+  // tipo: "Versiones" | "Licencias" — cada plantilla tiene su propia lista de agentes de contacto
+  function renderConfigContactosSoporte(tipo) {
+    const cont = document.getElementById(`cfg-contactos-soporte-${tipo.toLowerCase()}-list`);
     if (!cont) return;
-    const lista = configTickets.contactosSoporte || [];
+    const campo = `contactosSoporte${tipo}`;
+    const lista = configTickets[campo] || [];
     cont.innerHTML = lista.length ? lista.map((ct, idx) => `
       <div style="display:flex; gap:8px; align-items:center;">
         <span style="flex:1; font-size:0.82rem; color:var(--text-bright);">${escapeHtml(ct.nombre || "")}</span>
         <span style="flex:1; font-size:0.82rem; color:var(--text-muted);">${escapeHtml(ct.telefono || "")}</span>
-        <button class="btn btn-danger btn-xs btn-del-contacto-soporte" data-idx="${idx}">🗑️</button>
+        <button class="btn btn-danger btn-xs btn-del-contacto-soporte-${tipo.toLowerCase()}" data-idx="${idx}">🗑️</button>
       </div>`).join("") : `<div style="font-size:0.78rem; color:var(--text-muted);">Sin contactos agregados.</div>`;
-    cont.querySelectorAll(".btn-del-contacto-soporte").forEach(b => b.addEventListener("click", async function () {
+    cont.querySelectorAll(`.btn-del-contacto-soporte-${tipo.toLowerCase()}`).forEach(b => b.addEventListener("click", async function () {
       const idx = parseInt(this.dataset.idx);
-      configTickets.contactosSoporte.splice(idx, 1);
-      renderConfigContactosSoporte();
-      await guardarContactosSoporte();
+      configTickets[campo].splice(idx, 1);
+      renderConfigContactosSoporte(tipo);
+      await guardarContactosSoporte(tipo);
     }));
   }
 
-  async function guardarContactosSoporte() {
+  async function guardarContactosSoporte(tipo) {
+    const campo = `contactosSoporte${tipo}`;
     if (crmLocalOnly) { guardarLocal("crm_config_tickets", configTickets); return; }
-    const ok = await guardarConfigTickets({ contactosSoporte: configTickets.contactosSoporte });
+    const ok = await guardarConfigTickets({ [campo]: configTickets[campo] });
     if (!ok) guardarLocal("crm_config_tickets", configTickets);
   }
 
-  document.getElementById("btn-agregar-contacto-soporte")?.addEventListener("click", async () => {
-    const nombreInp = document.getElementById("cfg-nuevo-contacto-nombre") as HTMLInputElement;
-    const telInp = document.getElementById("cfg-nuevo-contacto-telefono") as HTMLInputElement;
-    const nombre = nombreInp?.value.trim() || "";
-    const telefono = telInp?.value.trim() || "";
-    if (!nombre || !telefono) { toast("⚠️ Escribe nombre y teléfono", "warning"); return; }
-    configTickets.contactosSoporte = [...(configTickets.contactosSoporte || []), { nombre, telefono }];
-    nombreInp.value = ""; telInp.value = "";
-    renderConfigContactosSoporte();
-    await guardarContactosSoporte();
-    toast("💾 Contacto de soporte agregado");
+  ["Versiones", "Licencias"].forEach(tipo => {
+    const sufijo = tipo.toLowerCase();
+    document.getElementById(`btn-agregar-contacto-soporte-${sufijo}`)?.addEventListener("click", async () => {
+      const nombreInp = document.getElementById(`cfg-nuevo-contacto-${sufijo}-nombre`) as HTMLInputElement;
+      const telInp = document.getElementById(`cfg-nuevo-contacto-${sufijo}-telefono`) as HTMLInputElement;
+      const nombre = nombreInp?.value.trim() || "";
+      const telefono = telInp?.value.trim() || "";
+      if (!nombre || !telefono) { toast("⚠️ Escribe nombre y teléfono", "warning"); return; }
+      const campo = `contactosSoporte${tipo}`;
+      configTickets[campo] = [...(configTickets[campo] || []), { nombre, telefono }];
+      nombreInp.value = ""; telInp.value = "";
+      renderConfigContactosSoporte(tipo);
+      await guardarContactosSoporte(tipo);
+      toast("💾 Contacto de soporte agregado");
+    });
   });
 
   // SLA config load
