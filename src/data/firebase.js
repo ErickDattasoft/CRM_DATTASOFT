@@ -490,6 +490,36 @@ export function suscribirKB(callback) {
   );
 }
 
+// ================================================================
+// AVISOS DE VERSIONES ENVIADOS (historial de control, uno por sistema notificado)
+// ================================================================
+
+export async function registrarAvisoVersion(data) {
+  try {
+    await addDoc(collection(db, "avisosVersiones"), { ...limpiar(data), fecha: serverTimestamp() });
+    return true;
+  } catch (e) { console.error("[AvisosVersiones] Error al registrar:", e); return false; }
+}
+
+export async function cargarAvisosVersiones() {
+  try {
+    const snap = await getDocs(collection(db, "avisosVersiones"));
+    return snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+  } catch (e) { console.error("[AvisosVersiones] Error al cargar:", e); return []; }
+}
+
+// Al renombrar una empresa hay que reescribir sus avisos previos, igual que ya se hace con
+// contactos/interacciones (ver comentario en index.astro sobre el mismo problema) — si no, el
+// historial de una empresa renombrada queda huérfano bajo el nombre anterior.
+export async function renombrarEmpresaEnAvisosVersiones(nombreAnterior, nombreNuevo) {
+  try {
+    const snap = await getDocs(collection(db, "avisosVersiones"));
+    const coincidencias = snap.docs.filter(d => d.data().empresa === nombreAnterior);
+    await Promise.all(coincidencias.map(d => updateDoc(doc(db, "avisosVersiones", d.id), { empresa: nombreNuevo })));
+    return true;
+  } catch (e) { console.error("[AvisosVersiones] Error al renombrar empresa:", e); return false; }
+}
+
 /**
  * Guarda el logotipo de empresa (base64 comprimido) en Firestore.
  */

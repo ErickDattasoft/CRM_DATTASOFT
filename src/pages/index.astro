@@ -2490,6 +2490,27 @@ try {
             <textarea id="txtPlantillaMensaje" rows="10" style="font-size:0.82rem; resize:vertical;"></textarea>
           </div>
         </div>
+
+        <div class="card" style="margin-top:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+            <div class="card-title" style="margin-bottom:0;">📨 Historial de Avisos Enviados</div>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <input type="text" id="hist-aviso-filtro-empresa" placeholder="Filtrar por empresa..." style="font-size:0.78rem; padding:6px 8px;">
+              <input type="date" id="hist-aviso-filtro-desde" title="Desde" style="font-size:0.78rem; padding:6px 8px;">
+              <span style="color:var(--text-muted); font-size:0.75rem;">a</span>
+              <input type="date" id="hist-aviso-filtro-hasta" title="Hasta" style="font-size:0.78rem; padding:6px 8px;">
+              <button class="btn btn-ghost btn-xs" id="btnActualizarHistorialAvisos" title="Recargar desde Firestore">🔄 Actualizar</button>
+            </div>
+          </div>
+          <div class="table-wrap" style="max-height:400px;">
+            <table>
+              <thead>
+                <tr><th>Empresa</th><th>Sistema</th><th>Versión avisada</th><th>Fecha/hora</th><th>Enviado por</th></tr>
+              </thead>
+              <tbody id="tabla-historial-avisos-body"><tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:16px;">Sin avisos registrados aún.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <!-- ============================== -->
@@ -2516,6 +2537,7 @@ try {
                 <button class="btn btn-ghost btn-sm" id="btnExportCSVEmpresas">📤 Exportar CSV</button>
                 <button class="btn btn-whatsapp btn-sm" id="btnWspMasivo">📢 WhatsApp (<span class="lblCountSel">0</span>)</button>
                 <button class="btn btn-email btn-sm" id="btnMailMasivo">✉️ Email (<span class="lblCountSel">0</span>)</button>
+                <button class="btn btn-ghost btn-sm" id="btnPendientesAviso" title="Empresas con sistemas desactualizados que aún no se les ha avisado">🔔 Pendientes de aviso (<span id="lblCountPendientesAviso">0</span>)</button>
                 <button class="btn btn-primary btn-sm" id="btnNuevoEmpresa">➕ Registrar Empresa</button>
               </div>
             </div>
@@ -4735,10 +4757,31 @@ try {
   </div>
 </div>
 
+<!-- ===== MODAL: Selección de sistemas a notificar por correo ===== -->
+<div id="modal-seleccion-aviso-versiones" class="modal-center" style="display:none;">
+  <div class="modal-box" style="width:640px; max-width:96%;">
+    <div class="modal-header">
+      <h2>📨 Seleccionar sistemas a notificar</h2>
+      <button class="modal-close" id="btnCerrarSeleccionAviso">×</button>
+    </div>
+    <div style="padding:14px 18px;">
+      <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:10px;">
+        Marca los sistemas que quieres avisar por correo. Los ya avisados para la versión oficial
+        actual aparecen desmarcados, pero puedes volver a marcarlos si quieres reinsistir.
+      </div>
+      <div id="seleccion-aviso-body" style="max-height:420px; overflow-y:auto;"></div>
+      <div class="form-actions" style="margin-top:14px; justify-content:flex-end;">
+        <button class="btn btn-ghost btn-sm" id="btnCancelarSeleccionAviso">Cancelar</button>
+        <button class="btn btn-primary btn-sm" id="btnConfirmarSeleccionAviso">✉️ Enviar (<span id="lblCountSeleccionAviso">0</span>)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones } from "../data/firebase.js";
+import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones } from "../data/firebase.js";
 
 // ── Modal confirmación (reemplaza confirm() — funciona en móvil) ──
 function confirmar(msg: string, icon = "⚠️"): Promise<boolean> {
@@ -5211,6 +5254,9 @@ verificarSesion();
   let tickets = [];
   let papelera = [];
   let bitacoraLog = (() => { try { return JSON.parse(localStorage.getItem("crm_bitacora") || "[]"); } catch { return []; } })();
+  let avisosVersionesLog = (() => { try { return JSON.parse(localStorage.getItem("crm_avisos_versiones") || "[]"); } catch { return []; } })();
+  let avisosVersionesInited = false;
+  let seleccionAvisoState = []; // grupos {cliente, items:[{sistema, versionInstalada, versionOficial, marcado, fechaPrevia}]} del modal de selección de aviso abierto
   let acercaDe = { version: "v3.1.0", fecha: "Julio 2026", notas: "" };
   let configCorreo = { provider: "brevo", apiKey: "" };
   let configN8n = { webhookUrl: "", destinatarios: [], reglas: [] };
@@ -5549,8 +5595,26 @@ verificarSesion();
     return pendientes;
   }
 
-  function generarMensaje(cliente) {
-    const pendientes = getSistemasPendientes(cliente);
+  // Misma comparación que getSistemasPendientes, pero regresa objetos (no texto ya formateado) —
+  // lo necesita el checklist de selección de aviso para mostrar/editar versión instalada y oficial
+  // por separado.
+  function getSistemasPendientesDetalle(cliente) {
+    const pendientes = [];
+    listaSistemas.forEach(s => {
+      const sKey = s.toUpperCase().trim();
+      const vC = String(cliente.SISTEMAS?.[sKey] || "").trim();
+      const vO = String(versionesMercado[sKey] || "").trim();
+      if (vC && vC !== "" && vC.toUpperCase() !== "NO APLICA" && esVersionMenor(vC, vO)) {
+        pendientes.push({ sistema: s, versionInstalada: vC, versionOficial: vO });
+      }
+    });
+    return pendientes;
+  }
+
+  function generarMensaje(cliente, sistemasSeleccionados) {
+    const pendientes = sistemasSeleccionados
+      ? sistemasSeleccionados.map(s => `• ${s.sistema}: ${s.versionInstalada} → ${s.versionOficial}`)
+      : getSistemasPendientes(cliente);
     if (pendientes.length === 0) return null;
     return plantillaMensaje
       .replace(/\[contacto\]/g, cliente.CONTACTO || "Estimado cliente")
@@ -5603,8 +5667,8 @@ verificarSesion();
     if (topbarSub) topbarSub.textContent = meta.sub || "";
 
     if (sectionId === "dashboard") renderDashboard();
-    if (sectionId === "versiones") initMarketForms();
-    if (sectionId === "empresas") renderEmpresas();
+    if (sectionId === "versiones") { initMarketForms(); initAvisosVersiones(); }
+    if (sectionId === "empresas") { renderEmpresas(); initAvisosVersiones(); }
     if (sectionId === "contactos") renderContactos();
     if (sectionId === "cotizaciones") renderCotizaciones();
     if (sectionId === "tickets") {
@@ -8085,6 +8149,7 @@ verificarSesion();
     // no por el nuevo — si no, al renombrar una empresa los contactos viejos (con el nombre
     // anterior) se quedaban duplicados en vez de reemplazados.
     const nombreAnterior = empExistente?.EMPRESA || nombre;
+    if (nombreAnterior !== nombre) renombrarEmpresaEnAvisosVersiones(nombreAnterior, nombre).catch(() => {});
     formContactosTemp.forEach((ct: any) => { ct.empresa = nombre; });
     contactos = contactos.filter((c: any) => c.empresa !== nombreAnterior && c.empresa !== nombre);
     formContactosTemp.forEach((ct: any) => contactos.push({ ...ct }));
@@ -8356,18 +8421,181 @@ verificarSesion();
     logBitacora(`🧾 Ticket #${t.numero} cerrado y FACTURADO — correo enviado`, "🧾");
   }
 
+  // ============================================================
+  // AVISOS DE VERSIONES: selección de sistemas a notificar + historial
+  // ============================================================
+  function segundosFecha(fecha) { return fecha?.seconds || 0; }
+
+  // Si ya existe un aviso registrado para esta empresa+sistema con la MISMA versión oficial
+  // actual, regresa la fecha (para mostrarla en el checklist); si la versión oficial cambió desde
+  // el último aviso, regresa null (se vuelve a considerar pendiente).
+  function avisoYaRegistrado(empresa, sistema, versionOficial) {
+    const match = avisosVersionesLog.find(a => a.empresa === empresa && a.sistema === sistema && a.versionOficial === versionOficial);
+    if (!match) return null;
+    const seg = segundosFecha(match.fecha);
+    return seg ? new Date(seg * 1000).toLocaleDateString("es-MX") : "una fecha anterior";
+  }
+
+  function calcularPendientesDeAviso() {
+    return clientes
+      .map(c => ({ cliente: c, items: getSistemasPendientesDetalle(c).filter(it => !avisoYaRegistrado(c.EMPRESA, it.sistema, it.versionOficial)) }))
+      .filter(g => g.items.length > 0);
+  }
+
+  function actualizarBadgePendientesAviso() {
+    const lbl = document.getElementById("lblCountPendientesAviso");
+    if (lbl) lbl.textContent = String(calcularPendientesDeAviso().length);
+  }
+
+  async function initAvisosVersiones() {
+    if (avisosVersionesInited) { renderHistorialAvisos(); actualizarBadgePendientesAviso(); return; }
+    avisosVersionesInited = true;
+    if (firebaseEnabled) {
+      const docs = await cargarAvisosVersiones();
+      avisosVersionesLog = docs;
+      localStorage.setItem("crm_avisos_versiones", JSON.stringify(avisosVersionesLog));
+    }
+    renderHistorialAvisos();
+    actualizarBadgePendientesAviso();
+  }
+
+  function renderHistorialAvisos() {
+    const tbody = document.getElementById("tabla-historial-avisos-body");
+    if (!tbody) return;
+    const filtroEmpresa = (document.getElementById("hist-aviso-filtro-empresa") as HTMLInputElement)?.value.toLowerCase().trim() || "";
+    const desde = (document.getElementById("hist-aviso-filtro-desde") as HTMLInputElement)?.value || "";
+    const hasta = (document.getElementById("hist-aviso-filtro-hasta") as HTMLInputElement)?.value || "";
+    let filas = [...avisosVersionesLog];
+    if (filtroEmpresa) filas = filas.filter(a => (a.empresa || "").toLowerCase().includes(filtroEmpresa));
+    if (desde) filas = filas.filter(a => segundosFecha(a.fecha) >= new Date(desde + "T00:00:00").getTime() / 1000);
+    if (hasta) filas = filas.filter(a => segundosFecha(a.fecha) <= new Date(hasta + "T23:59:59").getTime() / 1000);
+    filas.sort((a, b) => segundosFecha(b.fecha) - segundosFecha(a.fecha));
+    if (!filas.length) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:16px;">Sin avisos registrados aún.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = filas.map(a => `
+      <tr>
+        <td>${escapeHtml(a.empresa || "")}</td>
+        <td>${escapeHtml(a.sistema || "")}</td>
+        <td>${escapeHtml(a.versionInstalada || "")} → ${escapeHtml(a.versionOficial || "")}</td>
+        <td>${segundosFecha(a.fecha) ? new Date(segundosFecha(a.fecha) * 1000).toLocaleString("es-MX") : ""}</td>
+        <td>${escapeHtml(a.enviadoPor || "")}</td>
+      </tr>`).join("");
+  }
+
+  document.getElementById("btnActualizarHistorialAvisos")?.addEventListener("click", async () => {
+    avisosVersionesInited = false;
+    await initAvisosVersiones();
+    toast("🔄 Historial actualizado");
+  });
+  document.getElementById("hist-aviso-filtro-empresa")?.addEventListener("input", renderHistorialAvisos);
+  document.getElementById("hist-aviso-filtro-desde")?.addEventListener("change", renderHistorialAvisos);
+  document.getElementById("hist-aviso-filtro-hasta")?.addEventListener("change", renderHistorialAvisos);
+
+  // Abre el modal de selección de sistemas a notificar. Por default muestra TODOS los pendientes
+  // de cada empresa (los ya avisados aparecen desmarcados pero visibles, para no ocultar
+  // información); soloNoAvisados=true (usado por la bandeja "Pendientes de aviso") omite del todo
+  // los sistemas que ya tienen un aviso registrado para la versión oficial actual.
+  function abrirModalSeleccionAviso(listaClientes, soloNoAvisados = false) {
+    seleccionAvisoState = listaClientes.map(c => {
+      let items = getSistemasPendientesDetalle(c).map(it => {
+        const fechaPrevia = avisoYaRegistrado(c.EMPRESA, it.sistema, it.versionOficial);
+        return { ...it, marcado: !fechaPrevia, fechaPrevia };
+      });
+      if (soloNoAvisados) items = items.filter(it => !it.fechaPrevia);
+      return { cliente: c, items };
+    }).filter(g => g.items.length > 0);
+    if (!seleccionAvisoState.length) { toast("✅ No hay sistemas pendientes de notificar.", "success"); return; }
+    renderSeleccionAvisoModal();
+    const m = document.getElementById("modal-seleccion-aviso-versiones");
+    if (m) m.style.display = "flex";
+  }
+
+  function renderSeleccionAvisoModal() {
+    const cont = document.getElementById("seleccion-aviso-body");
+    if (!cont) return;
+    cont.innerHTML = seleccionAvisoState.map((g, gi) => `
+      <div style="margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--border-subtle);">
+        <div style="font-weight:700; font-size:0.85rem; margin-bottom:6px;">${escapeHtml(g.cliente.EMPRESA)}</div>
+        ${g.items.map((it, ii) => `
+          <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem; padding:4px 0; cursor:pointer;">
+            <input type="checkbox" class="chk-seleccion-aviso" data-gi="${gi}" data-ii="${ii}" ${it.marcado ? "checked" : ""}>
+            <span>${escapeHtml(it.sistema)}: ${escapeHtml(it.versionInstalada)} → ${escapeHtml(it.versionOficial)}</span>
+            ${it.fechaPrevia ? `<span style="color:var(--text-muted); font-size:0.72rem;">— ya avisado el ${it.fechaPrevia}</span>` : ""}
+          </label>`).join("")}
+      </div>`).join("");
+    cont.querySelectorAll(".chk-seleccion-aviso").forEach(chk => {
+      chk.addEventListener("change", function () {
+        const gi = parseInt(this.dataset.gi), ii = parseInt(this.dataset.ii);
+        seleccionAvisoState[gi].items[ii].marcado = this.checked;
+        actualizarContadorSeleccionAviso();
+      });
+    });
+    actualizarContadorSeleccionAviso();
+  }
+
+  function actualizarContadorSeleccionAviso() {
+    const n = seleccionAvisoState.reduce((acc, g) => acc + g.items.filter(it => it.marcado).length, 0);
+    const lbl = document.getElementById("lblCountSeleccionAviso");
+    if (lbl) lbl.textContent = String(n);
+  }
+
+  function cerrarModalSeleccionAviso() {
+    const m = document.getElementById("modal-seleccion-aviso-versiones");
+    if (m) m.style.display = "none";
+  }
+  document.getElementById("btnCerrarSeleccionAviso")?.addEventListener("click", cerrarModalSeleccionAviso);
+  document.getElementById("btnCancelarSeleccionAviso")?.addEventListener("click", cerrarModalSeleccionAviso);
+
+  document.getElementById("btnConfirmarSeleccionAviso")?.addEventListener("click", async () => {
+    const grupos = seleccionAvisoState.map(g => ({ cliente: g.cliente, items: g.items.filter(it => it.marcado) })).filter(g => g.items.length > 0);
+    if (!grupos.length) { toast("⚠️ Selecciona al menos un sistema.", "warning"); return; }
+    const usuario = getUsuarioActual()?.nombre || "Sistema";
+    let enviados = 0;
+    const sinCorreo = [];
+    for (const g of grupos) {
+      const c = g.cliente;
+      const ci = getInfoContacto(c);
+      if (!ci.correo) { sinCorreo.push(c.EMPRESA); continue; }
+      const subject = `Actualización de Sistemas CONTPAQi — ${c.EMPRESA}`;
+      const msg = generarMensaje(c, g.items);
+      const sent = await enviarEmailConProveedor({ to: ci.correo, subject, text: msg || "" });
+      if (sent?.ok) {
+        enviados++;
+        const fechaLocal = { seconds: Math.floor(Date.now() / 1000) };
+        for (const it of g.items) {
+          const registro = { empresa: c.EMPRESA, sistema: it.sistema, versionInstalada: it.versionInstalada, versionOficial: it.versionOficial, correo: ci.correo, enviadoPor: usuario };
+          registrarAvisoVersion(registro).catch(() => {});
+          avisosVersionesLog.unshift({ ...registro, fecha: fechaLocal });
+        }
+      } else if (grupos.length === 1) {
+        window.open(`mailto:${ci.correo}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(msg || "")}`, "_blank");
+      }
+    }
+    localStorage.setItem("crm_avisos_versiones", JSON.stringify(avisosVersionesLog));
+    if (sinCorreo.length) toast(`⚠️ ${sinCorreo.length} empresa(s) sin correo, se omitieron: ${sinCorreo.join(", ")}`, "warning");
+    if (enviados) {
+      logBitacora(`✉️ Aviso de versiones enviado a ${enviados} empresa(s)`, "📧");
+      toast(`✅ Aviso enviado a ${enviados} empresa(s)`);
+    }
+    cerrarModalSeleccionAviso();
+    renderHistorialAvisos();
+    actualizarBadgePendientesAviso();
+  });
+
+  document.getElementById("btnPendientesAviso")?.addEventListener("click", () => {
+    const grupos = calcularPendientesDeAviso();
+    if (!grupos.length) { toast("✅ No hay avisos pendientes — todo al día.", "success"); return; }
+    abrirModalSeleccionAviso(grupos.map(g => g.cliente), true);
+  });
+
   async function enviarEmailEmpresa(e) {
     const idx = parseInt(e.target.closest("button").dataset.idx);
     const c = clientes[idx];
     const ci = getInfoContacto(c);
     if (!ci.correo) return alert("No tiene correo electrónico. Agrégalo en la sección Contactos.");
-    const msg = generarMensaje(c);
-    const subject = `Actualización de Sistemas CONTPAQi — ${c.EMPRESA}`;
-    const body = msg || "";
-    const sent = await enviarEmailConProveedor({ to: ci.correo, subject, text: body });
-    if (!sent?.ok) {
-      window.open(`mailto:${ci.correo}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, "_blank");
-    }
+    abrirModalSeleccionAviso([c], false);
   }
 
   document.getElementById("btnIrContactosEmp")?.addEventListener("click", () => {
@@ -8538,27 +8766,21 @@ verificarSesion();
     }
   });
 
-  // Masivo Email — un correo individual y personalizado por empresa (misma plantilla y
-  // placeholders [contacto]/[empresa]/[sistemas_pendientes] que ya usa el WhatsApp masivo vía
-  // generarMensaje), no un solo envío genérico con el cuerpo vacío a todos los correos juntos —
-  // así cada empresa solo ve sus propios sistemas pendientes, y no un correo en blanco.
-  document.getElementById("btnMailMasivo")?.addEventListener("click", async () => {
+  // Masivo Email — abre el modal de selección de sistemas (mismo que el botón individual) para
+  // las empresas marcadas con checkbox, así cada una se revisa/ajusta antes de enviar en vez de
+  // mandar automáticamente todos los sistemas pendientes de golpe.
+  document.getElementById("btnMailMasivo")?.addEventListener("click", () => {
     if (seleccionadosIdx.length === 0) return alert("Selecciona al menos una empresa.");
-    const subject = "Actualización de Sistemas CONTPAQi";
-    const sinCorreo = [];
     const sinPendientes = [];
-    let enviados = 0;
-    for (const idx of seleccionadosIdx) {
+    const empresasConPendientes = [];
+    seleccionadosIdx.forEach(idx => {
       const c = clientes[idx];
-      if (!c?.CORREO) { sinCorreo.push(c?.EMPRESA || "—"); continue; }
-      const mensaje = generarMensaje(c);
-      if (!mensaje) { sinPendientes.push(c.EMPRESA); continue; }
-      const sent = await enviarEmailConProveedor({ to: c.CORREO, subject, text: mensaje });
-      if (sent?.ok) enviados++;
-    }
+      if (getSistemasPendientesDetalle(c).length > 0) empresasConPendientes.push(c);
+      else sinPendientes.push(c?.EMPRESA || "—");
+    });
     if (sinPendientes.length) toast(`ℹ️ ${sinPendientes.length} empresa(s) sin sistemas pendientes, se omitieron: ${sinPendientes.join(", ")}`, "warning");
-    if (sinCorreo.length) toast(`⚠️ ${sinCorreo.length} empresa(s) sin correo registrado, se omitieron.`, "warning");
-    if (enviados) logBitacora(`✉️ Email masivo de versiones enviado (personalizado) a ${enviados} empresa(s)`, "📧");
+    if (!empresasConPendientes.length) { toast("⚠️ Ninguna empresa seleccionada tiene sistemas pendientes.", "warning"); return; }
+    abrirModalSeleccionAviso(empresasConPendientes, false);
   });
 
   // ============================================================
