@@ -10142,6 +10142,10 @@ verificarSesion();
       };
       tickets.push(nuevoTicket);
       registrarActividadTicket(nuevoTicket, `Ticket creado${agente ? ` y asignado a ${agente}` : ""}`);
+      // Si el ticket nace ya como "Resuelto" (ej. se registra después de una consultoría en
+      // sitio que ya terminó), el automático da ~0s — no hay forma de medir el trabajo real
+      // desde la creación, así que la caja aparece igual pero invita a editar el tiempo a mano.
+      procesarTiempoTrabajado(nuevoTicket, estado);
       logBitacora(`Ticket #${num} creado: "${asunto}" — ${empresa || contacto}`, "🎫");
       dispararN8n("ticket_creado_equipo", datosEventoTicket(nuevoTicket));
 
