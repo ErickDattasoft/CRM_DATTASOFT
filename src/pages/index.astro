@@ -2294,8 +2294,8 @@ try {
       <div class="topbar-actions">
         <button class="btn btn-ghost btn-sm" id="btnToggleDarkMode" title="Cambiar tema">🌙</button>
         <button class="btn btn-ghost btn-sm" id="btnExportarExcel" title="Exportar a Excel">📊 Excel</button>
-        <button class="btn btn-ghost btn-sm" id="btnImportarJSON">📤 Importar</button>
-        <button class="btn btn-ghost btn-sm" id="btnExportarJSON">📥 Exportar</button>
+        <button class="btn btn-ghost btn-sm" id="btnImportarJSON" title="Restaurar un backup completo del CRM (JSON) — no confundir con Importar CSV/Excel de Empresas">📂 Importar Backup</button>
+        <button class="btn btn-ghost btn-sm" id="btnExportarJSON" title="Descargar un backup completo del CRM (JSON) — no confundir con Exportar CSV de Empresas">💾 Exportar Backup</button>
       </div>
     </div>
 
@@ -12281,7 +12281,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   // EXPORT JSON
   // ============================================================
   document.getElementById("btnExportarJSON")?.addEventListener("click", () => {
-    const allData = { clientes, contactos, tickets, versionesMercado, cartasTecnicas, configTickets, plantillaMensaje };
+    const allData = { clientes, contactos, tickets, versionesMercado, cartasTecnicas, configTickets, plantillaMensaje, plantillaLicencias };
     const str = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allData, null, 2));
     const a = document.createElement("a");
     a.setAttribute("href", str);
