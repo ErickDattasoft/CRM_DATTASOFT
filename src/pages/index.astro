@@ -8049,15 +8049,28 @@ verificarSesion();
       lista.innerHTML = `<div style="font-size:0.78rem;color:var(--text-muted);padding:4px 0;">Sin contactos — agrega al menos uno abajo</div>`;
       return;
     }
+    const inputStyle = "width:100%; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:3px 6px; font-family:inherit;";
     lista.innerHTML = formContactosTemp.map((ct, i) => `
       <div style="display:grid;grid-template-columns:auto 2fr 1.5fr 2fr auto auto;gap:6px;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
         <span style="font-size:0.65rem;font-weight:700;padding:2px 6px;border-radius:4px;background:${i===0?'rgba(99,102,241,0.2)':'rgba(16,185,129,0.15)'};color:${i===0?'#a5b4fc':'#6ee7b7'};white-space:nowrap;">${i===0?'⭐ Principal':'Alt. '+i}</span>
-        <span style="font-weight:600;color:var(--text-bright);font-size:0.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${ct.nombre}">${ct.nombre}</span>
-        <span style="color:#94a3b8;font-size:0.78rem;">${ct.telefono1||'—'}</span>
-        <span style="color:#7dd3fc;font-size:0.75rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${ct.correo||''}">${ct.correo||'—'}</span>
+        <input type="text" class="ct-edit-nombre" data-idx="${i}" value="${escapeHtml(ct.nombre||'')}" placeholder="Nombre" style="${inputStyle} font-weight:600; color:var(--text-bright); font-size:0.82rem;">
+        <input type="text" class="ct-edit-telefono" data-idx="${i}" value="${escapeHtml(ct.telefono1||'')}" placeholder="Teléfono" style="${inputStyle} color:#94a3b8; font-size:0.78rem;">
+        <input type="text" class="ct-edit-correo" data-idx="${i}" value="${escapeHtml(ct.correo||'')}" placeholder="Correo" style="${inputStyle} color:#7dd3fc; font-size:0.75rem;">
         ${i===0 ? '<span></span>' : `<button type="button" data-ct-principal="${i}" title="Hacer principal" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.35);color:#a5b4fc;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:0.7rem;white-space:nowrap;">⭐ Principal</button>`}
         <button type="button" data-ct-del="${i}" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:0.7rem;flex-shrink:0;">🗑</button>
       </div>`).join("");
+    // Edición en línea de contactos ya existentes (nombre/teléfono/correo) — antes solo se podía
+    // agregar un contacto nuevo o eliminar/promover uno existente, no editar sus datos, y por eso
+    // escribir un teléfono nuevo aquí se perdía en silencio al guardar.
+    lista.querySelectorAll(".ct-edit-nombre").forEach(inp => inp.addEventListener("input", function (this: HTMLInputElement) {
+      formContactosTemp[parseInt(this.dataset.idx || "0")].nombre = this.value;
+    }));
+    lista.querySelectorAll(".ct-edit-telefono").forEach(inp => inp.addEventListener("input", function (this: HTMLInputElement) {
+      formContactosTemp[parseInt(this.dataset.idx || "0")].telefono1 = this.value;
+    }));
+    lista.querySelectorAll(".ct-edit-correo").forEach(inp => inp.addEventListener("input", function (this: HTMLInputElement) {
+      formContactosTemp[parseInt(this.dataset.idx || "0")].correo = this.value;
+    }));
     lista.querySelectorAll("[data-ct-principal]").forEach(btn => {
       btn.addEventListener("click", () => {
         const idx = parseInt((btn as HTMLElement).dataset.ctPrincipal || "0");
