@@ -2507,7 +2507,7 @@ try {
           <div class="table-wrap" style="max-height:400px;">
             <table>
               <thead>
-                <tr><th>Empresa</th><th>Sistema</th><th>Versión avisada</th><th>Fecha/hora</th><th>Enviado por</th></tr>
+                <tr><th>Empresa</th><th>Sistema</th><th>Versión avisada</th><th>Canal</th><th>Fecha/hora</th><th>Enviado por</th></tr>
               </thead>
               <tbody id="tabla-historial-avisos-body"><tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:16px;">Sin avisos registrados aún.</td></tr></tbody>
             </table>
@@ -5272,6 +5272,7 @@ verificarSesion();
   let avisosVersionesLog = (() => { try { return JSON.parse(localStorage.getItem("crm_avisos_versiones") || "[]"); } catch { return []; } })();
   let avisosVersionesInited = false;
   let seleccionAvisoState = []; // grupos {cliente, items:[{sistema, versionInstalada, versionOficial, marcado, fechaPrevia}]} del modal de selección de aviso abierto
+  let seleccionAvisoCanal = "email"; // "email" (Brevo) | "whatsapp" (n8n o WhatsApp Web) — decide qué hace el botón "Enviar" del modal
   let acercaDe = { version: "v3.1.0", fecha: "Julio 2026", notas: "" };
   let configCorreo = { provider: "brevo", apiKey: "" };
   let configN8n = { webhookUrl: "", destinatarios: [], reglas: [] };
@@ -8499,7 +8500,7 @@ verificarSesion();
     if (hasta) filas = filas.filter(a => segundosFecha(a.fecha) <= new Date(hasta + "T23:59:59").getTime() / 1000);
     filas.sort((a, b) => segundosFecha(b.fecha) - segundosFecha(a.fecha));
     if (!filas.length) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:16px;">Sin avisos registrados aún.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:16px;">Sin avisos registrados aún.</td></tr>`;
       return;
     }
     tbody.innerHTML = filas.map(a => `
@@ -8507,6 +8508,7 @@ verificarSesion();
         <td>${escapeHtml(a.empresa || "")}</td>
         <td>${escapeHtml(a.sistema || "")}</td>
         <td>${escapeHtml(a.versionInstalada || "")} → ${escapeHtml(a.versionOficial || "")}</td>
+        <td title="${a.canal === "whatsapp" ? "WhatsApp" : "Correo"}">${a.canal === "whatsapp" ? "📢" : "✉️"}</td>
         <td>${segundosFecha(a.fecha) ? new Date(segundosFecha(a.fecha) * 1000).toLocaleString("es-MX") : ""}</td>
         <td>${escapeHtml(a.enviadoPor || "")}</td>
       </tr>`).join("");
@@ -8525,7 +8527,7 @@ verificarSesion();
   // de cada empresa (los ya avisados aparecen desmarcados pero visibles, para no ocultar
   // información); soloNoAvisados=true (usado por la bandeja "Pendientes de aviso") omite del todo
   // los sistemas que ya tienen un aviso registrado para la versión oficial actual.
-  function abrirModalSeleccionAviso(listaClientes, soloNoAvisados = false) {
+  function abrirModalSeleccionAviso(listaClientes, soloNoAvisados = false, canal = "email") {
     seleccionAvisoState = listaClientes.map(c => {
       let items = getSistemasPendientesDetalle(c).map(it => {
         const fechaPrevia = avisoYaRegistrado(c.EMPRESA, it.sistema, it.versionOficial);
@@ -8535,6 +8537,7 @@ verificarSesion();
       return { cliente: c, items };
     }).filter(g => g.items.length > 0);
     if (!seleccionAvisoState.length) { toast("✅ No hay sistemas pendientes de notificar.", "success"); return; }
+    seleccionAvisoCanal = canal;
     const banner = document.getElementById("seleccion-aviso-auto-banner");
     if (banner) banner.style.display = soloNoAvisados ? "flex" : "none";
     renderSeleccionAvisoModal();
@@ -8567,7 +8570,11 @@ verificarSesion();
   function actualizarContadorSeleccionAviso() {
     const n = seleccionAvisoState.reduce((acc, g) => acc + g.items.filter(it => it.marcado).length, 0);
     const btnConfirmar = document.getElementById("btnConfirmarSeleccionAviso");
-    if (btnConfirmar) btnConfirmar.innerHTML = `✉️ Enviar (<span id="lblCountSeleccionAviso">${n}</span>)`;
+    if (btnConfirmar) {
+      btnConfirmar.innerHTML = seleccionAvisoCanal === "whatsapp"
+        ? `📢 Enviar por WhatsApp (<span id="lblCountSeleccionAviso">${n}</span>)`
+        : `✉️ Enviar (<span id="lblCountSeleccionAviso">${n}</span>)`;
+    }
   }
 
   function cerrarModalSeleccionAviso() {
@@ -8581,6 +8588,73 @@ verificarSesion();
     const grupos = seleccionAvisoState.map(g => ({ cliente: g.cliente, items: g.items.filter(it => it.marcado) })).filter(g => g.items.length > 0);
     if (!grupos.length) { toast("⚠️ Selecciona al menos un sistema.", "warning"); return; }
     const usuario = getUsuarioActual()?.nombre || "Sistema";
+
+    if (seleccionAvisoCanal === "whatsapp") {
+      const sinTelefono = [];
+      const gruposConTel = grupos.filter(g => {
+        const tel = g.cliente.TELEFONO_1 || g.cliente.TELEFONO_2;
+        if (!tel) { sinTelefono.push(g.cliente.EMPRESA); return false; }
+        return true;
+      });
+      if (sinTelefono.length) toast(`⚠️ ${sinTelefono.length} empresa(s) sin teléfono, se omitieron: ${sinTelefono.join(", ")}`, "warning");
+      if (!gruposConTel.length) { cerrarModalSeleccionAviso(); return; }
+
+      const fechaLocal = { seconds: Math.floor(Date.now() / 1000) };
+      const registrarEnvios = () => {
+        for (const g of gruposConTel) {
+          const correoG = getInfoContacto(g.cliente).correo || "";
+          for (const it of g.items) {
+            const registro = { empresa: g.cliente.EMPRESA, sistema: it.sistema, versionInstalada: it.versionInstalada, versionOficial: it.versionOficial, correo: correoG, enviadoPor: usuario, canal: "whatsapp" };
+            registrarAvisoVersion(registro).catch(() => {});
+            avisosVersionesLog.unshift({ ...registro, fecha: fechaLocal });
+          }
+        }
+        localStorage.setItem("crm_avisos_versiones", JSON.stringify(avisosVersionesLog));
+        renderHistorialAvisos();
+        actualizarBadgePendientesAviso();
+      };
+
+      const reglaVersiones = (configN8n.reglas || []).find(r => r.id === "version_whatsapp_clientes");
+      const n8nListo = !!(configN8n.webhookUrl && reglaVersiones?.activo);
+      if (n8nListo) {
+        const empresas = gruposConTel.map(g => ({
+          nombre: g.cliente.EMPRESA || "", contacto: g.cliente.CONTACTO || "",
+          telefono: g.cliente.TELEFONO_1 || g.cliente.TELEFONO_2, correo: g.cliente.CORREO || "",
+          sistemasPendientes: g.items.map(it => `• ${it.sistema}: ${it.versionInstalada} → ${it.versionOficial}${it.cartaTecnica ? ` — Carta técnica: ${it.cartaTecnica}` : ""}`).join("\n"),
+        }));
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
+          await fetch(configN8n.webhookUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ evento: "version_whatsapp_clientes", plantillaMensaje, empresas, totalEmpresas: empresas.length, enviadoPor: usuario, fecha: new Date().toISOString() }),
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+          toast(`📢 WhatsApp enviado a ${empresas.length} empresa(s) vía n8n`);
+          logBitacora(`📢 WhatsApp de versiones enviado a ${empresas.length} empresa(s) vía n8n — por ${usuario}`, "📢");
+          registrarEnvios();
+        } catch (err) {
+          toast("❌ Error al enviar a n8n — revisa el webhook", "error");
+        }
+      } else {
+        if (!configN8n.webhookUrl) toast("⚠️ n8n no está configurado — abriendo WhatsApp Web para enviar manualmente.", "warning");
+        gruposConTel.forEach((g, i) => {
+          setTimeout(() => {
+            const tel = g.cliente.TELEFONO_1 || g.cliente.TELEFONO_2;
+            const msg = generarMensaje(g.cliente, g.items);
+            const encoded = msg ? encodeURIComponent(msg) : "";
+            window.open(`https://web.whatsapp.com/send?phone=${tel}${encoded ? `&text=${encoded}` : ""}`, "_blank");
+          }, i * 500);
+        });
+        logBitacora(`📢 WhatsApp de versiones abierto para ${gruposConTel.length} empresa(s) — por ${usuario}`, "📢");
+        registrarEnvios();
+      }
+      cerrarModalSeleccionAviso();
+      return;
+    }
+
     let enviados = 0;
     const sinCorreo = [];
     for (const g of grupos) {
@@ -8594,7 +8668,7 @@ verificarSesion();
         enviados++;
         const fechaLocal = { seconds: Math.floor(Date.now() / 1000) };
         for (const it of g.items) {
-          const registro = { empresa: c.EMPRESA, sistema: it.sistema, versionInstalada: it.versionInstalada, versionOficial: it.versionOficial, correo: ci.correo, enviadoPor: usuario };
+          const registro = { empresa: c.EMPRESA, sistema: it.sistema, versionInstalada: it.versionInstalada, versionOficial: it.versionOficial, correo: ci.correo, enviadoPor: usuario, canal: "email" };
           registrarAvisoVersion(registro).catch(() => {});
           avisosVersionesLog.unshift({ ...registro, fecha: fechaLocal });
         }
@@ -8717,74 +8791,20 @@ verificarSesion();
     renderEmpresas();
   });
 
-  // Masivo WhatsApp
-  // WhatsApp masivo: si hay webhook de n8n configurado y la regla "version_whatsapp_clientes"
-  // está activa, manda UN solo webhook con todas las empresas seleccionadas (n8n decide con qué
-  // servicio de WhatsApp reenviarlo — CallMeBot no sirve aquí, solo funciona con números del
-  // equipo interno pre-registrados). Si no hay n8n configurado, se conserva el comportamiento
-  // anterior (abrir pestañas de WhatsApp Web una por una) como respaldo, para no dejar la función
-  // sin efecto mientras alguien termina de configurar n8n.
-  document.getElementById("btnWspMasivo")?.addEventListener("click", async () => {
+  // Masivo WhatsApp — abre el mismo modal de selección de sistemas (canal "whatsapp"); el envío
+  // real (n8n si está configurado, o WhatsApp Web como respaldo) ocurre en btnConfirmarSeleccionAviso.
+  document.getElementById("btnWspMasivo")?.addEventListener("click", () => {
     if (seleccionadosIdx.length === 0) return alert("Selecciona al menos una empresa.");
-
-    const reglaVersiones = (configN8n.reglas || []).find(r => r.id === "version_whatsapp_clientes");
-    const n8nListo = !!(configN8n.webhookUrl && reglaVersiones?.activo);
-
-    if (!n8nListo) {
-      if (!configN8n.webhookUrl) {
-        toast("⚠️ Configura el webhook de n8n en Configuración → Automatizaciones para usar WhatsApp masivo.", "warning");
-      }
-      seleccionadosIdx.forEach((idx, i) => {
-        setTimeout(() => {
-          const c = clientes[idx];
-          const tel = c.TELEFONO_1 || c.TELEFONO_2;
-          if (!tel) return;
-          const msg = generarMensaje(c);
-          const encoded = msg ? encodeURIComponent(msg) : "";
-          window.open(`https://web.whatsapp.com/send?phone=${tel}${encoded ? `&text=${encoded}` : ""}`, "_blank");
-        }, i * 500);
-      });
-      return;
-    }
-
-    const empresasSinTelefono = [];
-    const empresas = seleccionadosIdx.map(idx => {
+    const sinPendientes = [];
+    const empresasConPendientes = [];
+    seleccionadosIdx.forEach(idx => {
       const c = clientes[idx];
-      const tel = c.TELEFONO_1 || c.TELEFONO_2;
-      if (!tel) { empresasSinTelefono.push(c.EMPRESA); return null; }
-      return {
-        nombre: c.EMPRESA || "", contacto: c.CONTACTO || "", telefono: tel, correo: c.CORREO || "",
-        sistemasPendientes: getSistemasPendientes(c).join("\n"),
-      };
-    }).filter(Boolean);
-
-    if (empresasSinTelefono.length) {
-      toast(`⚠️ ${empresasSinTelefono.length} empresa(s) no tienen teléfono y se omitieron del envío.`, "warning");
-    }
-    if (!empresas.length) { toast("⚠️ Ninguna empresa seleccionada tiene teléfono registrado.", "error"); return; }
-
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
-      await fetch(configN8n.webhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          evento: "version_whatsapp_clientes",
-          plantillaMensaje,
-          empresas,
-          totalEmpresas: empresas.length,
-          enviadoPor: getUsuarioActual()?.nombre || "Sistema",
-          fecha: new Date().toISOString(),
-        }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      toast(`📢 WhatsApp masivo enviado a ${empresas.length} empresa(s) vía n8n`);
-      logBitacora(`📢 WhatsApp masivo enviado a ${empresas.length} empresas vía n8n — por ${getUsuarioActual()?.nombre || "Sistema"}`, "📢");
-    } catch (err) {
-      toast("❌ Error al enviar a n8n — revisa el webhook", "error");
-    }
+      if (getSistemasPendientesDetalle(c).length > 0) empresasConPendientes.push(c);
+      else sinPendientes.push(c?.EMPRESA || "—");
+    });
+    if (sinPendientes.length) toast(`ℹ️ ${sinPendientes.length} empresa(s) sin sistemas pendientes, se omitieron: ${sinPendientes.join(", ")}`, "warning");
+    if (!empresasConPendientes.length) { toast("⚠️ Ninguna empresa seleccionada tiene sistemas pendientes.", "warning"); return; }
+    abrirModalSeleccionAviso(empresasConPendientes, false, "whatsapp");
   });
 
   // Masivo Email — abre el modal de selección de sistemas (mismo que el botón individual) para
