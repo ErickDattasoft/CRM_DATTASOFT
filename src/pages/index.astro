@@ -2554,8 +2554,8 @@ try {
                 <button class="btn btn-ghost btn-sm" id="btnImportXLSEmpresas">📥 Importar Excel</button>
                 <input type="file" id="input-import-xls" accept=".xlsx,.xls" style="display:none">
                 <button class="btn btn-ghost btn-sm" id="btnExportCSVEmpresas">📤 Exportar CSV</button>
-                <button class="btn btn-whatsapp btn-sm" id="btnWspMasivo">📢 WhatsApp (<span class="lblCountSel">0</span>)</button>
-                <button class="btn btn-email btn-sm" id="btnMailMasivo">✉️ Email (<span class="lblCountSel">0</span>)</button>
+                <button class="btn btn-whatsapp btn-sm" id="btnWspMasivo" title="Avisar por WhatsApp sistemas desactualizados">📢 WhatsApp Versiones (<span class="lblCountSel">0</span>)</button>
+                <button class="btn btn-email btn-sm" id="btnMailMasivo" title="Avisar por correo sistemas desactualizados">✉️ Email Versiones (<span class="lblCountSel">0</span>)</button>
                 <button class="btn btn-ghost btn-sm" id="btnPendientesAviso" title="Empresas con sistemas desactualizados que aún no se les ha avisado">🔔 Pendientes de aviso (<span id="lblCountPendientesAviso">0</span>)</button>
                 <button class="btn btn-whatsapp btn-sm" id="btnWspLicencias" title="Avisar por WhatsApp licencias vencidas o por vencer">📢🔒 WhatsApp Licencias (<span class="lblCountSel">0</span>)</button>
                 <button class="btn btn-email btn-sm" id="btnMailLicencias" title="Avisar por correo licencias vencidas o por vencer">✉️🔒 Email Licencias (<span class="lblCountSel">0</span>)</button>
@@ -7939,13 +7939,14 @@ verificarSesion();
         <td style="text-align:center; vertical-align:middle; padding:6px 4px; min-width:90px;">
           <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:3px; width:fit-content; margin:0 auto;">
             <button class="btn btn-secondary btn-xs btn-edit-emp" data-idx="${idx}" title="Editar" style="padding:3px 5px;">✏️</button>
-            <button class="btn btn-whatsapp btn-xs btn-wsp-emp" data-idx="${idx}" title="WhatsApp" style="padding:3px 5px;">💬</button>
-            <button class="btn btn-ghost btn-xs btn-mail-emp-zoho" data-idx="${idx}" title="Email" style="background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.4);color:#f97316;padding:3px 5px;">✉️</button>
+            <button class="btn btn-whatsapp btn-xs btn-wsp-emp" data-idx="${idx}" title="Avisar por WhatsApp sistemas desactualizados" style="padding:3px 5px;">💬</button>
+            <button class="btn btn-ghost btn-xs btn-mail-emp-zoho" data-idx="${idx}" title="Avisar por correo sistemas desactualizados" style="background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.4);color:#f97316;padding:3px 5px;">✉️</button>
             <button class="btn btn-danger btn-xs btn-del-emp" data-idx="${idx}" title="Eliminar" style="padding:3px 5px;">🗑️</button>
             <button class="btn btn-ghost btn-xs btn-toggle-versiones" data-idx="${idx}" title="Versiones" style="${verBtnStyle} font-size:0.65rem;font-weight:700;padding:2px 3px;grid-column:span 2;">${verIcon} Ver</button>
             <button class="btn btn-ghost btn-xs btn-historial-emp" data-idx="${idx}" title="Ver historial de interacciones" style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;padding:2px 3px;font-size:0.65rem;display:flex;align-items:center;gap:2px;position:relative;">📋<span style="font-size:0.6rem;line-height:1;">Hist.</span>${interacciones.filter((i:any)=>i.empresa===c.EMPRESA).length > 0 ? `<span style="position:absolute;top:-5px;right:-5px;background:#6366f1;color:white;border-radius:10px;font-size:0.58rem;padding:0 4px;font-weight:800;min-width:14px;text-align:center;">${interacciones.filter((i:any)=>i.empresa===c.EMPRESA).length}</span>` : ""}</button>
             <button class="btn btn-ghost btn-xs btn-tareas-emp" data-idx="${idx}" title="Ver tareas pendientes" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:#34d399;padding:2px 3px;font-size:0.65rem;display:flex;align-items:center;gap:2px;position:relative;">📌<span style="font-size:0.6rem;line-height:1;">Tar.</span>${tareas.filter((t:any)=>t.empresa===c.EMPRESA&&!t.completada).length > 0 ? `<span style="position:absolute;top:-5px;right:-5px;background:#10b981;color:white;border-radius:10px;font-size:0.58rem;padding:0 4px;font-weight:800;min-width:14px;text-align:center;">${tareas.filter((t:any)=>t.empresa===c.EMPRESA&&!t.completada).length}</span>` : ""}</button>
-            <button class="btn btn-ghost btn-xs btn-mail-licencia-emp" data-idx="${idx}" title="Avisar licencia por correo" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:3px 5px;grid-column:span 4;">🔒 Licencia</button>
+            <button class="btn btn-ghost btn-xs btn-mail-licencia-emp" data-idx="${idx}" title="Avisar licencia por correo" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:3px 5px;grid-column:span 2;">✉️🔒</button>
+            <button class="btn btn-whatsapp btn-xs btn-wsp-licencia-emp" data-idx="${idx}" title="Avisar licencia por WhatsApp" style="padding:3px 5px;grid-column:span 2;">💬🔒</button>
           </div>
         </td>
       `;
@@ -10525,6 +10526,23 @@ verificarSesion();
       return;
     }
     abrirModalSeleccionLicencia([c], false);
+  });
+
+  // Botón individual de WhatsApp de licencia por empresa — igual que el de versiones (enviarWhatsApp):
+  // manda directo con TODAS las licencias pendientes, sin panel de selección.
+  function enviarWhatsAppLicencia(e) {
+    const idx = parseInt(e.target.closest("button").dataset.idx);
+    const c = clientes[idx];
+    const ci = getInfoContacto(c);
+    const tel = (ci.telefono1 || ci.telefono2 || "").replace(/\D/g, "");
+    if (!tel) return alert("No tiene teléfono.");
+    const msg = generarMensajeLicencias(c);
+    if (!msg) { toast(`ℹ️ ${c.EMPRESA} no tiene licencias vencidas o por vencer registradas.`, "info"); return; }
+    abrirWhatsAppLink(tel, msg);
+  }
+  document.addEventListener("click", e => {
+    const btn = e.target.closest(".btn-wsp-licencia-emp");
+    if (btn) enviarWhatsAppLicencia({ target: btn } as any);
   });
 
   // ============================================================
