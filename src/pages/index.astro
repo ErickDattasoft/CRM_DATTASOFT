@@ -2317,6 +2317,11 @@ try {
             <span class="stat-value" id="dash-total-empresas">0</span>
             <span class="stat-label">Empresas</span>
           </div>
+          <div class="stat-card stat-pending" data-nav="empresas" data-accion="pendientes-aviso" title="Ver empresas con sistemas sin avisar">
+            <div class="stat-icon">🔔</div>
+            <span class="stat-value" id="dash-avisos-pendientes">0</span>
+            <span class="stat-label">Avisos Pendientes</span>
+          </div>
           <div class="stat-card stat-contacts" data-nav="contactos" title="Ver Contactos">
             <div class="stat-icon">👥</div>
             <span class="stat-value" id="dash-total-contactos">0</span>
@@ -5733,10 +5738,15 @@ verificarSesion();
 
   // Click en stat-cards del dashboard
   document.querySelectorAll(".stat-card[data-nav]").forEach(card => {
-    card.addEventListener("click", () => {
-      const nav = card.dataset.nav;
-      const filtroEstado = card.dataset.filterEstado || "";
+    card.addEventListener("click", async () => {
+      const nav = (card as HTMLElement).dataset.nav;
+      const filtroEstado = (card as HTMLElement).dataset.filterEstado || "";
       navegarA(nav, filtroEstado);
+      if ((card as HTMLElement).dataset.accion === "pendientes-aviso") {
+        await initAvisosVersiones(); // asegura que avisosVersionesLog esté cargado antes de calcular pendientes
+        const grupos = calcularPendientesDeAviso();
+        if (grupos.length) abrirModalSeleccionAviso(grupos.map(g => g.cliente), true);
+      }
     });
   });
 
@@ -7074,6 +7084,8 @@ verificarSesion();
     const cardTkOtros = document.querySelector(".stat-card.stat-others");
     el("dash-tickets-otros").textContent = nTkOtros;
     if (cardTkOtros) cardTkOtros.style.display = nTkOtros > 0 ? "flex" : "none";
+
+    initAvisosVersiones(); // carga avisosVersionesLog (si aún no se había cargado) y actualiza el contador de "Avisos Pendientes"
 
     // Sidebar badges
     el("badge-empresas").textContent = clientes.length;
@@ -8528,8 +8540,11 @@ verificarSesion();
   }
 
   function actualizarBadgePendientesAviso() {
+    const n = calcularPendientesDeAviso().length;
     const lbl = document.getElementById("lblCountPendientesAviso");
-    if (lbl) lbl.textContent = String(calcularPendientesDeAviso().length);
+    if (lbl) lbl.textContent = String(n);
+    const dashLbl = document.getElementById("dash-avisos-pendientes");
+    if (dashLbl) dashLbl.textContent = String(n);
   }
 
   async function initAvisosVersiones() {
