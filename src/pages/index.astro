@@ -5586,6 +5586,14 @@ verificarSesion();
     return partes.join(" ");
   }
 
+  // Color del punto de la línea de tiempo del ticket — reutiliza los mismos tonos que los badges
+  // de estado (badge-abierto/pendiente/resuelto/cerrado) para que se vea consistente. Un estado
+  // personalizado que el equipo haya agregado en Configuración cae al morado por defecto.
+  function colorPuntoEstado(estado) {
+    const mapa = { abierto: "#38bdf8", pendiente: "#fbbf24", resuelto: "#34d399", cerrado: "#94a3b8" };
+    return mapa[slugBadge(estado)] || "#a5b4fc";
+  }
+
   // Documento público reducido (agenda/publico) para que las páginas sin login
   // (registro-evento.astro, ticket-publico.astro) dejen de leer agenda/datos completo
   // (clientes, tickets con notas internas, todo) solo para sacar logo/nombre/correo/eventos.
@@ -8643,16 +8651,34 @@ verificarSesion();
     if (seAcabaDeCerrar) dispararN8n("ticket_cerrado", datosEventoTicket(t));
   }
 
-  // Calcula el tiempo trabajado (creación → resuelto) cada vez que un ticket pasa a "Resuelto".
-  // Se recalcula desde fechaCreacion aunque el ticket ya se hubiera reabierto antes, y borra
+  // Calcula el tiempo trabajado total cada vez que un ticket pasa a "Resuelto". NO cuenta el
+  // tiempo que el ticket pasó en "Abierto" (esperando cotización, acceso del cliente, etc.) —
+  // suma solo los tramos de t.historialEstados donde el estado de partida es distinto de
+  // "Abierto". Si el ticket entra y sale de "Abierto" varias veces (se reabre y vuelve a
+  // esperar), esos tramos también se excluyen cada vez. Se recalcula por completo y borra
   // cualquier edición manual previa (una nueva resolución implica un nuevo cálculo).
-  function procesarTiempoTrabajado(t, nuevoEstado) {
-    if ((nuevoEstado || "").toLowerCase() !== "resuelto") return;
-    const inicio = new Date(t.fechaCreacion).getTime();
-    const fin = Date.now();
-    t.tiempoTrabajadoAutoSegundos = Math.max(0, Math.round((fin - inicio) / 1000));
-    t.fechaResuelto = new Date(fin).toISOString();
+  function calcularTiempoTrabajadoAuto(t) {
+    const hist = (t.historialEstados && t.historialEstados.length) ? t.historialEstados : [{ estado: t.estado, fecha: t.fechaCreacion }];
+    let totalMs = 0;
+    for (let i = 0; i < hist.length - 1; i++) {
+      if ((hist[i].estado || "").toLowerCase() === "abierto") continue;
+      totalMs += new Date(hist[i + 1].fecha).getTime() - new Date(hist[i].fecha).getTime();
+    }
+    t.tiempoTrabajadoAutoSegundos = Math.max(0, Math.round(totalMs / 1000));
+    t.fechaResuelto = new Date().toISOString();
     t.tiempoTrabajadoEditadoSegundos = null;
+  }
+
+  // Se llama en cada cambio de estado — lleva la bitácora estructurada (t.historialEstados) que
+  // alimenta la línea de tiempo visual del ticket, y dispara el cálculo de tiempo trabajado si
+  // el nuevo estado es "Resuelto". Para tickets creados antes de que existiera este campo, arranca
+  // el historial con el estado que tenían justo antes de este cambio.
+  function registrarCambioEstadoTiempo(t, nuevoEstado) {
+    if (!t.historialEstados || !t.historialEstados.length) {
+      t.historialEstados = [{ estado: t.estado || "Abierto", fecha: t.fechaCreacion }];
+    }
+    t.historialEstados.push({ estado: nuevoEstado, fecha: new Date().toISOString() });
+    if ((nuevoEstado || "").toLowerCase() === "resuelto") calcularTiempoTrabajadoAuto(t);
   }
 
   // Correo + evento n8n de "cerrado y facturado" — se dispara la primera vez que la combinación
@@ -10130,13 +10156,15 @@ verificarSesion();
 
     if (idx === "") {
       const num = tickets.length > 0 ? Math.max(...tickets.map(t => t.numero)) + 1 : 1001;
+      const nowISO = new Date().toISOString();
       const nuevoTicket = {
         numero: num, asunto, empresa, contacto, contactoCorreo, tipo, sistema, estado, facturado, prioridad, grupo, agente,
         descripcion, notasInternas, cc, cco, solicitado, canalizado,
         fechaProgramada, horaProgramada, agenteAsignado, recordatorioDestinatariosIds,
         adjuntos: [...adjuntosTicketActual],
-        fechaCreacion: new Date().toISOString(),
-        fechaActualizacion: new Date().toISOString(),
+        fechaCreacion: nowISO,
+        fechaActualizacion: nowISO,
+        historialEstados: [{ estado, fecha: nowISO }],
         notas: [],
         actividad: []
       };
@@ -10145,7 +10173,7 @@ verificarSesion();
       // Si el ticket nace ya como "Resuelto" (ej. se registra después de una consultoría en
       // sitio que ya terminó), el automático da ~0s — no hay forma de medir el trabajo real
       // desde la creación, así que la caja aparece igual pero invita a editar el tiempo a mano.
-      procesarTiempoTrabajado(nuevoTicket, estado);
+      if ((estado || "").toLowerCase() === "resuelto") calcularTiempoTrabajadoAuto(nuevoTicket);
       logBitacora(`Ticket #${num} creado: "${asunto}" — ${empresa || contacto}`, "🎫");
       dispararN8n("ticket_creado_equipo", datosEventoTicket(nuevoTicket));
 
@@ -10187,7 +10215,7 @@ verificarSesion();
         fechaProgramada, horaProgramada, agenteAsignado, recordatorioDestinatariosIds,
         adjuntos: [...adjuntosExistentes, ...adjuntosTicketActual],
         fechaActualizacion: new Date().toISOString() });
-      if (estado !== estadoAnterior) { registrarActividadTicket(t, `Estado cambiado: "${estadoAnterior}" → "${estado}"`); procesarTiempoTrabajado(t, estado); }
+      if (estado !== estadoAnterior) { registrarActividadTicket(t, `Estado cambiado: "${estadoAnterior}" → "${estado}"`); registrarCambioEstadoTiempo(t, estado); }
       if (agente !== agenteAnterior) registrarActividadTicket(t, `Asignado cambiado: "${agenteAnterior || "sin asignar"}" → "${agente || "sin asignar"}"`);
       if (prioridad !== prioridadAnterior) registrarActividadTicket(t, `Prioridad cambiada: "${prioridadAnterior}" → "${prioridad}"`);
       if (facturado !== facturadoAnterior) registrarActividadTicket(t, `Facturación cambiada: "${facturadoAnterior}" → "${facturado}"`);
@@ -10311,40 +10339,83 @@ verificarSesion();
     await guardarTickets(tickets);
   }
 
+  // Arma la línea de tiempo visual (un punto + conector por cada cambio de estado). Los tramos
+  // que arrancan en "Abierto" se marcan como espera (⏳, no cuentan para el total facturable);
+  // el resto se marca como trabajo real (✅). El último tramo, si el ticket sigue en un estado
+  // no terminal (no Resuelto/Cerrado), se muestra "en curso" calculado hasta ahora mismo.
+  function renderLineaTiempoTicket(t) {
+    const hist = (t.historialEstados && t.historialEstados.length) ? t.historialEstados : [{ estado: t.estado, fecha: t.fechaCreacion }];
+    const filas = hist.map((h, i) => {
+      const esUltimo = i === hist.length - 1;
+      const esperaTramo = (h.estado || "").toLowerCase() === "abierto";
+      let segmentoHtml = "";
+      if (!esUltimo) {
+        const durSeg = (new Date(hist[i + 1].fecha).getTime() - new Date(h.fecha).getTime()) / 1000;
+        segmentoHtml = `<div style="font-size:0.74rem; margin-top:2px; color:${esperaTramo ? "var(--text-muted)" : "#34d399"};">${esperaTramo ? `⏳ ${formatearDuracion(durSeg)} en espera (no cuenta)` : `✅ ${formatearDuracion(durSeg)}`}</div>`;
+      } else {
+        const terminal = ["resuelto", "cerrado"].includes((h.estado || "").toLowerCase());
+        if (!terminal) {
+          const durSeg = (Date.now() - new Date(h.fecha).getTime()) / 1000;
+          segmentoHtml = `<div style="font-size:0.74rem; margin-top:2px; color:var(--text-muted); font-style:italic;">${esperaTramo ? `⏳ ${formatearDuracion(durSeg)} en espera — en curso` : `🔴 ${formatearDuracion(durSeg)} en curso`}</div>`;
+        }
+      }
+      return `
+        <div style="display:flex; gap:10px;">
+          <div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0;">
+            <div style="width:10px; height:10px; border-radius:50%; background:${colorPuntoEstado(h.estado)}; margin-top:3px;"></div>
+            ${!esUltimo ? `<div style="width:2px; flex:1; background:var(--border-color); margin:2px 0;"></div>` : ""}
+          </div>
+          <div style="padding-bottom:12px; flex:1;">
+            <div style="font-size:0.82rem; font-weight:700; color:var(--text-bright);">${escapeHtml(h.estado)}</div>
+            <div style="font-size:0.7rem; color:var(--text-muted);">${new Date(h.fecha).toLocaleString("es-MX")}</div>
+            ${segmentoHtml}
+          </div>
+        </div>`;
+    }).join("");
+    return `<div style="display:flex; flex-direction:column;">${filas}</div>`;
+  }
+
   function renderTiempoTrabajadoTicket(t) {
     const cont = document.getElementById("det-tk-tiempo-trabajado");
     if (!cont) return;
 
+    const timelineHtml = renderLineaTiempoTicket(t);
+    let totalHtml;
+
     if (t.tiempoTrabajadoAutoSegundos == null) {
-      cont.innerHTML = `<div style="font-size:0.78rem; color:var(--text-muted); padding:10px 12px; border:1px dashed var(--border-color); border-radius:6px;">⏱️ Cronómetro corriendo desde ${new Date(t.fechaCreacion).toLocaleString("es-MX")} — el tiempo trabajado se calcula al marcar el ticket como <strong>Resuelto</strong>.</div>`;
-      return;
-    }
-
-    const consultoria = esConsultoria(t.tipo);
-    const colorBorder = consultoria ? "rgba(16,185,129,0.35)" : "rgba(234,179,8,0.35)";
-    const colorBg = consultoria ? "rgba(16,185,129,0.08)" : "rgba(234,179,8,0.07)";
-    const colorText = consultoria ? "#10b981" : "#ca8a04";
-    const etiqueta = consultoria ? "💼 Consultoría — facturable por horas" : "ℹ️ Referencia — no se factura por horas";
-    const editado = t.tiempoTrabajadoEditadoSegundos;
-    const valorMostrado = editado != null ? editado : t.tiempoTrabajadoAutoSegundos;
-
-    cont.innerHTML = `
-      <div style="border:1px solid ${colorBorder}; background:${colorBg}; border-radius:8px; padding:12px 14px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-          <div>
-            <div style="font-size:0.72rem; text-transform:uppercase; font-weight:700; color:${colorText};">⏱️ Tiempo trabajado — ${etiqueta}</div>
-            <div style="font-size:1.05rem; font-weight:700; margin-top:2px; color:var(--text-bright);">${formatearDuracion(valorMostrado)}
-              ${editado != null ? `<span style="font-size:0.72rem; font-weight:400; color:var(--text-muted);">(editado · automático: ${formatearDuracion(t.tiempoTrabajadoAutoSegundos)})</span>` : ""}
+      totalHtml = `<div style="font-size:0.78rem; color:var(--text-muted); margin-top:10px;">El total facturable se calcula al marcar el ticket como <strong>Resuelto</strong> (no cuenta el tiempo que pase en "Abierto").</div>`;
+    } else {
+      const consultoria = esConsultoria(t.tipo);
+      const colorBorder = consultoria ? "rgba(16,185,129,0.35)" : "rgba(234,179,8,0.35)";
+      const colorBg = consultoria ? "rgba(16,185,129,0.08)" : "rgba(234,179,8,0.07)";
+      const colorText = consultoria ? "#10b981" : "#ca8a04";
+      const etiqueta = consultoria ? "💼 Consultoría — facturable por horas" : "ℹ️ Referencia — no se factura por horas";
+      const editado = t.tiempoTrabajadoEditadoSegundos;
+      const valorMostrado = editado != null ? editado : t.tiempoTrabajadoAutoSegundos;
+      totalHtml = `
+        <div style="border:1px solid ${colorBorder}; background:${colorBg}; border-radius:8px; padding:12px 14px; margin-top:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div>
+              <div style="font-size:0.72rem; text-transform:uppercase; font-weight:700; color:${colorText};">⏱️ Total trabajado (sin espera) — ${etiqueta}</div>
+              <div style="font-size:1.05rem; font-weight:700; margin-top:2px; color:var(--text-bright);">${formatearDuracion(valorMostrado)}
+                ${editado != null ? `<span style="font-size:0.72rem; font-weight:400; color:var(--text-muted);">(editado · automático: ${formatearDuracion(t.tiempoTrabajadoAutoSegundos)})</span>` : ""}
+              </div>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+              <input id="tk-tiempo-edit-h" type="number" min="0" placeholder="h" style="width:52px; font-size:0.78rem; padding:4px 6px;">
+              <input id="tk-tiempo-edit-m" type="number" min="0" max="59" placeholder="m" style="width:52px; font-size:0.78rem; padding:4px 6px;">
+              <button class="btn btn-ghost btn-xs" id="btnGuardarTiempoTrabajado">✏️ Editar</button>
+              <button class="btn btn-ghost btn-xs" id="btnIncluirTiempoDescripcion">➕ Incluir en descripción</button>
             </div>
           </div>
-          <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-            <input id="tk-tiempo-edit-h" type="number" min="0" placeholder="h" style="width:52px; font-size:0.78rem; padding:4px 6px;">
-            <input id="tk-tiempo-edit-m" type="number" min="0" max="59" placeholder="m" style="width:52px; font-size:0.78rem; padding:4px 6px;">
-            <button class="btn btn-ghost btn-xs" id="btnGuardarTiempoTrabajado">✏️ Editar</button>
-            <button class="btn btn-ghost btn-xs" id="btnIncluirTiempoDescripcion">➕ Incluir en descripción</button>
-          </div>
-        </div>
-      </div>`;
+        </div>`;
+    }
+
+    cont.innerHTML = `
+      <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:8px;">⏱️ Tiempo del ticket</div>
+      ${timelineHtml}
+      ${totalHtml}
+    `;
 
     document.getElementById("btnGuardarTiempoTrabajado")?.addEventListener("click", async () => {
       const tk = ticketPorNumero(ticketDetalleNumero);
@@ -10573,7 +10644,7 @@ verificarSesion();
     if (nuevoEstado && nuevoEstado !== t.estado) {
       registrarActividadTicket(t, `Estado cambiado: "${estadoAnterior}" → "${nuevoEstado}"`);
       logBitacora(`Ticket #${t.numero} cambió de estado: "${estadoAnterior}" → "${nuevoEstado}"`, "🔄");
-      procesarTiempoTrabajado(t, nuevoEstado);
+      registrarCambioEstadoTiempo(t, nuevoEstado);
       t.estado = nuevoEstado;
       document.getElementById("det-tk-estado-badge").textContent = nuevoEstado;
       document.getElementById("det-tk-estado-badge").className = `badge badge-${slugBadge(nuevoEstado)}`;
