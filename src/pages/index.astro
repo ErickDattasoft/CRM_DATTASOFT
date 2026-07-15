@@ -5260,6 +5260,7 @@ verificarSesion();
   let avisosVersionesLog = (() => { try { return JSON.parse(localStorage.getItem("crm_avisos_versiones") || "[]"); } catch { return []; } })();
   let avisosVersionesInited = false;
   let seleccionAvisoState = []; // grupos {cliente, items:[{sistema, versionInstalada, versionOficial, marcado, fechaPrevia}]} del modal de selección de aviso abierto
+  let seleccionAvisoModo = "brevo"; // "brevo": envío automático (masivo/pendientes de aviso) | "zoho": botón individual por fila, abre Zoho con el mensaje ya filtrado
   let acercaDe = { version: "v3.1.0", fecha: "Julio 2026", notas: "" };
   let configCorreo = { provider: "brevo", apiKey: "" };
   let configN8n = { webhookUrl: "", destinatarios: [], reglas: [] };
@@ -8500,7 +8501,7 @@ verificarSesion();
   // de cada empresa (los ya avisados aparecen desmarcados pero visibles, para no ocultar
   // información); soloNoAvisados=true (usado por la bandeja "Pendientes de aviso") omite del todo
   // los sistemas que ya tienen un aviso registrado para la versión oficial actual.
-  function abrirModalSeleccionAviso(listaClientes, soloNoAvisados = false) {
+  function abrirModalSeleccionAviso(listaClientes, soloNoAvisados = false, modo = "brevo") {
     seleccionAvisoState = listaClientes.map(c => {
       let items = getSistemasPendientesDetalle(c).map(it => {
         const fechaPrevia = avisoYaRegistrado(c.EMPRESA, it.sistema, it.versionOficial);
@@ -8510,6 +8511,7 @@ verificarSesion();
       return { cliente: c, items };
     }).filter(g => g.items.length > 0);
     if (!seleccionAvisoState.length) { toast("✅ No hay sistemas pendientes de notificar.", "success"); return; }
+    seleccionAvisoModo = modo;
     const banner = document.getElementById("seleccion-aviso-auto-banner");
     if (banner) banner.style.display = soloNoAvisados ? "flex" : "none";
     renderSeleccionAvisoModal();
@@ -8524,10 +8526,9 @@ verificarSesion();
       <div style="margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--border-subtle);">
         <div style="font-weight:700; font-size:0.85rem; margin-bottom:6px;">${escapeHtml(g.cliente.EMPRESA)}</div>
         ${g.items.map((it, ii) => `
-          <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem; padding:4px 0; cursor:pointer;">
-            <input type="checkbox" class="chk-seleccion-aviso" data-gi="${gi}" data-ii="${ii}" ${it.marcado ? "checked" : ""}>
-            <span>${escapeHtml(it.sistema)}: ${escapeHtml(it.versionInstalada)} → ${escapeHtml(it.versionOficial)}</span>
-            ${it.fechaPrevia ? `<span style="color:var(--text-muted); font-size:0.72rem;">— ya avisado el ${it.fechaPrevia}</span>` : ""}
+          <label style="display:grid; grid-template-columns:18px 1fr; align-items:start; gap:8px; font-size:0.8rem; padding:4px 0; cursor:pointer; width:100%; text-align:left;">
+            <input type="checkbox" class="chk-seleccion-aviso" data-gi="${gi}" data-ii="${ii}" ${it.marcado ? "checked" : ""} style="margin-top:2px;">
+            <span>${escapeHtml(it.sistema)}: ${escapeHtml(it.versionInstalada)} → ${escapeHtml(it.versionOficial)}${it.fechaPrevia ? `<br><span style="color:var(--text-muted); font-size:0.72rem;">— ya avisado el ${it.fechaPrevia}</span>` : ""}</span>
           </label>`).join("")}
       </div>`).join("");
     cont.querySelectorAll(".chk-seleccion-aviso").forEach(chk => {
@@ -8542,8 +8543,12 @@ verificarSesion();
 
   function actualizarContadorSeleccionAviso() {
     const n = seleccionAvisoState.reduce((acc, g) => acc + g.items.filter(it => it.marcado).length, 0);
-    const lbl = document.getElementById("lblCountSeleccionAviso");
-    if (lbl) lbl.textContent = String(n);
+    const btnConfirmar = document.getElementById("btnConfirmarSeleccionAviso");
+    if (btnConfirmar) {
+      btnConfirmar.innerHTML = seleccionAvisoModo === "zoho"
+        ? `📧 Continuar a Zoho (<span id="lblCountSeleccionAviso">${n}</span>)`
+        : `✉️ Enviar (<span id="lblCountSeleccionAviso">${n}</span>)`;
+    }
   }
 
   function cerrarModalSeleccionAviso() {
@@ -8557,6 +8562,27 @@ verificarSesion();
     const grupos = seleccionAvisoState.map(g => ({ cliente: g.cliente, items: g.items.filter(it => it.marcado) })).filter(g => g.items.length > 0);
     if (!grupos.length) { toast("⚠️ Selecciona al menos un sistema.", "warning"); return; }
     const usuario = getUsuarioActual()?.nombre || "Sistema";
+
+    if (seleccionAvisoModo === "zoho") {
+      const g = grupos[0]; // el botón individual por fila solo abre este modal para 1 empresa
+      const c = g.cliente;
+      const ci = getInfoContacto(c);
+      const subject = `Actualización de Sistemas CONTPAQi — ${c.EMPRESA}`;
+      const msg = generarMensaje(c, g.items) || "";
+      abrirZohoMail({ to: ci.correo || "", subject, body: msg });
+      const fechaLocal = { seconds: Math.floor(Date.now() / 1000) };
+      for (const it of g.items) {
+        const registro = { empresa: c.EMPRESA, sistema: it.sistema, versionInstalada: it.versionInstalada, versionOficial: it.versionOficial, correo: ci.correo || "", enviadoPor: usuario };
+        registrarAvisoVersion(registro).catch(() => {});
+        avisosVersionesLog.unshift({ ...registro, fecha: fechaLocal });
+      }
+      localStorage.setItem("crm_avisos_versiones", JSON.stringify(avisosVersionesLog));
+      cerrarModalSeleccionAviso();
+      renderHistorialAvisos();
+      actualizarBadgePendientesAviso();
+      return;
+    }
+
     let enviados = 0;
     const sinCorreo = [];
     for (const g of grupos) {
@@ -8594,14 +8620,6 @@ verificarSesion();
     if (!grupos.length) { toast("✅ No hay avisos pendientes — todo al día.", "success"); return; }
     abrirModalSeleccionAviso(grupos.map(g => g.cliente), true);
   });
-
-  async function enviarEmailEmpresa(e) {
-    const idx = parseInt(e.target.closest("button").dataset.idx);
-    const c = clientes[idx];
-    const ci = getInfoContacto(c);
-    if (!ci.correo) return alert("No tiene correo electrónico. Agrégalo en la sección Contactos.");
-    abrirModalSeleccionAviso([c], false);
-  }
 
   document.getElementById("btnIrContactosEmp")?.addEventListener("click", () => {
     cerrarFormEmpresa();
@@ -10044,7 +10062,16 @@ verificarSesion();
   // ============================================================
   function abrirZohoMail({ to = "", subject = "", body = "" } = {}) {
     window.open("https://mail.zoho.com/zm/#compose", "_blank");
-    if (to) {
+    if (body) {
+      // Hay mensaje armado (sistemas ya filtrados por el modal de selección): lo copiamos porque
+      // es lo más tedioso de re-escribir a mano; el destinatario se muestra en el toast para
+      // copiarlo/escribirlo tú mismo en el campo "Para:".
+      navigator.clipboard.writeText(body).then(() => {
+        toast(`✉️ Zoho abierto · Mensaje copiado (pégalo en el cuerpo) · Destinatario: ${to || "—"}`, "info");
+      }).catch(() => {
+        toast(`✉️ Zoho abierto · Destinatario: ${to || "—"}`, "info");
+      });
+    } else if (to) {
       navigator.clipboard.writeText(to).then(() => {
         toast(`✉️ Zoho abierto · Correo copiado: ${to} — pégalo en el campo "Para:"`, "info");
       }).catch(() => {
@@ -10054,16 +10081,22 @@ verificarSesion();
     logBitacora(`Correo Zoho abierto para: ${to || "(sin destino)"}`, "✉️");
   }
 
-  // Hook en botón de email empresa → Zoho si está configurado
+  // Botón individual de email por empresa → primero abre el panel de selección de sistemas
+  // (para elegir cuáles mencionar), y al confirmar abre Zoho con el mensaje ya filtrado copiado
+  // al portapapeles.
   document.addEventListener("click", e => {
     const btn = e.target.closest(".btn-mail-emp-zoho");
     if (!btn) return;
     const idx = parseInt(btn.dataset.idx);
     const c = clientes[idx];
     if (!c) return;
-    const pendientes = getSistemasPendientes(c);
-    const bodyMsg = pendientes.length > 0 ? generarMensaje(c) || "" : "";
-    abrirZohoMail({ to: getInfoContacto(c).correo || "", subject: "Actualización de Sistemas CONTPAQi", body: bodyMsg });
+    const ci = getInfoContacto(c);
+    if (!ci.correo) { toast("⚠️ Esta empresa no tiene correo electrónico registrado.", "warning"); return; }
+    if (getSistemasPendientesDetalle(c).length === 0) {
+      abrirZohoMail({ to: ci.correo, subject: "", body: "" });
+      return;
+    }
+    abrirModalSeleccionAviso([c], false, "zoho");
   });
 
   // ============================================================
