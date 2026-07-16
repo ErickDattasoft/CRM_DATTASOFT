@@ -4305,7 +4305,10 @@ try {
         </label>
         <button class="btn btn-ghost btn-sm" id="btnCotizarTicket" title="Generar una cotización a partir de este ticket">🧾 Cotizar</button>
         <button class="btn btn-ghost btn-sm" id="btnImprimirTicket" title="Imprimir o guardar como PDF">🖨️ Imprimir</button>
-        <button class="btn btn-ghost btn-sm" id="btnReenviarCorreoTicket" title="Reenviar correo de notificación al contacto">✉️ Reenviar correo</button>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+          <button class="btn btn-ghost btn-sm" id="btnReenviarCorreoTicket" title="Reenvía el correo al cliente con la descripción actual — úsalo para avisar cambios o darle seguimiento al ticket">✉️ Reenviar correo</button>
+          <span style="font-size:0.62rem; color:var(--text-muted); white-space:nowrap;">Por cambios o seguimiento</span>
+        </div>
         <button class="modal-close" id="btnCerrarDetalle">×</button>
       </div>
     </div>
