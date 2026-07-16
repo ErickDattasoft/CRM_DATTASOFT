@@ -632,13 +632,19 @@ export async function guardarConfigPublica(datos) {
  * a sí misma (las reglas de Firestore exigen que quien otorga el acceso ya lo tenga), y el
  * otorgamiento fallaba en silencio. Pidiéndolo primero, se hace mientras la sesión que ejecuta
  * esto (la de quien ya tiene acceso real) todavía está activa.
+ *
+ * Si la cuenta de ese correo ya existía en Firebase (ej. un intento anterior que sí creó la
+ * cuenta pero, por este mismo bug, se quedó sin el permiso ni el vínculo guardados), no se trata
+ * como error: el permiso de arriba ya se otorgó de todas formas, así que se avisa con
+ * yaExistia=true para que el llamador guarde el vínculo igual, en vez de dejar la cuenta
+ * "huérfana" para siempre porque nunca se puede volver a "crear".
  */
 export async function activarCuentaSegura(email, password) {
+  // Es para alguien que YA es miembro legítimo del CRM (se autoactivó, o un admin la creó
+  // por él) — se le otorga acceso real de una vez, a diferencia de solicitarAcceso() para
+  // gente nueva, que se queda pendiente de aprobación.
+  const otorgado = await otorgarAccesoStaff(email);
   try {
-    // Es para alguien que YA es miembro legítimo del CRM (se autoactivó, o un admin la creó
-    // por él) — se le otorga acceso real de una vez, a diferencia de solicitarAcceso() para
-    // gente nueva, que se queda pendiente de aprobación.
-    const otorgado = await otorgarAccesoStaff(email);
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     if (!otorgado) {
       return {
@@ -649,10 +655,18 @@ export async function activarCuentaSegura(email, password) {
     }
     return { ok: true, uid: cred.user.uid };
   } catch (error) {
+    if (error?.code === "auth/email-already-in-use") {
+      if (!otorgado) {
+        return {
+          ok: false, error: error.code,
+          mensaje: "Ese correo ya tiene una cuenta segura, pero no se pudo confirmar su acceso. Usa \"🔄 Sincronizar accesos\" e inténtalo de nuevo."
+        };
+      }
+      return { ok: true, uid: null, yaExistia: true };
+    }
     console.error("Error al activar cuenta segura:", error);
     let mensaje = error?.message || String(error);
-    if (error?.code === "auth/email-already-in-use") mensaje = "Ese correo ya tiene una cuenta segura activada.";
-    else if (error?.code === "auth/weak-password") mensaje = "La contraseña debe tener al menos 6 caracteres.";
+    if (error?.code === "auth/weak-password") mensaje = "La contraseña debe tener al menos 6 caracteres.";
     else if (error?.code === "auth/invalid-email") mensaje = "Correo inválido.";
     else if (error?.code === "auth/operation-not-allowed") mensaje = "El inicio de sesión con correo/contraseña no está habilitado en Firebase todavía — avísale a Erick.";
     return { ok: false, error: error?.code || "error", mensaje };

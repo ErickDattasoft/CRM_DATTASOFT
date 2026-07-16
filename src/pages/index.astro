@@ -6668,6 +6668,8 @@ verificarSesion();
     const m = document.getElementById("modal-cuenta-segura"); if (m) m.style.display = "none";
     if (res.avisoAcceso) {
       toast(`⚠️ ${res.avisoAcceso}`, "warning");
+    } else if (res.yaExistia) {
+      toast(`🔗 Esa cuenta ya existía — se vinculó y se le otorgó acceso${esParaOtro ? ` a ${cuentaSeguraObjetivo}` : ""}`);
     } else {
       toast(esParaOtro ? `🔒 Cuenta segura activada para ${cuentaSeguraObjetivo}` : "🔒 Cuenta segura activada correctamente");
     }
