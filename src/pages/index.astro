@@ -547,6 +547,54 @@ try {
     .btn-xs { padding: 4px 8px; font-size: 0.7rem; border-radius: var(--radius-sm); }
     .btn-block { width: 100%; justify-content: center; }
 
+    /* ===== Botones de acciones por fila (tablas) ===== */
+    .row-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-icon {
+      position: relative;
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      font-size: 0.85rem;
+    }
+    .btn-icon-badge {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      color: white;
+      border-radius: 10px;
+      font-size: 0.58rem;
+      line-height: 1.4;
+      padding: 0 4px;
+      font-weight: 800;
+      min-width: 14px;
+      text-align: center;
+    }
+    .avisar-menu-flotante {
+      position: fixed;
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 210px;
+      padding: 8px;
+      background: var(--bg-card-hover);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+      z-index: 3000;
+    }
+    .avisar-menu-flotante .btn {
+      width: 100%;
+      justify-content: flex-start;
+      font-size: 0.75rem;
+      padding: 7px 10px;
+    }
+
     /* ===== INPUTS & FORMS ===== */
     input, textarea, select {
       padding: 10px 14px;
@@ -591,6 +639,20 @@ try {
       letter-spacing: 0.03em;
     }
     .form-group label .required { color: var(--brand-danger); }
+
+    /* ===== Secciones delimitadas dentro de un formulario (evita que todo se vea plano) ===== */
+    .form-section {
+      border: 1px solid var(--section-accent, var(--border-color));
+      border-radius: var(--radius-md);
+      background: var(--section-bg, rgba(255, 255, 255, 0.02));
+      padding: 12px 14px;
+      margin-bottom: 12px;
+    }
+    .form-section-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
 
     .form-actions {
       display: flex;
@@ -2644,28 +2706,35 @@ try {
             <div class="card hidden" id="formulario-empresa" style="border-color: rgba(99,102,241,0.3);">
               <div class="card-title" id="form-emp-titulo">➕ Registrar Empresa</div>
               <input type="hidden" id="edit-emp-index">
-              <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:14px;">
-                <div class="form-group"><label>Empresa <span class="required">*</span></label><input id="form-empresa" required style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
-                <div class="form-group"><label>RFC</label><input id="form-empresa-rfc" placeholder="Ej: XAXX010101000"></div>
+              <div class="form-section" style="--section-accent:rgba(56,189,248,0.25); --section-bg:rgba(56,189,248,0.04);">
+                <div class="form-section-title" style="color:#7dd3fc;">🏢 Datos de la empresa</div>
+                <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:0;">
+                  <div class="form-group"><label>Empresa <span class="required">*</span></label><input id="form-empresa" required style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
+                  <div class="form-group"><label>RFC</label><input id="form-empresa-rfc" placeholder="Ej: XAXX010101000"></div>
+                </div>
               </div>
               <!-- Sección inline de contactos -->
-              <div style="border:1px solid rgba(99,102,241,0.25);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:12px;background:rgba(99,102,241,0.04);">
-                <div style="font-size:0.8rem;font-weight:700;color:#a5b4fc;margin-bottom:10px;">📇 Contactos de esta empresa</div>
+              <div class="form-section" style="--section-accent:rgba(99,102,241,0.25); --section-bg:rgba(99,102,241,0.04);">
+                <div class="form-section-title" style="color:#a5b4fc;">📇 Contactos de esta empresa</div>
                 <div id="form-emp-ct-lista" style="margin-bottom:10px;"></div>
                 <!-- Mini-form agregar contacto -->
                 <div style="border-top:1px dashed rgba(255,255,255,0.08);padding-top:10px;">
                   <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:6px;font-weight:600;">➕ Agregar contacto</div>
                   <div style="display:grid;grid-template-columns:2fr 1.5fr 2fr auto;gap:6px;align-items:end;">
-                    <div><label style="font-size:0.7rem;color:var(--text-muted);">Nombre *</label><input id="form-ct-inline-nombre" placeholder="Ej: Juan García" style="font-size:0.82rem;"></div>
+                    <div class="autocomplete-wrap">
+                      <label style="font-size:0.7rem;color:var(--text-muted);">Nombre *</label>
+                      <input id="form-ct-inline-nombre" placeholder="Escribe para buscar un contacto ya existente..." style="font-size:0.82rem;" autocomplete="off">
+                      <div class="autocomplete-list hidden" id="form-ct-inline-ac"></div>
+                    </div>
                     <div><label style="font-size:0.7rem;color:var(--text-muted);">📱 Celular</label><input id="form-ct-inline-tel" placeholder="Ej: 9991234567" style="font-size:0.82rem;"></div>
                     <div><label style="font-size:0.7rem;color:var(--text-muted);">✉️ Correo</label><input id="form-ct-inline-correo" placeholder="Ej: juan@empresa.mx" style="font-size:0.82rem;"></div>
                     <button type="button" class="btn btn-success btn-sm" id="btnAddCtInline" style="height:36px;padding:0 12px;white-space:nowrap;">+ Agregar</button>
                   </div>
                 </div>
               </div>
-              <div id="form-emp-campos-extra-section" style="border-top:1px dashed rgba(255,255,255,0.06); margin-top:10px; padding-top:12px;">
+              <div class="form-section" id="form-emp-campos-extra-section" style="--section-accent:rgba(148,163,184,0.2); --section-bg:rgba(148,163,184,0.03);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                  <h4 style="font-size:0.85rem; color:var(--brand-secondary); font-family:var(--font-heading);">⚙️ Campos Extra</h4>
+                  <h4 class="form-section-title" style="color:var(--brand-secondary); font-family:var(--font-heading); margin-bottom:0;">⚙️ Campos Extra</h4>
                   <button type="button" class="btn btn-ghost btn-xs" id="btnAgregarCampoExtra">➕ Añadir campo</button>
                 </div>
                 <div id="contenedorCamposExtras" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px;"></div>
@@ -2708,7 +2777,7 @@ try {
                     <th style="min-width:160px; width:200px;">Contacto principal<div class="col-resize-handle"></div></th>
                     <th style="min-width:160px; width:200px;">Contacto alternativo<div class="col-resize-handle"></div></th>
                     <th style="min-width:110px; width:130px;">RFC<div class="col-resize-handle"></div></th>
-                    <th style="text-align:center; min-width:100px; width:110px;">Acciones</th>
+                    <th style="text-align:center; min-width:220px; width:230px;">Acciones</th>
                   </tr>
                 </thead>
                 <tbody id="tabla-empresas-body"></tbody>
@@ -3434,6 +3503,23 @@ try {
             Personas que pidieron acceso desde la pantalla de login. No pueden ver ni tocar nada del CRM hasta que apruebes.
           </p>
           <div id="cfg-solicitudes-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+
+        <div class="card" id="cfg-mi-contacto-panel" style="margin-top:20px;">
+          <div class="card-title">📱 Mi información para avisos</div>
+          <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">
+            Se usa como firma cuando <strong>tú</strong> envías avisos de versiones o licencias por WhatsApp o correo — cada
+            usuario del CRM configura la suya desde su propia sesión. Puedes dejar uno o dos contactos; si no dejas
+            ninguno, se usa la lista general de "Contactos de soporte" de más abajo.
+          </p>
+          <div class="form-group" style="max-width:460px; margin-bottom:0;">
+            <div id="cfg-mis-contactos-list" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
+            <div style="display:flex; gap:8px; align-items:flex-start;">
+              <input id="cfg-mi-contacto-nombre" type="text" placeholder="Tu nombre" style="flex:1;">
+              <input id="cfg-mi-contacto-telefono" type="text" placeholder="Tu teléfono" style="flex:1;">
+              <button id="btnAgregarMiContacto" class="btn btn-secondary btn-sm" style="white-space:nowrap;">➕ Agregar</button>
+            </div>
+          </div>
         </div>
 
         <div class="card" id="cfg-usuarios-panel" style="margin-top:20px;">
@@ -4914,7 +5000,7 @@ try {
       <button class="modal-close" id="btnCerrarSeleccionAviso">×</button>
     </div>
     <div style="padding:14px 18px;">
-      <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:10px;">
+      <div id="seleccion-aviso-desc" style="font-size:0.78rem; color:var(--text-muted); margin-bottom:10px;">
         Marca los sistemas que quieres avisar por correo. Los ya avisados para la versión oficial
         actual aparecen desmarcados, pero puedes volver a marcarlos si quieres reinsistir.
       </div>
@@ -5004,7 +5090,7 @@ const BLOQUEO_LOGIN_MINUTOS = 15;
 // siempre deben apuntar aquí, nunca a location.origin (que en desarrollo sería localhost).
 const URL_PRODUCCION = "https://crm-dattasoft.pages.dev";
 
-interface Usuario { id: string; nombre: string; rol: "admin" | "normal"; passHash: string; activo: boolean; authEmail?: string; seccionesPermitidas?: string[]; }
+interface Usuario { id: string; nombre: string; rol: "admin" | "normal"; passHash: string; activo: boolean; authEmail?: string; seccionesPermitidas?: string[]; contactosPropios?: { nombre: string; telefono: string }[]; }
 
 // Secciones que un admin puede restringir por usuario "normal" desde Configuración → Usuarios.
 // Dashboard siempre es visible (es el home). Bitácora ya es admin-only por rol (regla aparte,
@@ -5028,6 +5114,17 @@ function getUsuarios(): Usuario[] {
   try { return JSON.parse(localStorage.getItem(USUARIOS_KEY) || "[]"); } catch { return []; }
 }
 function saveUsuariosLocal(u: Usuario[]) { localStorage.setItem(USUARIOS_KEY, JSON.stringify(u)); }
+
+// Contacto(s) propios que el usuario en sesión configuró para firmar sus avisos de versiones/
+// licencias (ver [contacto_soporte] en generarMensaje/generarMensajeLicencias) — cada usuario
+// guarda su propia lista (uno o dos números); si la deja vacía, esas funciones recurren a la
+// lista global de Configuración como respaldo.
+function getContactosPropiosUsuarioActual(): { nombre: string; telefono: string }[] {
+  const ua = getUsuarioActual();
+  if (!ua) return [];
+  const full = getUsuarios().find(u => u.nombre === ua.nombre);
+  return full?.contactosPropios || [];
+}
 
 // Deduplica nombres ignorando mayúsculas/minúsculas, conservando la primera forma vista
 function dedupeNombres(nombres: string[]): string[] {
@@ -5798,9 +5895,12 @@ verificarSesion();
     if (!licencias.length) return null;
     const fechaFmt = (f: string) => new Date(f + "T00:00:00").toLocaleDateString("es-MX");
     const lineas = licencias.map(l => `• ${l.sistema}: ${l.vencida ? `vencida hace ${Math.abs(l.dias)} día(s)` : `vence en ${l.dias} día(s)`} (${fechaFmt(l.fechaVencimiento)})`);
-    const contactoSoporte = (configTickets.contactosSoporteLicencias || []).length
-      ? (configTickets.contactosSoporteLicencias || []).map(ct => `• ${ct.nombre}: ${ct.telefono}`).join("\n")
-      : "";
+    const propios = getContactosPropiosUsuarioActual();
+    const contactoSoporte = propios.length
+      ? propios.map(ct => `• ${ct.nombre}: ${ct.telefono}`).join("\n")
+      : (configTickets.contactosSoporteLicencias || []).length
+        ? (configTickets.contactosSoporteLicencias || []).map(ct => `• ${ct.nombre}: ${ct.telefono}`).join("\n")
+        : "";
     return plantillaLicencias
       .replace(/\[contacto\]/g, cliente.CONTACTO || "Estimado cliente")
       .replace(/\[empresa\]/g, cliente.EMPRESA || "")
@@ -5813,9 +5913,12 @@ verificarSesion();
       ? sistemasSeleccionados.map(s => `• ${s.sistema}: ${s.versionInstalada} → ${s.versionOficial}${s.cartaTecnica ? ` — Carta técnica: ${s.cartaTecnica}` : ""}`)
       : getSistemasPendientes(cliente);
     if (pendientes.length === 0) return null;
-    const contactoSoporte = (configTickets.contactosSoporteVersiones || []).length
-      ? (configTickets.contactosSoporteVersiones || []).map(ct => `• ${ct.nombre}: ${ct.telefono}`).join("\n")
-      : "";
+    const propios = getContactosPropiosUsuarioActual();
+    const contactoSoporte = propios.length
+      ? propios.map(ct => `• ${ct.nombre}: ${ct.telefono}`).join("\n")
+      : (configTickets.contactosSoporteVersiones || []).length
+        ? (configTickets.contactosSoporteVersiones || []).map(ct => `• ${ct.nombre}: ${ct.telefono}`).join("\n")
+        : "";
     return plantillaMensaje
       .replace(/\[contacto\]/g, cliente.CONTACTO || "Estimado cliente")
       .replace(/\[empresa\]/g, cliente.EMPRESA || "")
@@ -8032,17 +8135,14 @@ verificarSesion();
         <td style="${tdBase} max-width:0; overflow:hidden;">${lineaContacto(nombre2, correo2, tel2, false)}</td>`;
         })()}
         <td style="${tdBase} white-space:nowrap; color:#a5b4fc; font-size:0.82rem; font-family:monospace;">${c.RFC || '—'}</td>
-        <td style="text-align:center; vertical-align:middle; padding:6px 4px; min-width:90px;">
-          <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:3px; width:fit-content; margin:0 auto;">
-            <button class="btn btn-secondary btn-xs btn-edit-emp" data-idx="${idx}" title="Editar" style="padding:3px 5px;">✏️</button>
-            <button class="btn btn-whatsapp btn-xs btn-wsp-emp" data-idx="${idx}" title="Avisar por WhatsApp sistemas desactualizados" style="padding:3px 5px;">💬</button>
-            <button class="btn btn-ghost btn-xs btn-mail-emp-zoho" data-idx="${idx}" title="Avisar por correo sistemas desactualizados" style="background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.4);color:#f97316;padding:3px 5px;">✉️</button>
-            <button class="btn btn-danger btn-xs btn-del-emp" data-idx="${idx}" title="Eliminar" style="padding:3px 5px;">🗑️</button>
-            <button class="btn btn-ghost btn-xs btn-toggle-versiones" data-idx="${idx}" title="Versiones" style="${verBtnStyle} font-size:0.65rem;font-weight:700;padding:2px 3px;grid-column:span 2;">${verIcon} Ver</button>
-            <button class="btn btn-ghost btn-xs btn-historial-emp" data-idx="${idx}" title="Ver historial de interacciones" style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;padding:2px 3px;font-size:0.65rem;display:flex;align-items:center;gap:2px;position:relative;">📋<span style="font-size:0.6rem;line-height:1;">Hist.</span>${interacciones.filter((i:any)=>i.empresa===c.EMPRESA).length > 0 ? `<span style="position:absolute;top:-5px;right:-5px;background:#6366f1;color:white;border-radius:10px;font-size:0.58rem;padding:0 4px;font-weight:800;min-width:14px;text-align:center;">${interacciones.filter((i:any)=>i.empresa===c.EMPRESA).length}</span>` : ""}</button>
-            <button class="btn btn-ghost btn-xs btn-tareas-emp" data-idx="${idx}" title="Ver tareas pendientes" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:#34d399;padding:2px 3px;font-size:0.65rem;display:flex;align-items:center;gap:2px;position:relative;">📌<span style="font-size:0.6rem;line-height:1;">Tar.</span>${tareas.filter((t:any)=>t.empresa===c.EMPRESA&&!t.completada).length > 0 ? `<span style="position:absolute;top:-5px;right:-5px;background:#10b981;color:white;border-radius:10px;font-size:0.58rem;padding:0 4px;font-weight:800;min-width:14px;text-align:center;">${tareas.filter((t:any)=>t.empresa===c.EMPRESA&&!t.completada).length}</span>` : ""}</button>
-            <button class="btn btn-ghost btn-xs btn-mail-licencia-emp" data-idx="${idx}" title="Avisar licencia por correo" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:3px 5px;grid-column:span 2;">✉️🔒</button>
-            <button class="btn btn-whatsapp btn-xs btn-wsp-licencia-emp" data-idx="${idx}" title="Avisar licencia por WhatsApp" style="padding:3px 5px;grid-column:span 2;">💬🔒</button>
+        <td style="text-align:center; vertical-align:middle; padding:8px 6px;">
+          <div class="row-actions">
+            <button class="btn btn-secondary btn-xs btn-icon btn-edit-emp" data-idx="${idx}" title="Editar empresa">✏️</button>
+            <button class="btn btn-ghost btn-xs btn-icon btn-toggle-versiones" data-idx="${idx}" title="Ver estado de versiones instaladas" style="${verBtnStyle}">${verIcon}</button>
+            <button class="btn btn-ghost btn-xs btn-icon btn-historial-emp" data-idx="${idx}" title="Ver historial de interacciones" style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;">📋${interacciones.filter((i:any)=>i.empresa===c.EMPRESA).length > 0 ? `<span class="btn-icon-badge" style="background:#6366f1;">${interacciones.filter((i:any)=>i.empresa===c.EMPRESA).length}</span>` : ""}</button>
+            <button class="btn btn-ghost btn-xs btn-icon btn-tareas-emp" data-idx="${idx}" title="Ver tareas pendientes" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:#34d399;">📌${tareas.filter((t:any)=>t.empresa===c.EMPRESA&&!t.completada).length > 0 ? `<span class="btn-icon-badge" style="background:#10b981;">${tareas.filter((t:any)=>t.empresa===c.EMPRESA&&!t.completada).length}</span>` : ""}</button>
+            <button class="btn btn-ghost btn-xs btn-icon btn-avisar-emp" data-idx="${idx}" title="Avisar por WhatsApp o correo (versión / licencia)" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);color:#fbbf24;">🔔</button>
+            <button class="btn btn-danger btn-xs btn-icon btn-del-emp" data-idx="${idx}" title="Eliminar empresa">🗑️</button>
           </div>
         </td>
       `;
@@ -8107,7 +8207,7 @@ verificarSesion();
     // Events
     tbody.querySelectorAll(".btn-edit-emp").forEach(b => b.addEventListener("click", prepararEdicionEmpresa));
     tbody.querySelectorAll(".btn-del-emp").forEach(b => b.addEventListener("click", eliminarEmpresa));
-    tbody.querySelectorAll(".btn-wsp-emp").forEach(b => b.addEventListener("click", enviarWhatsApp));
+    tbody.querySelectorAll(".btn-avisar-emp").forEach(b => b.addEventListener("click", toggleAvisarMenu));
     tbody.querySelectorAll(".btn-fav").forEach(b => b.addEventListener("click", toggleFavorito));
     tbody.querySelectorAll(".btn-toggle-versiones").forEach(b => b.addEventListener("click", function() {
       const i = this.dataset.idx;
@@ -8154,6 +8254,67 @@ verificarSesion();
     });
   }
 
+  // Menú flotante "🔔 Avisar" de la tabla de Empresas: agrupa los 4 botones de aviso
+  // (WhatsApp/correo de versión y de licencia) que antes iban sueltos en la fila. Se crea
+  // una sola vez y se reposiciona con position:fixed porque .table-wrap tiene overflow:auto
+  // y recortaría un dropdown normal.
+  function getAvisarMenu() {
+    let menu = document.getElementById("avisar-menu-flotante");
+    if (menu) return menu;
+    menu = document.createElement("div");
+    menu.id = "avisar-menu-flotante";
+    menu.className = "avisar-menu-flotante";
+    menu.innerHTML = `
+      <button class="btn btn-whatsapp btn-xs btn-wsp-emp" title="Avisar por WhatsApp sistemas desactualizados">💬 WhatsApp · Versión</button>
+      <button class="btn btn-ghost btn-xs btn-mail-emp-zoho" title="Avisar por correo sistemas desactualizados" style="background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.4);color:#f97316;">✉️ Correo · Versión</button>
+      <button class="btn btn-whatsapp btn-xs btn-wsp-licencia-emp" title="Avisar licencia por WhatsApp">💬🔒 WhatsApp · Licencia</button>
+      <button class="btn btn-ghost btn-xs btn-mail-licencia-emp" title="Avisar licencia por correo" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;">✉️🔒 Correo · Licencia</button>
+    `;
+    document.body.appendChild(menu);
+    // .btn-wsp-emp normalmente se enlaza desde renderEmpresas() vía querySelectorAll sobre el
+    // tbody; como este botón vive fuera de la tabla, se enlaza una sola vez aquí.
+    menu.querySelector(".btn-wsp-emp")?.addEventListener("click", enviarWhatsApp);
+    menu.querySelectorAll("button").forEach(b => b.addEventListener("click", () => { menu.style.display = "none"; }));
+    return menu;
+  }
+
+  function toggleAvisarMenu(e) {
+    e.stopPropagation();
+    const btn = e.currentTarget;
+    const menu = getAvisarMenu();
+    if (menu.style.display !== "none" && menu.dataset.idx === btn.dataset.idx) {
+      menu.style.display = "none";
+      return;
+    }
+    menu.dataset.idx = btn.dataset.idx;
+    menu.querySelectorAll("button").forEach(b => { b.dataset.idx = btn.dataset.idx; });
+    menu.style.display = "flex";
+    const r = btn.getBoundingClientRect();
+    const alturaMenu = menu.offsetHeight;
+    const anchoMenu = menu.offsetWidth;
+    const top = (r.bottom + alturaMenu + 6 > window.innerHeight)
+      ? Math.max(8, r.top - alturaMenu - 6)
+      : r.bottom + 6;
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - anchoMenu - 8));
+    menu.style.top = `${top}px`;
+    menu.style.left = `${left}px`;
+  }
+
+  document.addEventListener("click", (e) => {
+    const menu = document.getElementById("avisar-menu-flotante");
+    if (!menu || menu.style.display === "none") return;
+    if (e.target.closest("#avisar-menu-flotante") || e.target.closest(".btn-avisar-emp")) return;
+    menu.style.display = "none";
+  });
+  window.addEventListener("resize", () => {
+    const menu = document.getElementById("avisar-menu-flotante");
+    if (menu) menu.style.display = "none";
+  });
+  document.addEventListener("scroll", () => {
+    const menu = document.getElementById("avisar-menu-flotante");
+    if (menu) menu.style.display = "none";
+  }, true);
+
   function actualizarContSel() {
     document.querySelectorAll(".lblCountSel").forEach(l => l.textContent = seleccionadosIdx.length);
   }
@@ -8197,6 +8358,58 @@ verificarSesion();
     renderFormContactos();
     formEmp?.classList.remove("hidden");
     formEmp?.scrollIntoView({ behavior: "smooth" });
+  });
+
+  // Autocompletado del mini-form "Agregar contacto": si la persona ya existe como contacto de
+  // OTRA empresa (ej. el mismo dueño/contador con dos empresas), sugiere autollenar tel/correo en
+  // vez de forzar a volver a teclearlos — al confirmar con "+ Agregar" igual se crea un contacto
+  // nuevo ligado a esta empresa, no se comparte el mismo registro entre empresas.
+  const ctInlineNombreInput = document.getElementById("form-ct-inline-nombre") as HTMLInputElement | null;
+  const ctInlineAcList = document.getElementById("form-ct-inline-ac");
+  attachAutocompleteKeyboardNav(ctInlineNombreInput, ctInlineAcList);
+
+  ctInlineNombreInput?.addEventListener("input", function () {
+    const val = this.value.toLowerCase().trim();
+    if (val.length < 2) { ctInlineAcList?.classList.add("hidden"); return; }
+
+    const yaEnEstaEmpresa = new Set(formContactosTemp.map(c => (c.nombre || "").toLowerCase().trim()));
+    const seen = new Set();
+    const matches = contactos.filter((c: any) => {
+      const nombre = (c.nombre || "").toLowerCase().trim();
+      if (!nombre || yaEnEstaEmpresa.has(nombre)) return false;
+      if (!(nombre.includes(val) || (c.correo || "").toLowerCase().includes(val))) return false;
+      const key = `${nombre}||${(c.correo || "").toLowerCase()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    if (!matches.length) { ctInlineAcList?.classList.add("hidden"); return; }
+    ctInlineAcList!.innerHTML = "";
+    matches.slice(0, 10).forEach((c: any) => {
+      const div = document.createElement("div");
+      div.className = "autocomplete-item";
+      div.innerHTML = `
+        <div style="font-weight:600; color:var(--text-bright); font-size:0.84rem;">👤 ${escapeHtml(c.nombre || "")}</div>
+        <div style="font-size:0.76rem; color:var(--brand-secondary); font-weight:700; margin-top:3px;">🏢 ya es contacto de: ${escapeHtml(c.empresa || "—")}</div>
+        ${c.correo ? `<div style="font-size:0.72rem; color:var(--text-light); margin-top:2px;">✉️ ${escapeHtml(c.correo)}</div>` : ""}
+      `;
+      div.addEventListener("click", () => {
+        ctInlineNombreInput.value = c.nombre || "";
+        (document.getElementById("form-ct-inline-tel") as HTMLInputElement).value = c.telefono1 || "";
+        (document.getElementById("form-ct-inline-correo") as HTMLInputElement).value = c.correo || "";
+        ctInlineAcList?.classList.add("hidden");
+        document.getElementById("form-ct-inline-tel")?.focus();
+      });
+      ctInlineAcList!.appendChild(div);
+    });
+    ctInlineAcList?.classList.remove("hidden");
+  });
+
+  document.addEventListener("click", e => {
+    if (!(e.target as HTMLElement).closest("#form-ct-inline-nombre, #form-ct-inline-ac")) {
+      ctInlineAcList?.classList.add("hidden");
+    }
   });
 
   // Botón agregar contacto inline
@@ -8554,11 +8767,15 @@ verificarSesion();
   function enviarWhatsApp(e) {
     const idx = parseInt(e.target.closest("button").dataset.idx);
     const c = clientes[idx];
+    if (!c) return;
     const ci = getInfoContacto(c);
     const tel = (ci.telefono1 || ci.telefono2 || "").replace(/\D/g, "");
-    if (!tel) return alert("No tiene teléfono.");
-    const msg = generarMensaje(c);
-    abrirWhatsAppLink(tel, msg || "");
+    if (!tel) { toast("⚠️ Esta empresa no tiene teléfono registrado.", "warning"); return; }
+    if (getSistemasPendientesDetalle(c).length === 0) {
+      toast(`ℹ️ ${c.EMPRESA} no tiene sistemas con versión desactualizada registrada.`, "info");
+      return;
+    }
+    abrirModalSeleccionAviso([c], false, "whatsapp");
   }
 
   function getMailProviderConfig() {
@@ -8871,6 +9088,12 @@ verificarSesion();
     }).filter(g => g.items.length > 0);
     if (!seleccionAvisoState.length) { toast("✅ No hay sistemas pendientes de notificar.", "success"); return; }
     seleccionAvisoCanal = canal;
+    const desc = document.getElementById("seleccion-aviso-desc");
+    if (desc) {
+      desc.textContent = canal === "whatsapp"
+        ? "Marca los sistemas que quieres avisar por WhatsApp. Los ya avisados para la versión oficial actual aparecen desmarcados, pero puedes volver a marcarlos si quieres reinsistir."
+        : "Marca los sistemas que quieres avisar por correo. Los ya avisados para la versión oficial actual aparecen desmarcados, pero puedes volver a marcarlos si quieres reinsistir.";
+    }
     const banner = document.getElementById("seleccion-aviso-auto-banner");
     if (banner) banner.style.display = soloNoAvisados ? "flex" : "none";
     renderSeleccionAvisoModal();
@@ -8882,8 +9105,8 @@ verificarSesion();
     const cont = document.getElementById("seleccion-aviso-body");
     if (!cont) return;
     cont.innerHTML = seleccionAvisoState.map((g, gi) => `
-      <div style="margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--border-subtle);">
-        <div style="font-weight:700; font-size:0.85rem; margin-bottom:6px;">${escapeHtml(g.cliente.EMPRESA)}</div>
+      <div class="form-section" style="--section-accent:rgba(99,102,241,0.25); --section-bg:rgba(99,102,241,0.04);">
+        <div class="form-section-title" style="color:#a5b4fc;">🏢 ${escapeHtml(g.cliente.EMPRESA)}</div>
         ${g.items.map((it, ii) => `
           <label style="display:grid; grid-template-columns:18px 1fr; align-items:start; gap:8px; font-size:0.8rem; padding:4px 0; cursor:pointer; width:100%; text-align:left;">
             <input type="checkbox" class="chk-seleccion-aviso" data-gi="${gi}" data-ii="${ii}" ${it.marcado ? "checked" : ""} style="margin-top:2px;">
@@ -9052,8 +9275,8 @@ verificarSesion();
     if (!cont) return;
     const fechaFmt = (f: string) => new Date(f + "T00:00:00").toLocaleDateString("es-MX");
     cont.innerHTML = seleccionLicenciaState.map((g, gi) => `
-      <div style="margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--border-subtle);">
-        <div style="font-weight:700; font-size:0.85rem; margin-bottom:6px;">${escapeHtml(g.cliente.EMPRESA)}</div>
+      <div class="form-section" style="--section-accent:rgba(239,68,68,0.25); --section-bg:rgba(239,68,68,0.04);">
+        <div class="form-section-title" style="color:#fca5a5;">🔒 ${escapeHtml(g.cliente.EMPRESA)}</div>
         ${g.items.map((it, ii) => `
           <label style="display:grid; grid-template-columns:18px 1fr; align-items:start; gap:8px; font-size:0.8rem; padding:4px 0; cursor:pointer; width:100%; text-align:left;">
             <input type="checkbox" class="chk-seleccion-licencia" data-gi="${gi}" data-ii="${ii}" ${it.marcado ? "checked" : ""} style="margin-top:2px;">
@@ -9296,7 +9519,7 @@ verificarSesion();
   // Masivo WhatsApp — abre el mismo modal de selección de sistemas (canal "whatsapp"); el envío
   // real (n8n si está configurado, o WhatsApp Web como respaldo) ocurre en btnConfirmarSeleccionAviso.
   document.getElementById("btnWspMasivo")?.addEventListener("click", () => {
-    if (seleccionadosIdx.length === 0) return alert("Selecciona al menos una empresa.");
+    if (seleccionadosIdx.length === 0) { toast("⚠️ Selecciona al menos una empresa.", "warning"); return; }
     const sinPendientes = [];
     const empresasConPendientes = [];
     seleccionadosIdx.forEach(idx => {
@@ -9313,7 +9536,7 @@ verificarSesion();
   // las empresas marcadas con checkbox, así cada una se revisa/ajusta antes de enviar en vez de
   // mandar automáticamente todos los sistemas pendientes de golpe.
   document.getElementById("btnMailMasivo")?.addEventListener("click", () => {
-    if (seleccionadosIdx.length === 0) return alert("Selecciona al menos una empresa.");
+    if (seleccionadosIdx.length === 0) { toast("⚠️ Selecciona al menos una empresa.", "warning"); return; }
     const sinPendientes = [];
     const empresasConPendientes = [];
     seleccionadosIdx.forEach(idx => {
@@ -9329,7 +9552,7 @@ verificarSesion();
   // Masivo WhatsApp Licencias — mismo mecanismo que el masivo de versiones, pero con licencias
   // (flujo totalmente separado: propio modal, propia plantilla, propio historial por tipo).
   document.getElementById("btnWspLicencias")?.addEventListener("click", () => {
-    if (seleccionadosIdx.length === 0) return alert("Selecciona al menos una empresa.");
+    if (seleccionadosIdx.length === 0) { toast("⚠️ Selecciona al menos una empresa.", "warning"); return; }
     const sinPendientes = [];
     const empresasConPendientes = [];
     seleccionadosIdx.forEach(idx => {
@@ -9344,7 +9567,7 @@ verificarSesion();
 
   // Masivo Email Licencias
   document.getElementById("btnMailLicencias")?.addEventListener("click", () => {
-    if (seleccionadosIdx.length === 0) return alert("Selecciona al menos una empresa.");
+    if (seleccionadosIdx.length === 0) { toast("⚠️ Selecciona al menos una empresa.", "warning"); return; }
     const sinPendientes = [];
     const empresasConPendientes = [];
     seleccionadosIdx.forEach(idx => {
@@ -9549,7 +9772,7 @@ verificarSesion();
   document.getElementById("btnGuardarContacto")?.addEventListener("click", async () => {
     const idx = editCtIdx.value;
     const nombre = document.getElementById("form-ct-nombre").value.trim();
-    if (!nombre) return alert("El nombre es obligatorio.");
+    if (!nombre) { toast("⚠️ El nombre es obligatorio.", "warning"); return; }
 
     // Reconocer la empresa escrita contra las ya registradas (sin importar mayúsculas/minúsculas).
     // Si no existe ninguna igual, se crea automáticamente — igual que "🏢 Nueva empresa rápida" —
@@ -10073,6 +10296,10 @@ verificarSesion();
     if (horaInp) horaInp.value = "09:00";
     const chkRec = document.getElementById("chk-recordatorio-wsp") as HTMLInputElement | null;
     if (chkRec) chkRec.checked = false;
+    // Se resetea a "sí enviar" en cada apertura — si no, un ticket donde se desmarcó a propósito
+    // (ej. garantía) dejaba la casilla desmarcada para el siguiente ticket sin que nadie lo notara.
+    const chkCorreo = document.getElementById("chk-enviar-correo") as HTMLInputElement | null;
+    if (chkCorreo) chkCorreo.checked = true;
     actualizarVisibilidadProgramacion();
     renderRecordatorioCheckboxes([]);
     const avisoRec = document.getElementById("form-tk-recordatorio-aviso");
@@ -10177,14 +10404,14 @@ verificarSesion();
       : [];
 
     if (!contacto || !asunto || !descripcion) {
-      alert("Por favor rellena los campos obligatorios: Contacto, Asunto, Descripción.");
+      toast("⚠️ Por favor rellena los campos obligatorios: Contacto, Asunto, Descripción.", "warning");
       return;
     }
 
     if (sistema === "__otro__") {
       const sistemaOtro = (document.getElementById("form-tk-sistema-otro") as HTMLInputElement | null)?.value.trim() || "";
       if (!sistemaOtro) {
-        alert("Especifica el nombre del sistema.");
+        toast("⚠️ Especifica el nombre del sistema.", "warning");
         return;
       }
       sistema = sistemaOtro;
@@ -10677,7 +10904,7 @@ verificarSesion();
     const facturadoCambio = nuevoFacturado !== (t.facturado || "NO FACTURADO");
 
     if (nuevoEstado === t.estado && !camposGestionCambiaron && !notasInternasCambiaron && !facturadoCambio) {
-      alert("Cambia el estado, la facturación, o modifica algún campo de Solicitado/Canalizado/Notas Internas.");
+      toast("⚠️ Cambia el estado, la facturación, o modifica algún campo de Solicitado/Canalizado/Notas Internas.", "warning");
       return;
     }
 
@@ -10794,17 +11021,20 @@ verificarSesion();
     abrirModalSeleccionLicencia([c], false);
   });
 
-  // Botón individual de WhatsApp de licencia por empresa — igual que el de versiones (enviarWhatsApp):
-  // manda directo con TODAS las licencias pendientes, sin panel de selección.
+  // Botón individual de WhatsApp de licencia por empresa — abre el mismo panel de selección
+  // que el de correo (abrirModalSeleccionLicencia), en vez de mandar directo.
   function enviarWhatsAppLicencia(e) {
     const idx = parseInt(e.target.closest("button").dataset.idx);
     const c = clientes[idx];
+    if (!c) return;
     const ci = getInfoContacto(c);
     const tel = (ci.telefono1 || ci.telefono2 || "").replace(/\D/g, "");
-    if (!tel) return alert("No tiene teléfono.");
-    const msg = generarMensajeLicencias(c);
-    if (!msg) { toast(`ℹ️ ${c.EMPRESA} no tiene licencias vencidas o por vencer registradas.`, "info"); return; }
-    abrirWhatsAppLink(tel, msg);
+    if (!tel) { toast("⚠️ Esta empresa no tiene teléfono registrado.", "warning"); return; }
+    if (getLicenciasPendientesDetalle(c).length === 0) {
+      toast(`ℹ️ ${c.EMPRESA} no tiene licencias vencidas o por vencer registradas.`, "info");
+      return;
+    }
+    abrirModalSeleccionLicencia([c], false, "whatsapp");
   }
   document.addEventListener("click", e => {
     const btn = e.target.closest(".btn-wsp-licencia-emp");
@@ -11261,8 +11491,55 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     });
   }
 
+  // Lista de contacto propia del usuario en sesión (ver getContactosPropiosUsuarioActual) —
+  // visible para cualquier usuario, a diferencia del panel de administración de más abajo.
+  function renderMisContactosPropios() {
+    const cont = document.getElementById("cfg-mis-contactos-list");
+    if (!cont) return;
+    const lista = getContactosPropiosUsuarioActual();
+    cont.innerHTML = lista.length ? lista.map((ct, idx) => `
+      <div style="display:flex; gap:8px; align-items:center;">
+        <span style="flex:1; font-size:0.82rem; color:var(--text-bright);">${escapeHtml(ct.nombre || "")}</span>
+        <span style="flex:1; font-size:0.82rem; color:var(--text-muted);">${escapeHtml(ct.telefono || "")}</span>
+        <button class="btn btn-danger btn-xs btn-del-mi-contacto" data-idx="${idx}">🗑️</button>
+      </div>`).join("") : `<div style="font-size:0.78rem; color:var(--text-muted);">Sin contactos propios — se usa la lista general.</div>`;
+    cont.querySelectorAll(".btn-del-mi-contacto").forEach(b => b.addEventListener("click", async function () {
+      const idx = parseInt((this as HTMLElement).dataset.idx || "0");
+      const uActual = getUsuarioActual();
+      if (!uActual) return;
+      const usuarios = getUsuarios();
+      const i = usuarios.findIndex(u => u.nombre === uActual.nombre);
+      if (i === -1) return;
+      (usuarios[i].contactosPropios || []).splice(idx, 1);
+      saveUsuariosLocal(usuarios);
+      if (!crmLocalOnly) guardarUsuarios(usuarios).catch(() => {});
+      renderMisContactosPropios();
+    }));
+  }
+
+  document.getElementById("btnAgregarMiContacto")?.addEventListener("click", async () => {
+    const uActual = getUsuarioActual();
+    if (!uActual) return;
+    const nombreInp = document.getElementById("cfg-mi-contacto-nombre") as HTMLInputElement | null;
+    const telInp = document.getElementById("cfg-mi-contacto-telefono") as HTMLInputElement | null;
+    const nombre = nombreInp?.value.trim() || "";
+    const telefono = telInp?.value.trim() || "";
+    if (!nombre || !telefono) { toast("⚠️ Escribe nombre y teléfono", "warning"); return; }
+    const usuarios = getUsuarios();
+    const i = usuarios.findIndex(u => u.nombre === uActual.nombre);
+    if (i === -1) return;
+    usuarios[i].contactosPropios = [...(usuarios[i].contactosPropios || []), { nombre, telefono }];
+    if (nombreInp) nombreInp.value = "";
+    if (telInp) telInp.value = "";
+    saveUsuariosLocal(usuarios);
+    if (!crmLocalOnly) guardarUsuarios(usuarios).catch(() => {});
+    renderMisContactosPropios();
+    toast("💾 Contacto agregado");
+  });
+
   function renderUsuariosPanel() {
     const uActual = getUsuarioActual();
+    renderMisContactosPropios();
     const panel = document.getElementById("cfg-usuarios-panel");
     if (!panel) return;
     if (!uActual || uActual.rol !== "admin") { panel.style.display = "none"; return; }
@@ -12096,7 +12373,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
               const mEmp  = (document.getElementById('xls-map-empresa')  as HTMLSelectElement)?.value || autoM.empresaKey  || '';
               const mCt   = (document.getElementById('xls-map-contacto') as HTMLSelectElement)?.value || autoM.contactoKey || '';
               if (!mEmp) {
-                alert('Por favor selecciona la columna de Empresa antes de subir.');
+                toast("⚠️ Por favor selecciona la columna de Empresa antes de subir.", "warning");
                 modal.style.display = 'flex';
                 return;
               }
@@ -12227,13 +12504,13 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           }
         } catch (err) {
           console.error('Error parseando Excel:', err);
-          alert('Error leyendo el archivo Excel. Revisa el formato.');
+          toast("❌ Error leyendo el archivo Excel. Revisa el formato.", "error");
         }
       };
       reader.readAsArrayBuffer(f);
     } catch (err) {
       console.error(err);
-      alert('No se pudo leer el archivo.');
+      toast("❌ No se pudo leer el archivo.", "error");
     }
   });
 
@@ -12272,7 +12549,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     reader.onload = e => {
       const text = e.target.result;
       const lines = text.split(/\r?\n/).filter(l => l.trim());
-      if (lines.length < 2) return alert("CSV vacío.");
+      if (lines.length < 2) { toast("⚠️ CSV vacío.", "warning"); return; }
 
       const delimiter = lines[0].includes(";") ? ";" : ",";
       const headers = lines[0].replace(/^\uFEFF/, "").split(delimiter).map(h => h.trim().replace(/^"|"$/g, "")).map(h => h.toUpperCase());
@@ -12439,7 +12716,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         if (info) { info.innerHTML = `<strong>📄 ${file.name}</strong><br>${resumen}`; info.classList.remove("hidden"); }
         if (actions) actions.style.display = "flex";
       } catch (err) {
-        alert("Error al leer el archivo JSON. Asegúrate de que sea un JSON válido exportado desde esta aplicación.");
+        toast("❌ Error al leer el archivo JSON. Asegúrate de que sea un JSON válido exportado desde esta aplicación.", "error");
       }
     };
     reader.readAsText(file, 'UTF-8');
@@ -14187,7 +14464,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
   document.getElementById("btnGuardarEvento")?.addEventListener("click", () => {
     const nombre = document.getElementById("form-ev-nombre").value.trim();
-    if (!nombre) { alert("El nombre del evento es obligatorio."); return; }
+    if (!nombre) { toast("⚠️ El nombre del evento es obligatorio.", "warning"); return; }
     const id = document.getElementById("edit-evento-id").value || `ev_${Date.now()}`;
     const existente = eventos.find(e => e.id === id);
     const datos = {
