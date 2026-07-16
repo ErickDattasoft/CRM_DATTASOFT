@@ -8583,7 +8583,7 @@ verificarSesion();
     return texto.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
   }
 
-  async function enviarNotificacionTicket(t) {
+  async function enviarNotificacionTicket(t, esReenvio = false) {
     const mailTo = t.contactoCorreo || contactos.find(c => c.nombre === t.contacto)?.correo || "";
     const soporteEmails = parseEmailList(configTickets.correoSoporte);
     const ccTicket = parseEmailList(t.cc || "");
@@ -8593,8 +8593,16 @@ verificarSesion();
       <p style="background:#fef3c7; color:#92400e; padding:8px 12px; border-radius:6px; font-family:sans-serif; font-size:13px;">
         ⚠️ El contacto no tiene correo registrado — este ticket no se notificó al cliente.
       </p>`;
+    // Al reenviar (botón "✉️ Reenviar correo" en el detalle) se avisa explícitamente que es un
+    // reenvío — para que el cliente revise la descripción por si hay cambios (ej. tiempo
+    // trabajado agregado) en vez de asumir que es el mismo correo de siempre.
+    const avisoReenvio = esReenvio ? `
+      <p style="background:#e0e7ff; color:#4338ca; padding:8px 12px; border-radius:6px; font-family:sans-serif; font-size:13px;">
+        📨 Este correo es un reenvío — favor de revisar la descripción del ticket por si hay cambios o información nueva.
+      </p>` : "";
     const htmlTicket = `
       ${avisoSinContacto}
+      ${avisoReenvio}
       <h2 style="color:#4f46e5; font-family:sans-serif;">[Ticket #${t.numero}] ${t.asunto}</h2>
       <table style="border-collapse:collapse; width:100%; font-family:sans-serif; font-size:14px;">
         <tr><td style="padding:6px 12px; font-weight:bold; background:#f3f4f6; width:130px;">Empresa</td><td style="padding:6px 12px;">${t.empresa || ""}</td></tr>
@@ -10620,7 +10628,7 @@ verificarSesion();
     const textoOriginal = btn.textContent;
     btn.textContent = "Enviando...";
     try {
-      await enviarNotificacionTicket(t);
+      await enviarNotificacionTicket(t, true);
     } finally {
       btn.disabled = false;
       btn.textContent = textoOriginal;
