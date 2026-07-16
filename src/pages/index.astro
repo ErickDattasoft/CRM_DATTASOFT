@@ -575,6 +575,33 @@ try {
       min-width: 14px;
       text-align: center;
     }
+    .btn-bell-compact {
+      position: relative;
+      padding: 6px 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .btn-bell-badge {
+      background: #ef4444;
+      color: white;
+      border-radius: 10px;
+      font-size: 0.62rem;
+      line-height: 1.4;
+      padding: 0 5px;
+      font-weight: 800;
+      min-width: 14px;
+      text-align: center;
+    }
+    .btn-caret {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      margin-left: 1px;
+    }
+    .icon-whatsapp {
+      vertical-align: -2px;
+      flex-shrink: 0;
+    }
     .avisar-menu-flotante {
       position: fixed;
       display: none;
@@ -2676,16 +2703,16 @@ try {
                 <input type="file" id="input-import-xls" accept=".xlsx,.xls" style="display:none">
                 <button class="btn btn-ghost btn-sm" id="btnExportCSVEmpresas">📤 Exportar CSV</button>
                 <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
-                  <button class="btn btn-whatsapp btn-sm" id="btnWspMasivo" title="Abre WhatsApp Web/App por cada empresa seleccionada, una por una — tienes que darle Enviar en cada una">📢 WhatsApp Versiones (<span class="lblCountSel">0</span>)</button>
+                  <button class="btn btn-whatsapp btn-sm" id="btnWspMasivo" title="Abre WhatsApp Web/App por cada empresa seleccionada, una por una — tienes que darle Enviar en cada una"><svg class="icon-whatsapp" viewBox="0 0 32 32" width="14" height="14" fill="#25D366"><path d="M16.001 3C9.373 3 4 8.373 4 15c0 2.283.632 4.42 1.732 6.25L4 29l7.938-1.687A11.94 11.94 0 0 0 16.001 27C22.628 27 28 21.627 28 15S22.628 3 16.001 3zm0 21.75c-1.964 0-3.79-.55-5.35-1.5l-.383-.228-4.708 1.001 1.02-4.594-.25-.396A9.71 9.71 0 0 1 6.25 15c0-5.377 4.374-9.75 9.751-9.75S25.75 9.623 25.75 15 21.378 24.75 16.001 24.75zm5.34-7.34c-.293-.146-1.734-.857-2.003-.955-.269-.098-.464-.146-.66.147-.196.293-.757.955-.928 1.15-.171.196-.342.22-.635.073-.293-.147-1.235-.455-2.353-1.452-.87-.776-1.457-1.735-1.628-2.028-.171-.293-.018-.451.128-.597.132-.131.293-.342.44-.513.147-.171.196-.293.293-.489.098-.196.049-.367-.024-.513-.073-.147-.66-1.59-.904-2.177-.238-.573-.48-.495-.66-.504l-.562-.01c-.196 0-.513.073-.782.367-.269.293-1.026 1.003-1.026 2.446 0 1.443 1.05 2.837 1.196 3.033.147.196 2.067 3.157 5.008 4.427.7.302 1.246.483 1.673.618.703.224 1.343.192 1.849.117.564-.084 1.734-.709 1.979-1.393.244-.685.244-1.271.171-1.393-.073-.122-.269-.196-.562-.342z"/></svg> WhatsApp Versiones (<span class="lblCountSel">0</span>)</button>
                   <span style="font-size:0.62rem; color:var(--text-muted); white-space:nowrap;">Abre WhatsApp una por una</span>
                 </div>
-                <button class="btn btn-email btn-sm" id="btnMailMasivo" title="Avisar por correo sistemas desactualizados">✉️ Email Versiones (<span class="lblCountSel">0</span>)</button>
-                <button class="btn btn-ghost btn-sm" id="btnPendientesAviso" title="Empresas con sistemas desactualizados que aún no se les ha avisado">🔔 Pendientes de aviso (<span id="lblCountPendientesAviso">0</span>)</button>
+                <button class="btn btn-email btn-sm" id="btnMailMasivo" title="Avisar por correo sistemas desactualizados">📧 Email Versiones (<span class="lblCountSel">0</span>)</button>
+                <button class="btn btn-ghost btn-sm btn-bell-compact" id="btnPendientesAviso" title="Empresas con sistemas desactualizados que aún no se les ha avisado">🔔<span class="btn-bell-badge" id="lblCountPendientesAviso" style="display:none;">0</span><span class="btn-caret">▾</span></button>
                 <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
-                  <button class="btn btn-whatsapp btn-sm" id="btnWspLicencias" title="Abre WhatsApp Web/App por cada empresa seleccionada, una por una — tienes que darle Enviar en cada una">📢🔒 WhatsApp Licencias (<span class="lblCountSel">0</span>)</button>
+                  <button class="btn btn-whatsapp btn-sm" id="btnWspLicencias" title="Abre WhatsApp Web/App por cada empresa seleccionada, una por una — tienes que darle Enviar en cada una"><svg class="icon-whatsapp" viewBox="0 0 32 32" width="14" height="14" fill="#25D366"><path d="M16.001 3C9.373 3 4 8.373 4 15c0 2.283.632 4.42 1.732 6.25L4 29l7.938-1.687A11.94 11.94 0 0 0 16.001 27C22.628 27 28 21.627 28 15S22.628 3 16.001 3zm0 21.75c-1.964 0-3.79-.55-5.35-1.5l-.383-.228-4.708 1.001 1.02-4.594-.25-.396A9.71 9.71 0 0 1 6.25 15c0-5.377 4.374-9.75 9.751-9.75S25.75 9.623 25.75 15 21.378 24.75 16.001 24.75zm5.34-7.34c-.293-.146-1.734-.857-2.003-.955-.269-.098-.464-.146-.66.147-.196.293-.757.955-.928 1.15-.171.196-.342.22-.635.073-.293-.147-1.235-.455-2.353-1.452-.87-.776-1.457-1.735-1.628-2.028-.171-.293-.018-.451.128-.597.132-.131.293-.342.44-.513.147-.171.196-.293.293-.489.098-.196.049-.367-.024-.513-.073-.147-.66-1.59-.904-2.177-.238-.573-.48-.495-.66-.504l-.562-.01c-.196 0-.513.073-.782.367-.269.293-1.026 1.003-1.026 2.446 0 1.443 1.05 2.837 1.196 3.033.147.196 2.067 3.157 5.008 4.427.7.302 1.246.483 1.673.618.703.224 1.343.192 1.849.117.564-.084 1.734-.709 1.979-1.393.244-.685.244-1.271.171-1.393-.073-.122-.269-.196-.562-.342z"/></svg>🔒 WhatsApp Licencias (<span class="lblCountSel">0</span>)</button>
                   <span style="font-size:0.62rem; color:var(--text-muted); white-space:nowrap;">Abre WhatsApp una por una</span>
                 </div>
-                <button class="btn btn-email btn-sm" id="btnMailLicencias" title="Avisar por correo licencias vencidas o por vencer">✉️🔒 Email Licencias (<span class="lblCountSel">0</span>)</button>
+                <button class="btn btn-email btn-sm" id="btnMailLicencias" title="Avisar por correo licencias vencidas o por vencer">📧🔒 Email Licencias (<span class="lblCountSel">0</span>)</button>
                 <button class="btn btn-ghost btn-sm" id="btnLicenciasPendientes" title="Empresas con licencias vencidas o por vencer que aún no se les ha avisado">⏰ Licencias por vencer (<span id="lblCountLicenciasPendientes">0</span>)</button>
                 <button class="btn btn-primary btn-sm" id="btnNuevoEmpresa">➕ Registrar Empresa</button>
               </div>
@@ -2783,7 +2810,7 @@ try {
                     <th style="min-width:160px; width:200px;">Contacto principal<div class="col-resize-handle"></div></th>
                     <th style="min-width:160px; width:200px;">Contacto alternativo<div class="col-resize-handle"></div></th>
                     <th style="min-width:110px; width:130px;">RFC<div class="col-resize-handle"></div></th>
-                    <th style="text-align:center; min-width:220px; width:230px;">Acciones</th>
+                    <th style="text-align:center; min-width:140px;">Acciones</th>
                   </tr>
                 </thead>
                 <tbody id="tabla-empresas-body"></tbody>
@@ -8998,7 +9025,7 @@ verificarSesion();
   function actualizarBadgePendientesAviso() {
     const n = calcularPendientesDeAviso().length;
     const lbl = document.getElementById("lblCountPendientesAviso");
-    if (lbl) lbl.textContent = String(n);
+    if (lbl) { lbl.textContent = String(n); lbl.style.display = n > 0 ? "" : "none"; }
     const dashLbl = document.getElementById("dash-avisos-pendientes");
     if (dashLbl) dashLbl.textContent = String(n);
   }
