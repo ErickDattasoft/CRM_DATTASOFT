@@ -1095,6 +1095,65 @@ try {
       transform: translateY(-1px);
       color: rgba(239, 68, 68, 1) !important;
     }
+    .cfg-item-order {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+    .config-item button.btn-cfg-order {
+      width: 20px;
+      min-width: 20px;
+      height: 15px;
+      padding: 0;
+      font-size: 0.6rem;
+      line-height: 1;
+      border-radius: 4px;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.06) !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+    }
+    .config-item button.btn-cfg-order:hover:not(:disabled) {
+      background: rgba(99, 102, 241, 0.18) !important;
+      color: var(--text-bright) !important;
+    }
+    .config-item button.btn-cfg-order:disabled {
+      opacity: 0.25;
+      cursor: default;
+    }
+    .cfg-item-default {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      width: 26px;
+      height: 26px;
+      cursor: pointer;
+      border-radius: 8px;
+      position: relative;
+    }
+    .cfg-item-default input[type="checkbox"] {
+      position: absolute;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      cursor: pointer;
+    }
+    .cfg-item-default span {
+      font-size: 1rem;
+      opacity: 0.22;
+      filter: grayscale(1);
+      transition: opacity 0.15s ease, filter 0.15s ease;
+    }
+    .cfg-item-default input[type="checkbox"]:checked ~ span {
+      opacity: 1;
+      filter: none;
+    }
+    .cfg-item-default:hover span {
+      opacity: 0.6;
+      filter: none;
+    }
     .config-section {
       margin-bottom: 24px;
     }
@@ -3125,6 +3184,7 @@ try {
           <button type="button" class="cfg-quicknav-btn" data-cfg-target="cfg-card-sync">🔄 Contactos</button>
           <button type="button" class="cfg-quicknav-btn" data-cfg-target="cfg-card-github">🔖 GitHub</button>
           <button type="button" class="cfg-quicknav-btn" data-cfg-target="cfg-card-tickets">🎫 Tickets</button>
+          <button type="button" class="cfg-quicknav-btn" data-cfg-target="cfg-card-tipo">📋 Tipos</button>
           <button type="button" class="cfg-quicknav-btn" data-cfg-target="cfg-card-sla">⏱️ SLA</button>
           <button type="button" class="cfg-quicknav-btn" data-cfg-target="cfg-card-cotizaciones">🧾 Cotizaciones</button>
           <button type="button" class="cfg-quicknav-btn" data-cfg-target="cfg-card-apariencia">🎨 Apariencia</button>
@@ -3280,7 +3340,7 @@ try {
         </div>
 
         <div id="cfg-card-tickets" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:20px;">
-          <div class="card">
+          <div class="card" id="cfg-card-tipo">
             <div class="card-title">📋 Tipos de Ticket</div>
             <div class="config-list" id="cfg-list-tipo"></div>
             <button class="btn btn-ghost btn-xs" style="margin-top:10px;" data-cfg-add="tipo">➕ Agregar</button>
@@ -5417,6 +5477,24 @@ verificarSesion();
     }
   }
 
+  // Migración en memoria (una sola vez, si nunca se ha guardado configTickets.defaults): fija
+  // como "predeterminado" el mismo valor que hoy trae cableado el formulario de tickets nuevos,
+  // para que activar la función de predeterminados/orden en Configuración no cambie de golpe el
+  // comportamiento de los formularios existentes. A partir de aquí el admin controla los defaults
+  // desde Configuración → Tickets (check ⭐), incluyendo dejarlos vacíos a propósito.
+  function migrarDefaultsConfigTickets() {
+    if (configTickets.defaults !== undefined && configTickets.defaults !== null) return;
+    configTickets.defaults = {
+      tipos: configTickets.tipos?.[0] || "",
+      estados: configTickets.estados?.includes("Abierto") ? "Abierto" : (configTickets.estados?.[0] || ""),
+      prioridades: configTickets.prioridades?.includes("Media") ? "Media" : (configTickets.prioridades?.[0] || ""),
+      grupos: configTickets.grupos?.[0] || "",
+      agentes: "",
+      sistemas: "",
+      facturacion: configTickets.facturacion?.includes("NO FACTURADO") ? "NO FACTURADO" : (configTickets.facturacion?.[0] || "")
+    };
+  }
+
   let interacciones = [];
   let tareas = [];
   let filtrosGuardados = [];
@@ -5679,6 +5757,7 @@ verificarSesion();
     const cfgLocal = safeParseLocal("crm_config_tickets", null);
     if (cfgLocal) configTickets = { ...configTickets, ...cfgLocal };
     migrarContactosSoporte();
+    migrarDefaultsConfigTickets();
 
     listaSistemas.forEach(s => {
       const k = s.toUpperCase().trim();
@@ -6093,7 +6172,7 @@ verificarSesion();
     if (datos.configCotizaciones && !preservarConfig) configCotizaciones = { terminos: "", catalogo: [], ...datos.configCotizaciones };
     // Si el usuario está en la sección de configuración y aún no ha guardado, preservar
     // los cambios en memoria para no pisar ediciones en progreso (prioridades, estados, etc.)
-    if (datos.configTickets && !preservarConfig) { configTickets = { ...configTickets, ...datos.configTickets }; migrarContactosSoporte(); }
+    if (datos.configTickets && !preservarConfig) { configTickets = { ...configTickets, ...datos.configTickets }; migrarContactosSoporte(); migrarDefaultsConfigTickets(); }
     // Mismo cuidado que configTickets: si un admin está en el panel de Usuarios (a punto de
     // resetear una contraseña o cambiar un rol), una actualización remota de otro dispositivo
     // no debe pisar la lista en memoria a media edición.
@@ -9672,20 +9751,25 @@ verificarSesion();
   }
 
   function initTicketFormDropdowns(ticket) {
-    populateSelectOptions("form-tk-tipo", configTickets.tipos, ticket?.tipo || configTickets.tipos[0]);
-    populateSelectOptions("form-tk-sistema", ["No aplica", ...(configTickets.sistemas || listaSistemas), "__otro__"], ticket?.sistema || "No aplica");
+    // El valor "predeterminado" de cada catálogo se configura en Configuración → Tickets (check ⭐
+    // junto a cada elemento). Si el admin no marcó ninguno, def.<campo> queda vacío y el select de
+    // un ticket nuevo nace en blanco (opción "" al inicio) hasta que alguien elija algo a mano.
+    const def = configTickets.defaults || {};
+    populateSelectOptions("form-tk-tipo", ["", ...configTickets.tipos], ticket?.tipo || def.tipos || "");
+    populateSelectOptions("form-tk-sistema", ["", "No aplica", ...(configTickets.sistemas || listaSistemas), "__otro__"], ticket?.sistema || def.sistemas || "");
     const optOtroSistema = document.querySelector('#form-tk-sistema option[value="__otro__"]');
     if (optOtroSistema) optOtroSistema.textContent = "➕ Otro (especificar)";
     const inputOtroSistema = document.getElementById("form-tk-sistema-otro") as HTMLInputElement | null;
     if (inputOtroSistema) { inputOtroSistema.style.display = "none"; inputOtroSistema.value = ""; }
-    populateSelectOptions("form-tk-estado", configTickets.estados, ticket?.estado || "Abierto");
-    populateSelectOptions("form-tk-facturado", configTickets.facturacion, ticket?.facturado || "NO FACTURADO");
-    populateSelectOptions("form-tk-prioridad", configTickets.prioridades, ticket?.prioridad || "Media");
-    populateSelectOptions("form-tk-grupo", configTickets.grupos, ticket?.grupo || configTickets.grupos[0]);
-    populateSelectOptions("form-tk-agente", ["", ...getListaAgentes()], ticket?.agente || "");
+    populateSelectOptions("form-tk-estado", ["", ...configTickets.estados], ticket?.estado || def.estados || "");
+    populateSelectOptions("form-tk-facturado", ["", ...configTickets.facturacion], ticket?.facturado || def.facturacion || "");
+    populateSelectOptions("form-tk-prioridad", ["", ...configTickets.prioridades], ticket?.prioridad || def.prioridades || "");
+    populateSelectOptions("form-tk-grupo", ["", ...configTickets.grupos], ticket?.grupo || def.grupos || "");
+    populateSelectOptions("form-tk-agente", ["", ...getListaAgentes()], ticket?.agente || def.agentes || "");
 
-    // Also populate detail modal estado selector
-    populateSelectOptions("selectCambiarEstadoDetalle", configTickets.estados, ticket?.estado || "Abierto");
+    // Selector de estado del modal de detalle: siempre debe representar el estado real del ticket
+    // que se está viendo (nunca queda en blanco), por eso aquí sí cae al primer estado configurado.
+    populateSelectOptions("selectCambiarEstadoDetalle", configTickets.estados, ticket?.estado || def.estados || configTickets.estados[0]);
 
     // Agenda: dropdown de agente asignado, dinámico — solo usuarios reales activos del CRM
     // (no la lista de "agentes" configurados a mano), porque el recordatorio necesita cruzar
@@ -10848,11 +10932,21 @@ verificarSesion();
       listEl.innerHTML = "";
       const key = field === "estado" ? "estados" : field === "prioridad" ? "prioridades" : field === "facturado" ? "facturacion" : `${field}s`;
 
-      (configTickets[key] || []).forEach((item, idx) => {
+      const lista = configTickets[key] || [];
+      lista.forEach((item, idx) => {
+        const esDefault = configTickets.defaults?.[key] === item;
         const div = document.createElement("div");
         div.className = "config-item";
         div.innerHTML = `
-          <input value="${item}" data-field="${key}" data-idx="${idx}" style="color:var(--text-bright); background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12);">
+          <div class="cfg-item-order">
+            <button type="button" class="btn-cfg-order" data-dir="up" data-field="${key}" data-idx="${idx}" title="Subir" ${idx === 0 ? "disabled" : ""}>▲</button>
+            <button type="button" class="btn-cfg-order" data-dir="down" data-field="${key}" data-idx="${idx}" title="Bajar" ${idx === lista.length - 1 ? "disabled" : ""}>▼</button>
+          </div>
+          <label class="cfg-item-default" title="Marcar como predeterminado al crear un ticket">
+            <input type="checkbox" class="cfg-default-chk" data-field="${key}" data-idx="${idx}" ${esDefault ? "checked" : ""}>
+            <span>⭐</span>
+          </label>
+          <input value="${escapeHtml(item)}" data-field="${key}" data-idx="${idx}" style="color:var(--text-bright); background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12);">
           <button class="btn btn-danger btn-xs cfg-del-item" data-field="${key}" data-idx="${idx}">🗑️</button>
         `;
         listEl.appendChild(div);
@@ -10935,9 +11029,37 @@ verificarSesion();
         const field = btn.dataset.field;
         const idx = parseInt(btn.dataset.idx);
         if (await confirmar(`¿Eliminar "${configTickets[field][idx]}"?`, "🗑️")) {
+          if (configTickets.defaults?.[field] === configTickets[field][idx]) delete configTickets.defaults[field];
           configTickets[field].splice(idx, 1);
           renderConfig();
         }
+      };
+    });
+
+    // Reordenar con flechitas ▲▼: intercambia el elemento con su vecino directo. El orden del
+    // arreglo es el mismo orden en que luego aparecen las opciones en los selects del ticket.
+    document.querySelectorAll(".btn-cfg-order").forEach(btn => {
+      btn.onclick = () => {
+        const field = btn.dataset.field;
+        const idx = parseInt(btn.dataset.idx);
+        const arr = configTickets[field];
+        const destino = btn.dataset.dir === "up" ? idx - 1 : idx + 1;
+        if (!arr || destino < 0 || destino >= arr.length) return;
+        [arr[idx], arr[destino]] = [arr[destino], arr[idx]];
+        renderConfig();
+      };
+    });
+
+    // Check "predeterminado" (⭐): solo puede haber uno marcado por catálogo. Si se desmarca,
+    // el catálogo se queda sin predeterminado y el select nace vacío al crear un ticket nuevo.
+    document.querySelectorAll(".cfg-default-chk").forEach(chk => {
+      chk.onchange = () => {
+        const field = chk.dataset.field;
+        const idx = parseInt(chk.dataset.idx);
+        if (!configTickets.defaults) configTickets.defaults = {};
+        if (chk.checked) configTickets.defaults[field] = configTickets[field][idx];
+        else delete configTickets.defaults[field];
+        renderConfig();
       };
     });
   }
@@ -10948,7 +11070,12 @@ verificarSesion();
       const field = inp.dataset.field;
       const idx = parseInt(inp.dataset.idx);
       if (configTickets[field] && configTickets[field][idx] !== undefined) {
-        configTickets[field][idx] = inp.value.trim();
+        const valorAnterior = configTickets[field][idx];
+        const valorNuevo = inp.value.trim();
+        // Si el ítem renombrado era el predeterminado del catálogo, el predeterminado sigue
+        // apuntando al mismo ítem (por posición), no al texto viejo que ya no existe.
+        if (configTickets.defaults?.[field] === valorAnterior) configTickets.defaults[field] = valorNuevo;
+        configTickets[field][idx] = valorNuevo;
       }
     });
     configTickets.correoSoporte = document.getElementById("cfg-correo-soporte").value.trim();
@@ -11000,6 +11127,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       agentes: configTickets.agentes,
       sistemas: configTickets.sistemas,
       facturacion: configTickets.facturacion,
+      defaults: configTickets.defaults || {},
       correoSoporte: configTickets.correoSoporte
     });
     if (ok) { toast("💾 Configuración guardada"); ocultarEstado(); sincronizarConfigPublica(); renderConfig(); }
