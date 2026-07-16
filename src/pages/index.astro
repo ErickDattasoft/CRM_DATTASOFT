@@ -4957,7 +4957,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias } from "../data/firebase.js";
+import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias } from "../data/firebase.js";
 
 // ── Modal confirmación (reemplaza confirm() — funciona en móvil) ──
 function confirmar(msg: string, icon = "⚠️"): Promise<boolean> {
@@ -6641,9 +6641,7 @@ verificarSesion();
 
     const btn = document.getElementById("btnActivarCuentaSegura") as HTMLButtonElement;
     btn.disabled = true; btn.textContent = "Activando...";
-    // permanecer=false cuando un admin la activa para otra persona: restaura la sesión anónima
-    // después de crearla, para no dejar al admin "metido" con la identidad de otra persona.
-    const res = await activarCuentaSegura(correo, pass1, !esParaOtro);
+    const res = await activarCuentaSegura(correo, pass1);
     btn.disabled = false; btn.textContent = "🔒 Activar";
 
     if (!res.ok) {
@@ -6656,12 +6654,23 @@ verificarSesion();
     if (idx !== -1) {
       usuariosAct[idx].authEmail = correo;
       saveUsuariosLocal(usuariosAct);
-      guardarUsuarios(usuariosAct).catch(() => {});
+      // Se espera a que termine ANTES de restaurar la sesión anónima (abajo): en cuanto esa
+      // sesión se restaura, la cuenta recién creada deja de tener permiso para que el admin
+      // siga guardando en su nombre — si esto se guardara después, fallaría en silencio.
+      await guardarUsuarios(usuariosAct).catch(() => {});
     }
+    // Si se activó para otra persona que no está presente, se regresa la sesión del navegador al
+    // admin (anónimo) — ya con todo lo necesario guardado mientras tenía permiso para hacerlo.
+    if (esParaOtro) await restaurarSesionAnonima();
+
     actualizarBadgeCuentaSegura();
     if (typeof renderUsuariosPanel === "function") renderUsuariosPanel();
     const m = document.getElementById("modal-cuenta-segura"); if (m) m.style.display = "none";
-    toast(esParaOtro ? `🔒 Cuenta segura activada para ${cuentaSeguraObjetivo}` : "🔒 Cuenta segura activada correctamente");
+    if (res.avisoAcceso) {
+      toast(`⚠️ ${res.avisoAcceso}`, "warning");
+    } else {
+      toast(esParaOtro ? `🔒 Cuenta segura activada para ${cuentaSeguraObjetivo}` : "🔒 Cuenta segura activada correctamente");
+    }
     logBitacora(`Cuenta segura activada${esParaOtro ? ` para ${cuentaSeguraObjetivo}` : ""} (${correo})`, "🔒");
   });
 

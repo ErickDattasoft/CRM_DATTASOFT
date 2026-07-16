@@ -619,22 +619,33 @@ export async function guardarConfigPublica(datos) {
  * crea una cuenta real de Firebase (correo + contraseña).
  *
  * Al crearla, Firebase cambia automáticamente la sesión del navegador de anónima (o de quien
- * sea que esté activa) a esta cuenta nueva — eso es lo que queremos cuando alguien activa SU
- * PROPIA cuenta (permanecer=true, default), pero NO cuando un admin la crea para otra persona
- * que no está presente: en ese caso, con permanecer=false, se restaura la sesión anónima justo
- * después de crearla, para no dejar al admin "metido" con la identidad de otra persona en su
- * propio navegador.
+ * sea que esté activa) a esta cuenta nueva. Cuando alguien activa SU PROPIA cuenta eso es lo que
+ * queremos (se queda con esa sesión). Cuando un admin la crea para otra persona que no está
+ * presente, el llamador debe restaurar la sesión del admin después con restaurarSesionAnonima()
+ * — pero solo DESPUÉS de guardar cualquier otro cambio que necesite el permiso del admin (ej.
+ * vincular el authEmail en el registro del usuario), porque en cuanto se restaura esa sesión,
+ * la identidad nueva dejó de tener permiso para que el admin siga actuando por ella.
+ *
+ * El acceso (otorgarAccesoStaff) se pide ANTES de crear la cuenta, no después: crear la cuenta
+ * cambia de inmediato la sesión del navegador a esa identidad nueva, todavía sin permiso — si el
+ * acceso se pidiera después, se pediría desde una sesión que aún no puede otorgárselo a nadie, ni
+ * a sí misma (las reglas de Firestore exigen que quien otorga el acceso ya lo tenga), y el
+ * otorgamiento fallaba en silencio. Pidiéndolo primero, se hace mientras la sesión que ejecuta
+ * esto (la de quien ya tiene acceso real) todavía está activa.
  */
-export async function activarCuentaSegura(email, password, permanecer = true) {
+export async function activarCuentaSegura(email, password) {
   try {
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
     // Es para alguien que YA es miembro legítimo del CRM (se autoactivó, o un admin la creó
     // por él) — se le otorga acceso real de una vez, a diferencia de solicitarAcceso() para
     // gente nueva, que se queda pendiente de aprobación.
-    await otorgarAccesoStaff(email);
-    if (!permanecer) {
-      await signOut(auth);
-      await signInAnonymously(auth);
+    const otorgado = await otorgarAccesoStaff(email);
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    if (!otorgado) {
+      return {
+        ok: true,
+        uid: cred.user.uid,
+        avisoAcceso: "La cuenta se creó, pero no se pudo otorgar el acceso automáticamente. Usa \"🔄 Sincronizar accesos\" para intentarlo de nuevo."
+      };
     }
     return { ok: true, uid: cred.user.uid };
   } catch (error) {
@@ -645,6 +656,23 @@ export async function activarCuentaSegura(email, password, permanecer = true) {
     else if (error?.code === "auth/invalid-email") mensaje = "Correo inválido.";
     else if (error?.code === "auth/operation-not-allowed") mensaje = "El inicio de sesión con correo/contraseña no está habilitado en Firebase todavía — avísale a Erick.";
     return { ok: false, error: error?.code || "error", mensaje };
+  }
+}
+
+/**
+ * Contraparte de activarCuentaSegura() para cuando un admin la creó para otra persona que no
+ * está presente: regresa el navegador a una sesión anónima para no dejar al admin "metido" con
+ * la identidad de otra persona. Debe llamarse solo después de guardar todo lo que necesitara el
+ * permiso del admin (ver nota en activarCuentaSegura).
+ */
+export async function restaurarSesionAnonima() {
+  try {
+    await signOut(auth);
+    await signInAnonymously(auth);
+    return true;
+  } catch (error) {
+    console.error("Error al restaurar sesión anónima:", error);
+    return false;
   }
 }
 
