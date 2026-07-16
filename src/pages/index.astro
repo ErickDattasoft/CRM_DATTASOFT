@@ -2900,7 +2900,7 @@ try {
                 <th style="width:200px; min-width:130px;">✉️ Correo<div class="col-resize-handle"></div></th>
                 <th style="width:130px; min-width:90px;">📱 Celular<div class="col-resize-handle"></div></th>
                 <th style="width:130px; min-width:90px;">☎️ Tel. Oficina<div class="col-resize-handle"></div></th>
-                <th style="width:110px; min-width:100px; text-align:center;">Acciones</th>
+                <th style="min-width:150px; text-align:center;">Acciones</th>
               </tr>
             </thead>
             <tbody id="tabla-contactos-body"></tbody>
@@ -9751,12 +9751,12 @@ verificarSesion();
         <td style="${tdStyle} color:var(--brand-secondary); font-size:0.82rem;" title="${escapeHtml(c.correo)}">${escapeHtml(c.correo) || "—"}</td>
         <td style="white-space:nowrap; font-size:0.82rem;">${escapeHtml(c.telefono1) || "—"}</td>
         <td style="white-space:nowrap; font-size:0.82rem; color:#94a3b8;">${escapeHtml(c.telefono2) || "—"}</td>
-        <td style="text-align:center;">
-          <div style="display:inline-flex; gap:3px;">
-            ${c.telefono1 ? `<button class="btn btn-whatsapp btn-xs btn-ct-wsp" data-idx="${idx}" title="WhatsApp" style="padding:3px 5px;">💬</button>` : ''}
-            ${c.correo    ? `<button class="btn btn-ghost btn-xs btn-ct-mail" data-idx="${idx}" title="Email" style="padding:3px 5px;background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.4);color:#f97316;">✉️</button>` : ''}
-            <button class="btn btn-secondary btn-xs btn-edit-ct" data-idx="${idx}" title="Editar" style="padding:3px 5px;">✏️</button>
-            <button class="btn btn-danger btn-xs btn-del-ct" data-idx="${idx}" title="Eliminar" style="padding:3px 5px;">🗑️</button>
+        <td style="text-align:center; vertical-align:middle; padding:8px 6px;">
+          <div class="row-actions">
+            ${c.telefono1 ? `<button class="btn btn-whatsapp btn-xs btn-icon btn-ct-wsp" data-idx="${idx}" title="WhatsApp">${WSP_ICON_SVG}</button>` : ''}
+            ${c.correo    ? `<button class="btn btn-ghost btn-xs btn-icon btn-ct-mail" data-idx="${idx}" title="Email" style="background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.4);color:#f97316;"><span class="icon-email">📧</span></button>` : ''}
+            <button class="btn btn-secondary btn-xs btn-icon btn-edit-ct" data-idx="${idx}" title="Editar">✏️</button>
+            <button class="btn btn-danger btn-xs btn-icon btn-del-ct" data-idx="${idx}" title="Eliminar">🗑️</button>
           </div>
         </td>
       `;
@@ -13206,6 +13206,10 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     try {
       const widths = JSON.parse(saved);
       const ths = table.querySelectorAll('thead th');
+      // Si cambió el número de columnas desde la última vez que se guardó (ej. se agregó o quitó
+      // una columna), el ancho guardado por índice quedaría aplicado a la columna equivocada —
+      // se descarta en vez de arriesgar un layout roto.
+      if (widths.length !== ths.length) { localStorage.removeItem('crm_colw_' + tableId); return; }
       widths.forEach((w, i) => {
         if (ths[i] && w > 0) {
           ths[i].style.width = w + 'px';
