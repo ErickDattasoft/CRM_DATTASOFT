@@ -2613,10 +2613,16 @@ try {
                 <button class="btn btn-ghost btn-sm" id="btnImportXLSEmpresas">📥 Importar Excel</button>
                 <input type="file" id="input-import-xls" accept=".xlsx,.xls" style="display:none">
                 <button class="btn btn-ghost btn-sm" id="btnExportCSVEmpresas">📤 Exportar CSV</button>
-                <button class="btn btn-whatsapp btn-sm" id="btnWspMasivo" title="Avisar por WhatsApp sistemas desactualizados">📢 WhatsApp Versiones (<span class="lblCountSel">0</span>)</button>
+                <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                  <button class="btn btn-whatsapp btn-sm" id="btnWspMasivo" title="Abre WhatsApp Web/App por cada empresa seleccionada, una por una — tienes que darle Enviar en cada una">📢 WhatsApp Versiones (<span class="lblCountSel">0</span>)</button>
+                  <span style="font-size:0.62rem; color:var(--text-muted); white-space:nowrap;">Abre WhatsApp una por una</span>
+                </div>
                 <button class="btn btn-email btn-sm" id="btnMailMasivo" title="Avisar por correo sistemas desactualizados">✉️ Email Versiones (<span class="lblCountSel">0</span>)</button>
                 <button class="btn btn-ghost btn-sm" id="btnPendientesAviso" title="Empresas con sistemas desactualizados que aún no se les ha avisado">🔔 Pendientes de aviso (<span id="lblCountPendientesAviso">0</span>)</button>
-                <button class="btn btn-whatsapp btn-sm" id="btnWspLicencias" title="Avisar por WhatsApp licencias vencidas o por vencer">📢🔒 WhatsApp Licencias (<span class="lblCountSel">0</span>)</button>
+                <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                  <button class="btn btn-whatsapp btn-sm" id="btnWspLicencias" title="Abre WhatsApp Web/App por cada empresa seleccionada, una por una — tienes que darle Enviar en cada una">📢🔒 WhatsApp Licencias (<span class="lblCountSel">0</span>)</button>
+                  <span style="font-size:0.62rem; color:var(--text-muted); white-space:nowrap;">Abre WhatsApp una por una</span>
+                </div>
                 <button class="btn btn-email btn-sm" id="btnMailLicencias" title="Avisar por correo licencias vencidas o por vencer">✉️🔒 Email Licencias (<span class="lblCountSel">0</span>)</button>
                 <button class="btn btn-ghost btn-sm" id="btnLicenciasPendientes" title="Empresas con licencias vencidas o por vencer que aún no se les ha avisado">⏰ Licencias por vencer (<span id="lblCountLicenciasPendientes">0</span>)</button>
                 <button class="btn btn-primary btn-sm" id="btnNuevoEmpresa">➕ Registrar Empresa</button>
