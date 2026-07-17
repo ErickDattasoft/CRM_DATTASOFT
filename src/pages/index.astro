@@ -1600,6 +1600,16 @@ try {
     }
     .sort-arrow.active { opacity: 1; color: var(--brand-primary-hover); }
 
+    /* Fila del ticket que se está editando actualmente — se ubica y colorea sola para no
+       tener que buscarla a mano en listas largas (ver prepararEdicionTicket). */
+    tr.tk-fila-editando td {
+      background: rgba(99,102,241,0.18) !important;
+    }
+    tr.tk-fila-editando td:first-child {
+      border-left: 4px solid #6366f1;
+      padding-left: 14px !important;
+    }
+
     /* ===== HIDDEN ===== */
     .hidden { display: none !important; }
 
@@ -3285,9 +3295,9 @@ try {
           <table>
             <thead>
               <tr>
-                <th style="width:80px; text-align:center;">Ticket #</th>
+                <th class="th-sortable" id="th-sort-tk-numero" style="width:80px; text-align:center;">Ticket # <span class="sort-arrow active" id="sort-arrow-tk-numero">↓</span></th>
                 <th>Asunto</th>
-                <th>Contacto / Empresa</th>
+                <th class="th-sortable" id="th-sort-tk-contacto">Contacto / Empresa <span class="sort-arrow" id="sort-arrow-tk-contacto">↕</span></th>
                 <th style="text-align:center">Tipo</th>
                 <th style="text-align:center">Prioridad</th>
                 <th style="text-align:center">Estado</th>
@@ -5700,6 +5710,8 @@ verificarSesion();
   let seleccionadosIdx = [];
   let sortEmpresasDir = 'asc';
   let sortContactosDir = 'asc';
+  let sortTicketsCol = 'numero';
+  let sortTicketsDir = 'desc';
   let importCSVTarget = "empresas"; // or "contactos"
   let csvParsedData = [];
 
@@ -6162,6 +6174,16 @@ verificarSesion();
   document.getElementById('th-sort-ct')?.addEventListener('click', () => {
     sortContactosDir = sortContactosDir === 'asc' ? 'desc' : 'asc';
     renderContactos();
+  });
+  document.getElementById('th-sort-tk-numero')?.addEventListener('click', () => {
+    if (sortTicketsCol === 'numero') sortTicketsDir = sortTicketsDir === 'asc' ? 'desc' : 'asc';
+    else { sortTicketsCol = 'numero'; sortTicketsDir = 'desc'; }
+    renderTickets();
+  });
+  document.getElementById('th-sort-tk-contacto')?.addEventListener('click', () => {
+    if (sortTicketsCol === 'contacto') sortTicketsDir = sortTicketsDir === 'asc' ? 'desc' : 'asc';
+    else { sortTicketsCol = 'contacto'; sortTicketsDir = 'asc'; }
+    renderTickets();
   });
 
   // ============================================================
@@ -10380,12 +10402,30 @@ verificarSesion();
         const fb = new Date(`${b.fechaProgramada}T${b.horaProgramada || "23:59"}`).getTime();
         return fa - fb;
       }
-      return b.numero - a.numero;
+      if (sortTicketsCol === "contacto") {
+        const ca = (a.contacto || a.empresa || "").toLowerCase();
+        const cb = (b.contacto || b.empresa || "").toLowerCase();
+        const cmp = ca.localeCompare(cb, "es", { sensitivity: "base" });
+        return sortTicketsDir === "asc" ? cmp : -cmp;
+      }
+      return sortTicketsDir === "asc" ? a.numero - b.numero : b.numero - a.numero;
     });
+    const arrowTkNumero = document.getElementById("sort-arrow-tk-numero");
+    if (arrowTkNumero) {
+      arrowTkNumero.textContent = sortTicketsCol === "numero" ? (sortTicketsDir === "asc" ? "↑" : "↓") : "↕";
+      arrowTkNumero.className = "sort-arrow" + (sortTicketsCol === "numero" ? " active" : "");
+    }
+    const arrowTkContacto = document.getElementById("sort-arrow-tk-contacto");
+    if (arrowTkContacto) {
+      arrowTkContacto.textContent = sortTicketsCol === "contacto" ? (sortTicketsDir === "asc" ? "↑" : "↓") : "↕";
+      arrowTkContacto.className = "sort-arrow" + (sortTicketsCol === "contacto" ? " active" : "");
+    }
 
     filtrados.forEach(t => {
       const tr = document.createElement("tr");
       tr.dataset.idx = t._idx;
+      tr.dataset.numero = t.numero;
+      if (String(t.numero) === editTkIdx?.value) tr.classList.add("tk-fila-editando");
       // SLA cálculo
       let slaBadge = "";
       const esActivo = t.estado === "Abierto" || t.estado === "Pendiente";
@@ -10470,6 +10510,8 @@ verificarSesion();
   function cerrarFormTicket() {
     formTk?.classList.add("hidden");
     editTkIdx.value = "";
+    document.getElementById("tabla-tickets-body")?.querySelectorAll("tr.tk-fila-editando")
+      .forEach(tr => tr.classList.remove("tk-fila-editando"));
     ["form-tk-contacto-buscar", "form-tk-contacto", "form-tk-correo-contacto", "form-tk-empresa",
      "form-tk-asunto", "form-tk-cc", "form-tk-cco",
      "form-tk-solicitado", "form-tk-canalizado",
@@ -10713,14 +10755,29 @@ verificarSesion();
     renderDashboard();
   });
 
+  // Resalta en la tabla la fila del ticket que se está editando y la centra dentro del
+  // contenedor con scroll propio (.table-wrap), sin mover el scroll de la página — así no
+  // hay que buscarla a mano cuando hay muchos tickets. El resaltado también se reaplica en
+  // cada renderTickets() (ver tr.dataset.numero === editTkIdx.value ahí), pero el centrado
+  // solo ocurre aquí, al abrir la edición, para no pelear con el scroll manual del usuario.
+  function marcarFilaTicketEnEdicion(numero) {
+    const tbody = document.getElementById("tabla-tickets-body");
+    const fila = tbody?.querySelector(`tr[data-numero="${numero}"]`);
+    if (!fila) return;
+    fila.classList.add("tk-fila-editando");
+    const wrap = fila.closest(".table-wrap");
+    if (wrap) wrap.scrollTop = fila.offsetTop - wrap.clientHeight / 2 + fila.clientHeight / 2;
+  }
+
   function prepararEdicionTicket(e) {
     const idx = parseInt(e.target.closest("button").dataset.idx);
     const t = tickets[idx];
     cerrarFormTicket();
-    document.getElementById("form-tk-titulo").textContent = "✏️ Editar Ticket";
+    document.getElementById("form-tk-titulo").textContent = `✏️ Editar Ticket #${t.numero}`;
     // Se guarda el folio (t.numero), no la posición en el arreglo — ver comentario junto a
     // ticketDetalleNumero más abajo para la misma razón.
     editTkIdx.value = String(t.numero);
+    marcarFilaTicketEnEdicion(t.numero);
     document.getElementById("form-tk-contacto").value = t.contacto || "";
     document.getElementById("form-tk-correo-contacto").value = t.contactoCorreo || "";
     document.getElementById("form-tk-empresa").value = t.empresa || "";
