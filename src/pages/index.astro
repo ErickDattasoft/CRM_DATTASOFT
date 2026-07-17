@@ -3627,13 +3627,16 @@ try {
               <input type="date" id="bit-filtro-desde" title="Desde" style="font-size:0.78rem; padding:6px 8px;">
               <span style="color:var(--text-muted); font-size:0.75rem;">a</span>
               <input type="date" id="bit-filtro-hasta" title="Hasta" style="font-size:0.78rem; padding:6px 8px;">
-              <button class="btn btn-ghost btn-xs" id="btnLimpiarFiltroBitacora" title="Quitar filtro de fechas">✕</button>
+              <select id="bit-filtro-usuario" title="Filtrar por usuario" style="font-size:0.78rem; padding:6px 8px; max-width:150px;">
+                <option value="">Todos los usuarios</option>
+              </select>
+              <button class="btn btn-ghost btn-xs" id="btnLimpiarFiltroBitacora" title="Quitar filtros">✕</button>
               <button class="btn btn-ghost btn-xs" id="btnActualizarBitacora" title="Traer las entradas más recientes de otros usuarios sin recargar la página">🔄 Actualizar</button>
               <button class="btn btn-ghost btn-xs" id="btnLimpiarBitacora">🗑️ Limpiar</button>
             </div>
           </div>
           <div style="font-size:0.72rem; color:var(--text-muted); margin-bottom:10px;">La bitácora conserva solo los últimos 60 días.</div>
-          <div id="bitacora-list" style="max-height:500px; overflow-y:auto;">
+          <div id="bitacora-list" style="max-height:calc(100vh - 260px); overflow-y:auto;">
             <div style="text-align:center; color:var(--text-muted); padding:24px; font-size:0.85rem;">Sin actividad registrada.</div>
           </div>
         </div>
@@ -4117,6 +4120,7 @@ try {
             <a href="#man-config">⚙️ Configuración</a>
             <a href="#man-automatizaciones">🤖 Automatizaciones (n8n)</a>
             <a href="#man-cuenta-segura">🔒 Cuenta Segura</a>
+            <a href="#man-bitacora">📋 Bitácora</a>
           </div>
 
           <!-- ── DASHBOARD ─────────────────────────────────── -->
@@ -4440,6 +4444,27 @@ try {
 
             <div class="manual-subtitulo">🛡️ Protección del login</div>
             <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;margin-bottom:8px;">La pantalla de login tiene protecciones adicionales: el ícono 👁️ junto a la contraseña la muestra/oculta, y si Bloq Mayús está activo aparece un aviso mientras escribes. Después de <strong>5 contraseñas incorrectas seguidas</strong> para un mismo usuario, ese usuario se bloquea 15 minutos (el contador se resetea al entrar correctamente). Además, si nadie toca el mouse ni el teclado durante <strong>8 horas</strong>, la sesión se cierra sola por inactividad.</p>
+          </div>
+
+          <!-- ── BITÁCORA ──────────────────────────────────── -->
+          <div class="manual-seccion" id="man-bitacora">
+            <div class="manual-seccion-title">📋 Bitácora de Acciones</div>
+            <p style="font-size:0.84rem;color:var(--text-main);line-height:1.6;margin-bottom:14px;">
+              Registro de actividad del CRM: quién hizo qué y cuándo (inicios de sesión, backups, ediciones de empresas, avisos enviados, altas de usuarios, etc.). Solo la ven los usuarios con rol <strong>Admin</strong>. Conserva únicamente los últimos 60 días — las entradas más antiguas se descartan solas.
+            </p>
+
+            <div class="manual-subtitulo">Filtros</div>
+            <div class="manual-paso"><div class="manual-paso-num">1</div><div class="manual-paso-txt"><strong>Rango de fechas:</strong> los campos "Desde" / "Hasta" filtran las entradas por día.</div></div>
+            <div class="manual-paso"><div class="manual-paso-num">2</div><div class="manual-paso-txt"><strong>Usuario:</strong> el desplegable filtra para ver solo las acciones de una persona en particular. Se llena solo con los nombres que realmente aparecen en el registro (incluye "Sistema" y usuarios que ya no estén activos).</div></div>
+            <div class="manual-paso"><div class="manual-paso-num">3</div><div class="manual-paso-txt">El botón <strong>✕</strong> quita todos los filtros (fechas y usuario) de un clic.</div></div>
+
+            <div class="manual-subtitulo">Botones</div>
+            <table class="manual-tabla">
+              <tr><th>Botón</th><th>¿Qué hace?</th></tr>
+              <tr><td>🔄 Actualizar</td><td>Trae las entradas más recientes registradas por otros usuarios, sin recargar la página.</td></tr>
+              <tr><td>🗑️ Limpiar</td><td>Borra por completo el historial de la bitácora (pide confirmación). Esta acción es permanente.</td></tr>
+              <tr><td>📊 Excel / 📂 Importar Backup / 💾 Exportar Backup</td><td>Botones generales del CRM en la barra superior — no son exclusivos de la Bitácora.</td></tr>
+            </table>
           </div>
 
           <!-- ── PREGUNTAS FRECUENTES ───────────────────────── -->
@@ -6764,6 +6789,18 @@ verificarSesion();
     toast(`⚠️ No se pudo guardar "${operacion}" en Firebase — ${mensaje || "sin conexión"}`, "error");
   });
 
+  // Reconstruye las opciones del <select> de usuario a partir de los que aparecen en la
+  // bitácora actual (no de getUsuarios(), para que sigan apareciendo usuarios ya eliminados
+  // o "Sistema"). Conserva la selección vigente si sigue siendo una opción válida.
+  function poblarFiltroUsuariosBitacora() {
+    const sel = document.getElementById("bit-filtro-usuario") as HTMLSelectElement;
+    if (!sel) return;
+    const valorActual = sel.value;
+    const usuarios = [...new Set(bitacoraLog.map(e => e.usuario).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
+    sel.innerHTML = '<option value="">Todos los usuarios</option>' + usuarios.map(u => `<option value="${u}">${u}</option>`).join("");
+    if (usuarios.includes(valorActual)) sel.value = valorActual;
+  }
+
   function renderBitacora() {
     const cont = document.getElementById("bitacora-list");
     if (!cont) return;
@@ -6776,13 +6813,16 @@ verificarSesion();
       cont.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:24px; font-size:0.85rem;">Sin actividad registrada.</div>';
       return;
     }
+    poblarFiltroUsuariosBitacora();
     const desde = (document.getElementById("bit-filtro-desde") as HTMLInputElement)?.value || "";
     const hasta = (document.getElementById("bit-filtro-hasta") as HTMLInputElement)?.value || "";
+    const usuarioSel = (document.getElementById("bit-filtro-usuario") as HTMLSelectElement)?.value || "";
     let entradas = bitacoraLog;
     if (desde) entradas = entradas.filter(e => e.fecha && e.fecha.slice(0, 10) >= desde);
     if (hasta) entradas = entradas.filter(e => e.fecha && e.fecha.slice(0, 10) <= hasta);
+    if (usuarioSel) entradas = entradas.filter(e => e.usuario === usuarioSel);
     if (!entradas.length) {
-      cont.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:24px; font-size:0.85rem;">Sin resultados en ese rango de fechas.</div>';
+      cont.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:24px; font-size:0.85rem;">Sin resultados con esos filtros.</div>';
       return;
     }
     const hoy = new Date().getFullYear();
@@ -6829,9 +6869,11 @@ verificarSesion();
 
   document.getElementById("bit-filtro-desde")?.addEventListener("change", renderBitacora);
   document.getElementById("bit-filtro-hasta")?.addEventListener("change", renderBitacora);
+  document.getElementById("bit-filtro-usuario")?.addEventListener("change", renderBitacora);
   document.getElementById("btnLimpiarFiltroBitacora")?.addEventListener("click", () => {
     (document.getElementById("bit-filtro-desde") as HTMLInputElement).value = "";
     (document.getElementById("bit-filtro-hasta") as HTMLInputElement).value = "";
+    (document.getElementById("bit-filtro-usuario") as HTMLSelectElement).value = "";
     renderBitacora();
   });
 
