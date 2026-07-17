@@ -9080,9 +9080,15 @@ verificarSesion();
   // cambiar a "Cerrado" en esta misma acción, dispara ticket_cerrado. No hace nada si el ticket
   // ya estaba cerrado antes de esta acción (para no reenviar en cada edición posterior de un
   // ticket que sigue cerrado).
-  async function procesarCierreTicket(t, estadoAnterior) {
+  async function procesarCierreTicket(t, estadoAnterior, notificarCliente = true) {
     const seAcabaDeCerrar = (t.estado || "").toLowerCase() === "cerrado" && (estadoAnterior || "").toLowerCase() !== "cerrado";
-    if (seAcabaDeCerrar) dispararN8n("ticket_cerrado", datosEventoTicket(t));
+    if (seAcabaDeCerrar) {
+      dispararN8n("ticket_cerrado", datosEventoTicket(t));
+      // Aviso al cliente de que su ticket se cerró — misma plantilla que enviarNotificacionTicket
+      // usa para "Reenviar correo", que nunca incluye notasInternas. Se omite en creación (notificarCliente=false)
+      // porque ahí ya se cubre con el checkbox "enviar correo" del formulario.
+      if (notificarCliente) await enviarNotificacionTicket(t);
+    }
   }
 
   // Estados que se consideran "de espera" y NO cuentan como tiempo trabajado: "Abierto" (recién
@@ -10645,7 +10651,7 @@ verificarSesion();
         }
         cotizacionOrigenParaTicket = null;
       }
-      await procesarCierreTicket(nuevoTicket, "");
+      await procesarCierreTicket(nuevoTicket, "", false);
       await procesarFacturacion(nuevoTicket, "", "");
       if (fechaProgramada && recordatorioDestinatariosIds.length) await enviarRecordatorioN8n("programar", nuevoTicket);
 
