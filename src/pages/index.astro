@@ -3607,6 +3607,18 @@ try {
           </div>
         </div>
 
+        <div class="card" id="cfg-mantenimiento-panel" style="margin-top:20px;">
+          <div class="card-title">🧹 Mantenimiento</div>
+          <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">
+            Adjuntos de tickets antiguos (guardados como base64 embebido directo en cada ticket) siguen
+            ocupando espacio en el documento compartido del CRM, y ese documento tiene un límite de 1MiB —
+            si está lleno, <strong>cualquier</strong> guardado de ticket puede fallar en silencio, no solo los que
+            tienen adjuntos. Este botón mueve esos adjuntos viejos a su propia colección (tickets_adjuntos) sin
+            borrar ningún archivo — es seguro correrlo varias veces (los tickets sin adjuntos viejos no se tocan).
+          </p>
+          <button class="btn btn-ghost btn-sm" id="btnMigrarAdjuntosViejos" title="Un solo uso, o cuando el guardado de tickets vuelva a fallar por tamaño del documento">🧹 Migrar adjuntos antiguos</button>
+        </div>
+
         <div class="card" id="cfg-n8n-panel" style="margin-top:20px;">
           <div class="card-title">🤖 Automatizaciones (n8n)</div>
 
@@ -5144,7 +5156,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias } from "../data/firebase.js";
+import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket } from "../data/firebase.js";
 import { parseEmailList, hoyLocalStr, parseFechaLocal, escapeHtml, slugBadge, esConsultoria, formatearDuracion, colorPuntoEstado, formatMoney } from "../data/utils.js";
 
 // ── Modal confirmación (reemplaza confirm() — funciona en móvil) ──
@@ -5640,7 +5652,8 @@ verificarSesion();
   let configN8n = { webhookUrl: "", destinatarios: [], reglas: [] };
   let unsubscribeCRM = null;
   let primeraCargaFB = true;
-  let adjuntosTicketActual = []; // archivos adjuntos en formulario activo
+  let adjuntosTicketActual = []; // lista completa (existentes + nuevos - quitados) del ticket en edición
+  let adjuntosPendientesEliminar = []; // ids de tickets_adjuntos a borrar solo si el guardado tiene éxito (ver btnGuardarTicket)
   let filtroAgendaActivo = false; // tab "📅 Agenda": solo tickets con fecha programada, orden asc
   let plantillaMensaje = "Hola [contacto] de [empresa].\n\nTe saludamos de parte del equipo de DATTASOFT By INFOXPERT. Te escribimos para comentarte que ya se encuentran disponibles las últimas versiones oficiales y estables para tus sistemas CONTPAQi.\n\nRevisando tu perfil, notamos que tienes la oportunidad de actualizar los siguientes módulos:\n\n[sistemas_pendientes]\n\nMantenerlos al día te garantiza la mayor estabilidad, seguridad y el cumplimiento de los cambios fiscales más recientes.\n\nSi deseas agendar la actualización, contáctanos:\n[contacto_soporte]\n\nEstamos para atenderles con gusto.\n\nSaludos cordiales,\nEquipo DATTASOFT BY INFOXPERT";
   let plantillaLicencias = "Hola [contacto] de [empresa].\n\nTe saludamos de parte del equipo de DATTASOFT By INFOXPERT. Te escribimos para recordarte el estado de las licencias de tus sistemas CONTPAQi:\n\n[licencias_pendientes]\n\nSi ya venció o está por vencer, contáctanos para renovarla y evitar interrupciones en el servicio:\n[contacto_soporte]\n\nEstamos para atenderles con gusto.\n\nSaludos cordiales,\nEquipo DATTASOFT BY INFOXPERT";
@@ -7083,9 +7096,20 @@ verificarSesion();
       const chip = document.createElement("span");
       chip.className = "attachment-chip";
       const ext = f.nombre.split(".").pop().toUpperCase();
-      chip.innerHTML = `<span>${ext === "PDF" ? "📄" : ext === "XML" ? "📋" : "🖼️"} <span title="${f.nombre}">${f.nombre}</span></span><button data-i="${i}" title="Quitar">×</button>`;
+      const icono = f.subiendo ? "⏳" : (ext === "PDF" ? "📄" : ext === "XML" ? "📋" : "🖼️");
+      chip.innerHTML = `<span>${icono} <span title="${f.nombre}">${f.nombre}${f.subiendo ? " (subiendo…)" : ""}</span></span><button data-i="${i}" title="Quitar">×</button>`;
       chip.querySelector("button").addEventListener("click", () => {
-        adjuntosTicketActual.splice(i, 1);
+        const [removido] = adjuntosTicketActual.splice(i, 1);
+        if (removido?.subiendo) {
+          // Sigue guardándose en segundo plano (ver procesarAdjuntos) — se marca para que, al
+          // terminar, se borre solo en vez de reaparecer en la lista.
+          removido._cancelado = true;
+        } else if (removido?.adjId) {
+          // Aún no se guarda el ticket: el borrado real del documento en tickets_adjuntos se
+          // difiere hasta que btnGuardarTicket confirme éxito, para no perder el archivo si el
+          // usuario cancela la edición.
+          adjuntosPendientesEliminar.push(removido.adjId);
+        }
         renderAdjuntosForm();
       });
       list.appendChild(chip);
@@ -7108,8 +7132,27 @@ verificarSesion();
       const ext = (f.nombre || "").split(".").pop().toUpperCase();
       chip.innerHTML = `<span>${ext === "PDF" ? "📄" : ext === "XML" ? "📋" : "🖼️"} <span title="${f.nombre}">${f.nombre}</span></span>`;
       if (f.data) {
+        // Adjuntos antiguos guardados con base64 embebido directo en el ticket — se conservan legibles.
         chip.href = f.data;
         chip.download = f.nombre;
+      } else if (f.adjId) {
+        // El contenido vive en su propio documento (tickets_adjuntos) — se pide bajo demanda al
+        // hacer clic, no se precarga solo por abrir el detalle del ticket.
+        chip.href = "#";
+        chip.addEventListener("click", async (e) => {
+          e.preventDefault();
+          if (chip.dataset.cargando) return;
+          chip.dataset.cargando = "1";
+          chip.style.opacity = "0.5";
+          const adj = await cargarAdjuntoTicket(f.adjId);
+          chip.style.opacity = "1";
+          delete chip.dataset.cargando;
+          if (!adj?.data) { toast("⚠️ No se pudo cargar el adjunto (¿fue eliminado?)", "error"); return; }
+          const a = document.createElement("a");
+          a.href = adj.data;
+          a.download = f.nombre;
+          a.click();
+        });
       }
       cont.appendChild(chip);
     });
@@ -7127,25 +7170,66 @@ verificarSesion();
   });
   tkAttachInput?.addEventListener("change", () => { if (tkAttachInput.files.length) procesarAdjuntos(Array.from(tkAttachInput.files)); });
 
-  function procesarAdjuntos(files) {
+  async function procesarAdjuntos(files) {
     // Antes: "MIME permitido O termina en .xml" dejaba pasar CUALQUIER archivo con solo
     // renombrarlo a *.xml (el MIME real no importaba). Ahora exige extensión Y MIME consistentes.
     const permitidos = {
       png: ["image/png"], jpg: ["image/jpeg", "image/jpg"], jpeg: ["image/jpeg", "image/jpg"],
       pdf: ["application/pdf"], xml: ["text/xml", "application/xml", ""],
     };
-    files.forEach(f => {
+    for (const f of files) {
       const ext = (f.name.split(".").pop() || "").toLowerCase();
       const mimesValidos = permitidos[ext];
-      if (!mimesValidos || !mimesValidos.includes(f.type)) { toast(`⚠️ Tipo no permitido: ${f.name}`, "error"); return; }
-      if (f.size > 5 * 1024 * 1024) { toast(`⚠️ ${f.name} supera 5MB`, "error"); return; }
-      const reader = new FileReader();
-      reader.onload = ev => {
-        adjuntosTicketActual.push({ nombre: f.name, tipo: f.type, data: ev.target.result });
-        renderAdjuntosForm();
-      };
-      reader.readAsDataURL(f);
-    });
+      if (!mimesValidos || !mimesValidos.includes(f.type)) { toast(`⚠️ Tipo no permitido: ${f.name}`, "error"); continue; }
+
+      if (!firebaseEnabled) {
+        // Modo local sin Firebase: no hay límite de Firestore de por medio (nada se sincroniza),
+        // así que se conserva el flujo anterior con un límite más generoso.
+        if (f.size > 5 * 1024 * 1024) { toast(`⚠️ ${f.name} supera 5MB`, "error"); continue; }
+        await new Promise(resolve => {
+          const reader = new FileReader();
+          reader.onload = ev => {
+            adjuntosTicketActual.push({ nombre: f.name, tipo: f.type, data: ev.target.result });
+            renderAdjuntosForm();
+            resolve(null);
+          };
+          reader.readAsDataURL(f);
+        });
+        continue;
+      }
+
+      // Este proyecto no tiene Cloud Storage habilitado (requiere plan de pago Blaze, no
+      // disponible aquí), así que cada adjunto se guarda como documento PROPIO en la colección
+      // tickets_adjuntos en vez de embebido en el ticket — evita el límite de 1MiB del documento
+      // único agenda/datos, pero el documento individual del adjunto sigue topado a esos mismos
+      // 1MiB de Firestore. Con el ~33% de overhead de base64, 700KB de archivo es el margen
+      // seguro. Si en algún momento se habilita Cloud Storage, este límite deja de ser necesario.
+      if (f.size > 700 * 1024) { toast(`⚠️ ${f.name} supera 700KB (límite mientras no haya Cloud Storage)`, "error"); continue; }
+
+      const item = { nombre: f.name, tipo: f.type, size: f.size, subiendo: true };
+      adjuntosTicketActual.push(item);
+      renderAdjuntosForm();
+      const dataUrl = await new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = ev => resolve(ev.target.result);
+        reader.readAsDataURL(f);
+      });
+      if (item._cancelado) continue; // se quitó mientras se leía el archivo, nunca llegó a guardarse nada
+      const res = await guardarAdjuntoTicket(f.name, f.type, dataUrl, f.size);
+      if (item._cancelado) {
+        // El usuario lo quitó mientras se guardaba — nada lo referencia todavía, se borra directo.
+        if (res.ok) eliminarAdjuntoTicket(res.id).catch(() => {});
+        continue;
+      }
+      if (res.ok) {
+        item.adjId = res.id;
+        delete item.subiendo;
+      } else {
+        adjuntosTicketActual = adjuntosTicketActual.filter(a => a !== item);
+        toast(`⚠️ No se pudo guardar ${f.name}: ${res.error}`, "error");
+      }
+      renderAdjuntosForm();
+    }
     if (tkAttachInput) tkAttachInput.value = "";
   }
 
@@ -10526,6 +10610,9 @@ verificarSesion();
     const rte = document.getElementById("form-tk-descripcion");
     if (rte) rte.innerHTML = "";
     adjuntosTicketActual = [];
+    // Se descartan sin tocar Storage: si había adjuntos existentes quitados en esta edición,
+    // cancelar el formulario no debe borrar archivos que el ticket guardado sigue referenciando.
+    adjuntosPendientesEliminar = [];
     renderAdjuntosForm();
     const horaInp = document.getElementById("form-tk-hora-programada") as HTMLInputElement | null;
     if (horaInp) horaInp.value = "09:00";
@@ -10708,7 +10795,6 @@ verificarSesion();
         renderTickets();
         return;
       }
-      const adjuntosExistentes = t.adjuntos || [];
       const estadoAnterior = t.estado, agenteAnterior = t.agente, prioridadAnterior = t.prioridad;
       const notasInternasAnterior = t.notasInternas || "";
       const facturadoAnterior = t.facturado || "NO FACTURADO";
@@ -10717,7 +10803,9 @@ verificarSesion();
       Object.assign(t, { asunto, empresa, contacto, contactoCorreo, tipo, sistema, estado, facturado, prioridad, grupo, agente,
         descripcion, notasInternas, cc, cco, solicitado, canalizado,
         fechaProgramada, horaProgramada, agenteAsignado, recordatorioDestinatariosIds,
-        adjuntos: [...adjuntosExistentes, ...adjuntosTicketActual],
+        // adjuntosTicketActual ya es la lista completa (existentes + nuevos - quitados en esta
+        // edición) desde que prepararEdicionTicket la precarga con t.adjuntos — ver ese comentario.
+        adjuntos: [...adjuntosTicketActual],
         fechaActualizacion: new Date().toISOString() });
       if (estado !== estadoAnterior) { registrarActividadTicket(t, `Estado cambiado: "${estadoAnterior}" → "${estado}"`); registrarCambioEstadoTiempo(t, estado); }
       if (agente !== agenteAnterior) registrarActividadTicket(t, `Asignado cambiado: "${agenteAnterior || "sin asignar"}" → "${agente || "sin asignar"}"`);
@@ -10738,6 +10826,9 @@ verificarSesion();
         await enviarRecordatorioN8n("reprogramar", t);
     }
 
+    // Se captura antes de cerrarFormTicket() porque esa función vacía adjuntosPendientesEliminar.
+    const adjIdsPendientesEliminar = adjuntosPendientesEliminar;
+
     guardarLocal("crm_tickets", tickets);
     if (crmLocalOnly) {
       toast("💾 Ticket guardado (Local)");
@@ -10748,8 +10839,19 @@ verificarSesion();
     }
     mostrarEstado("💾 Guardando ticket...");
     const ok = await guardarTickets(tickets);
-    if (ok) { toast("💾 Ticket guardado"); ocultarEstado(); }
-    else { mostrarEstado("⚠️ Guardado localmente (sin conexión)", 3000); }
+    if (ok) {
+      toast("💾 Ticket guardado");
+      ocultarEstado();
+      // Recién ahora es seguro borrar los documentos de tickets_adjuntos que se quitaron en esta
+      // edición: el ticket ya se guardó sin ellos, así que nada los sigue referenciando.
+      adjIdsPendientesEliminar.forEach(id => eliminarAdjuntoTicket(id).catch(() => {}));
+    } else {
+      // guardarTickets ya quedó en localStorage (guardarLocal arriba), pero NO llegó a Firestore
+      // — "sin conexión" era engañoso: la causa real casi siempre es un error de Firestore (ej.
+      // documento de 1MiB lleno), no falta de red. Se avisa explícito para no repetir el bug de
+      // adjuntos que "se guardaban" y desaparecían al reabrir el ticket.
+      mostrarEstado("⚠️ No se pudo guardar en el servidor — revisa la consola o inténtalo de nuevo. Quedó solo en este dispositivo.", 5000);
+    }
     cerrarFormTicket();
     renderTickets();
     renderDashboard();
@@ -10788,6 +10890,12 @@ verificarSesion();
     const fSol = document.getElementById("form-tk-solicitado"); if (fSol) fSol.value = t.solicitado || "";
     const fCan = document.getElementById("form-tk-canalizado"); if (fCan) fCan.value = t.canalizado || "";
     const fNI = document.getElementById("form-tk-notas-internas"); if (fNI) fNI.value = t.notasInternas || "";
+    // Se cargan los adjuntos ya guardados como la lista de trabajo completa (no solo los nuevos
+    // de esta sesión) — así el botón "×" también puede quitar adjuntos existentes, no solo los
+    // que se acaban de arrastrar. cerrarFormTicket() (arriba) ya la dejó en [], por eso se
+    // reasigna después en vez de solo hacer push.
+    adjuntosTicketActual = [...(t.adjuntos || [])];
+    renderAdjuntosForm();
     initTicketFormDropdowns(t);
     formTk?.classList.remove("hidden");
     formTk?.scrollIntoView({ behavior: "smooth" });
@@ -12236,6 +12344,59 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     }
     toast(`🔄 Acceso sincronizado para ${ok}/${usuariosConCuenta.length} usuario(s)`);
     logBitacora(`Sincronización de accesos ejecutada (${ok}/${usuariosConCuenta.length})`, "🔄");
+  });
+
+  // Migración de un solo uso (repetible sin riesgo): mueve adjuntos viejos guardados como
+  // base64 embebido directo en tickets/papelera a la colección tickets_adjuntos, para liberar
+  // espacio en el documento compartido agenda/datos (límite de 1MiB) — ver comentario en la UI
+  // (cfg-mantenimiento-panel) y MEMORY project_adjuntos_tickets_storage para el porqué completo.
+  document.getElementById("btnMigrarAdjuntosViejos")?.addEventListener("click", async () => {
+    if (!firebaseEnabled) { toast("⚠️ No aplica en Modo Local", "warning"); return; }
+
+    const calcularSizeBase64 = (dataUrl) => {
+      const coma = dataUrl.indexOf(",");
+      const b64 = coma >= 0 ? dataUrl.slice(coma + 1) : dataUrl;
+      return Math.round(b64.length * 3 / 4);
+    };
+
+    const candidatos = [];
+    [...tickets, ...papelera].forEach(t => {
+      (t.adjuntos || []).forEach(a => { if (a.data && !a.adjId) candidatos.push(a); });
+    });
+
+    if (!candidatos.length) { toast("✅ No hay adjuntos antiguos que migrar"); return; }
+    if (!await confirmar(`¿Migrar ${candidatos.length} adjunto(s) antiguo(s) a su propia colección? No se borra ningún archivo — solo se mueve dónde vive.`, "🧹")) return;
+
+    mostrarEstado(`🧹 Migrando 0/${candidatos.length}...`);
+    let ok = 0, fallidos = 0;
+    for (const a of candidatos) {
+      const size = calcularSizeBase64(a.data);
+      const res = await guardarAdjuntoTicket(a.nombre, a.tipo, a.data, size);
+      if (res.ok) {
+        // Se reemplaza en el mismo objeto (referencia compartida entre tickets/papelera y el
+        // arreglo `candidatos`) — por eso no hace falta buscar de nuevo dónde vive cada adjunto.
+        a.adjId = res.id;
+        a.size = size;
+        delete a.data;
+        ok++;
+      } else {
+        fallidos++;
+      }
+      mostrarEstado(`🧹 Migrando ${ok + fallidos}/${candidatos.length}...`);
+    }
+
+    const okTickets = await guardarTickets(tickets);
+    const okPapelera = await guardarPapelera(papelera);
+    ocultarEstado();
+
+    if (okTickets && okPapelera) {
+      guardarLocal("crm_tickets", tickets);
+      toast(`🧹 Migración completa: ${ok} adjunto(s) movido(s)${fallidos ? `, ${fallidos} fallaron (se quedaron como estaban)` : ""}`);
+      logBitacora(`Migración de adjuntos antiguos: ${ok} movidos, ${fallidos} fallidos`, "🧹");
+    } else {
+      toast(`⚠️ Se migraron ${ok} adjunto(s), pero el guardado final falló — puede que el documento siga demasiado lleno. Vuelve a intentar o revisa la consola.`, "error");
+    }
+    renderTickets();
   });
 
   // ============================================================

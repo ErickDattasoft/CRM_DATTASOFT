@@ -193,6 +193,53 @@ export async function guardarTickets(tickets) {
 }
 
 /**
+ * Guarda un adjunto de ticket como documento PROPIO en la colección tickets_adjuntos, no
+ * embebido en el documento único agenda/datos — antes se guardaba como Data URL base64 dentro
+ * de agenda/datos (que comparte TODO el CRM y tiene límite de 1MiB): un solo PDF normal bastaba
+ * para que el setDoc fuera rechazado en silencio (el ticket ya se había mutado en memoria, así
+ * que la UI seguía mostrando "guardado" aunque Firestore nunca lo recibiera). Este enfoque evita
+ * ese límite compartido, pero cada adjunto individual sigue topado a los mismos 1MiB de
+ * Firestore por documento — de ahí el límite de ~700KB que valida procesarAdjuntos en
+ * index.astro antes de llamar aquí (el ideal sería Cloud Storage, pero requiere plan de pago
+ * Blaze que no está disponible para este proyecto).
+ */
+export async function guardarAdjuntoTicket(nombre, tipo, dataUrl, size) {
+  try {
+    const ref = await addDoc(collection(db, "tickets_adjuntos"), {
+      nombre, tipo, size, data: dataUrl, fecha: serverTimestamp()
+    });
+    return { ok: true, id: ref.id };
+  } catch (error) {
+    console.error("Error al guardar adjunto de ticket:", error);
+    return { ok: false, error: error?.code || error?.message || String(error) };
+  }
+}
+
+/**
+ * Carga el contenido (Data URL base64) de un adjunto de ticket bajo demanda — no se precargan
+ * todos los adjuntos de un ticket solo por abrir su detalle, se piden uno por uno al hacer clic.
+ */
+export async function cargarAdjuntoTicket(id) {
+  try {
+    const snap = await getDoc(doc(db, "tickets_adjuntos", id));
+    return snap.exists() ? snap.data() : null;
+  } catch (error) {
+    console.error("Error al cargar adjunto de ticket:", error);
+    return null;
+  }
+}
+
+export async function eliminarAdjuntoTicket(id) {
+  try {
+    await deleteDoc(doc(db, "tickets_adjuntos", id));
+    return true;
+  } catch (error) {
+    console.error("Error al eliminar adjunto de ticket:", error);
+    return false;
+  }
+}
+
+/**
  * Guarda los contactos del CRM en Firestore.
  */
 export async function guardarContactos(contactos) {
