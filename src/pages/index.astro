@@ -10766,6 +10766,11 @@ verificarSesion();
       // desde la creación, así que la caja aparece igual pero invita a editar el tiempo a mano.
       if ((estado || "").toLowerCase() === "resuelto") calcularTiempoTrabajadoAuto(nuevoTicket);
       logBitacora(`Ticket #${num} creado: "${asunto}" — ${empresa || contacto}`, "🎫");
+      if (adjuntosTicketActual.length) {
+        const nombres = adjuntosTicketActual.map(a => a.nombre).join(", ");
+        registrarActividadTicket(nuevoTicket, `${adjuntosTicketActual.length} adjunto(s) agregado(s): ${nombres}`);
+        logBitacora(`Ticket #${num}: ${adjuntosTicketActual.length} adjunto(s) agregado(s) (${nombres})`, "📎");
+      }
       dispararN8n("ticket_creado_equipo", datosEventoTicket(nuevoTicket));
 
       // Puente Cotización → Ticket: si este ticket nació de "🎫 Crear ticket desde esta cotización",
@@ -10800,6 +10805,7 @@ verificarSesion();
       const facturadoAnterior = t.facturado || "NO FACTURADO";
       const fechaProgAnterior = t.fechaProgramada || "", horaProgAnterior = t.horaProgramada || "";
       const recordatorioIdsAnterior = t.recordatorioDestinatariosIds || [];
+      const adjuntosAntes = t.adjuntos || [];
       Object.assign(t, { asunto, empresa, contacto, contactoCorreo, tipo, sistema, estado, facturado, prioridad, grupo, agente,
         descripcion, notasInternas, cc, cco, solicitado, canalizado,
         fechaProgramada, horaProgramada, agenteAsignado, recordatorioDestinatariosIds,
@@ -10811,6 +10817,15 @@ verificarSesion();
       if (agente !== agenteAnterior) registrarActividadTicket(t, `Asignado cambiado: "${agenteAnterior || "sin asignar"}" → "${agente || "sin asignar"}"`);
       if (prioridad !== prioridadAnterior) registrarActividadTicket(t, `Prioridad cambiada: "${prioridadAnterior}" → "${prioridad}"`);
       if (facturado !== facturadoAnterior) registrarActividadTicket(t, `Facturación cambiada: "${facturadoAnterior}" → "${facturado}"`);
+      // Comparación por referencia: los adjuntos que ya estaban se recargan tal cual en
+      // prepararEdicionTicket (mismo objeto), así que lo que no está en adjuntosAntes es nuevo
+      // de esta edición, y lo que faltó de adjuntosAntes fue quitado con el botón "×".
+      const adjuntosAgregados = adjuntosTicketActual.filter(a => !adjuntosAntes.includes(a));
+      const adjuntosQuitados = adjuntosAntes.filter(a => !adjuntosTicketActual.includes(a));
+      if (adjuntosAgregados.length) registrarActividadTicket(t, `${adjuntosAgregados.length} adjunto(s) agregado(s): ${adjuntosAgregados.map(a => a.nombre).join(", ")}`);
+      if (adjuntosQuitados.length) registrarActividadTicket(t, `${adjuntosQuitados.length} adjunto(s) quitado(s): ${adjuntosQuitados.map(a => a.nombre).join(", ")}`);
+      if (adjuntosAgregados.length) logBitacora(`Ticket #${t.numero}: ${adjuntosAgregados.length} adjunto(s) agregado(s) (${adjuntosAgregados.map(a => a.nombre).join(", ")})`, "📎");
+      if (adjuntosQuitados.length) logBitacora(`Ticket #${t.numero}: ${adjuntosQuitados.length} adjunto(s) quitado(s) (${adjuntosQuitados.map(a => a.nombre).join(", ")})`, "📎");
       logBitacora(`Ticket #${t.numero} "${t.asunto}" actualizado a ${estado}${prioridad ? ` · ${prioridad}` : ""}`, "✏️");
       if (facturado !== facturadoAnterior) logBitacora(`Ticket #${t.numero}: facturación cambiada a "${facturado}"`, "🧾");
       if (estado !== estadoAnterior) dispararN8n("ticket_estado_cambiado", datosEventoTicket(t));
@@ -14513,6 +14528,23 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         const idx = parseInt(e.target.dataset.i);
         const tp = ticketsPublicos[idx];
         const num = tickets.length > 0 ? Math.max(...tickets.map(x => x.numero)) + 1 : 1001;
+
+        // Los adjuntos del portal público llegan como base64 embebido directo en el documento
+        // tickets_publicos/{id} (ver ticket-publico.astro) — ahí no es un problema porque cada
+        // ticket público vive en su propio documento. Pero si se copiaran tal cual al ticket
+        // interno, volverían a inflar el documento único agenda/datos con el tiempo (el mismo
+        // bug de "adjuntos que desaparecen al guardar", solo que reintroducido desde este otro
+        // punto de entrada) — así que se convierten a documentos propios en tickets_adjuntos
+        // aquí, en la sesión ya autenticada de staff, antes de copiarlos al ticket.
+        const adjuntosConvertidos = [];
+        for (const a of (tp.adjuntos || [])) {
+          if (!firebaseEnabled || !a?.data) { adjuntosConvertidos.push(a); continue; }
+          const coma = a.data.indexOf(",");
+          const size = Math.round((coma >= 0 ? a.data.slice(coma + 1) : a.data).length * 3 / 4);
+          const res = await guardarAdjuntoTicket(a.nombre, a.tipo, a.data, size);
+          adjuntosConvertidos.push(res.ok ? { nombre: a.nombre, tipo: a.tipo, size, adjId: res.id } : a);
+        }
+
         const nuevoTicketPub = {
           numero: num,
           asunto: tp.asunto || "Sin asunto",
@@ -14526,7 +14558,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           grupo: "", agente: "",
           descripcion: (tp.descripcion || "").replace(/\n/g, "<br>"),
           solicitado: "", canalizado: "",
-          adjuntos: tp.adjuntos || [],
+          adjuntos: adjuntosConvertidos,
           actividad: [],
           fechaCreacion: tp.fechaCreacion || new Date().toISOString(),
           fechaActualizacion: new Date().toISOString()
