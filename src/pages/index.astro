@@ -799,6 +799,16 @@ try {
     }
     tr { transition: var(--transition-base); }
     tr:hover { background: var(--bg-table-row-hover); }
+
+    /* Tabla de tickets: columnas fijas obligan a scroll horizontal en vez de amontonarse.
+       Sin esto, cualquier ventana más angosta que ~1250px (no solo el breakpoint móvil)
+       comprime las columnas de Tipo/Prioridad/Estado/Facturación/Agente/Creado/Acciones y
+       su contenido (badges, fechas) se desborda encima de las celdas vecinas.
+       nth-child(7)=Facturación y nth-child(10)=Acciones (última columna). */
+    #section-tickets .table-wrap table { min-width: 1250px; }
+    #section-tickets .table-wrap th:nth-child(1), #section-tickets .table-wrap td:nth-child(1) { width: 60px; }
+    #section-tickets .table-wrap th:nth-child(7), #section-tickets .table-wrap td:nth-child(7) { width: 130px; }
+    #section-tickets .table-wrap th:nth-child(10), #section-tickets .table-wrap td:nth-child(10) { width: 120px; }
     tbody tr.empresa-row td { border-top: 2px solid rgba(99,102,241,0.25) !important; }
     tbody tr.empresa-row:first-child td { border-top: none !important; }
     tbody tr.empresa-row:nth-child(even) td { background: rgba(255,255,255,0.03); }
@@ -1724,18 +1734,6 @@ try {
       }
       table { font-size: 0.75rem; }
       th, td { padding: 8px 10px; }
-
-      /* Tabla de tickets: columnas fijas obligan a scroll horizontal en vez de amontonarse.
-         760px no alcanzaba: Asunto+Contacto ya usan 440px fijos (nth-child 2 y 3), dejando
-         solo ~45px por columna para Tipo/Prioridad/Estado/Facturación/Agente/Creado/Acciones —
-         ahí se veían encimadas. Con 1250px cada una de esas queda con espacio suficiente para
-         badges (ej. "NO FACTURADO") y los botones de acción sin amontonarse.
-         nth-child(7)=Facturación y nth-child(10)=Acciones (última columna); antes apuntaba
-         a nth-child(9)=Creado por desfase al agregar la columna Facturación. */
-      #section-tickets .table-wrap table { min-width: 1250px; }
-      #section-tickets .table-wrap th:nth-child(1), #section-tickets .table-wrap td:nth-child(1) { width: 60px; }
-      #section-tickets .table-wrap th:nth-child(7), #section-tickets .table-wrap td:nth-child(7) { width: 130px; }
-      #section-tickets .table-wrap th:nth-child(10), #section-tickets .table-wrap td:nth-child(10) { width: 120px; }
 
       /* Formularios a pantalla completa */
       .form-card {
@@ -3261,10 +3259,10 @@ try {
             <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px;">📅 Programar atención (opcional)</div>
             <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:12px;">
               <div class="form-group"><label>Fecha programada</label><input type="date" id="form-tk-fecha-programada"></div>
-              <div class="form-group" id="form-tk-hora-programada-wrap" style="display:none;"><label>Hora programada</label><input type="time" id="form-tk-hora-programada" value="09:00"></div>
+              <div class="form-group" id="form-tk-hora-programada-wrap"><label>Hora programada</label><input type="time" id="form-tk-hora-programada" value="09:00"></div>
               <div class="form-group"><label>Agente asignado</label><select id="form-tk-agente-asignado"></select></div>
             </div>
-            <div id="form-tk-recordatorio-wrap" style="display:none; margin-top:10px;">
+            <div id="form-tk-recordatorio-wrap" style="margin-top:10px;">
               <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.83rem;">
                 <input type="checkbox" id="chk-recordatorio-wsp" style="width:16px; height:16px; accent-color:#6366f1; cursor:pointer; flex-shrink:0;"> Enviar recordatorio WhatsApp 30 min antes a:
               </label>
@@ -10247,21 +10245,10 @@ verificarSesion();
     const chkRec = document.getElementById("chk-recordatorio-wsp") as HTMLInputElement | null;
     if (chkRec) chkRec.checked = !!(ticket?.recordatorioDestinatariosIds || []).length;
     renderRecordatorioCheckboxes(ticket?.recordatorioDestinatariosIds || []);
-    actualizarVisibilidadProgramacion();
     const avisoRec = document.getElementById("form-tk-recordatorio-aviso");
     if (avisoRec) avisoRec.style.display = "none";
     populateCcPicker();
   }
-
-  function actualizarVisibilidadProgramacion() {
-    const fecha = (document.getElementById("form-tk-fecha-programada") as HTMLInputElement | null)?.value;
-    const horaWrap = document.getElementById("form-tk-hora-programada-wrap");
-    const recWrap = document.getElementById("form-tk-recordatorio-wrap");
-    const mostrar = !!fecha;
-    if (horaWrap) horaWrap.style.display = mostrar ? "" : "none";
-    if (recWrap) recWrap.style.display = mostrar ? "" : "none";
-  }
-  document.getElementById("form-tk-fecha-programada")?.addEventListener("change", actualizarVisibilidadProgramacion);
 
   function renderRecordatorioCheckboxes(preseleccionIds = []) {
     const cont = document.getElementById("form-tk-recordatorio-destinatarios");
@@ -10622,7 +10609,6 @@ verificarSesion();
     // (ej. garantía) dejaba la casilla desmarcada para el siguiente ticket sin que nadie lo notara.
     const chkCorreo = document.getElementById("chk-enviar-correo") as HTMLInputElement | null;
     if (chkCorreo) chkCorreo.checked = true;
-    actualizarVisibilidadProgramacion();
     renderRecordatorioCheckboxes([]);
     const avisoRec = document.getElementById("form-tk-recordatorio-aviso");
     if (avisoRec) avisoRec.style.display = "none";
