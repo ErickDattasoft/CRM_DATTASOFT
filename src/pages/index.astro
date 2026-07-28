@@ -750,6 +750,10 @@ try {
     .table-wrap {
       overflow-x: auto;
       overflow-y: auto;
+      /* Reserva el espacio de la barra vertical aunque no se necesite todavía, para que
+         columnas/campos no se reacomoden cada vez que un filtro cambia el número de filas
+         y la barra aparece o desaparece. */
+      scrollbar-gutter: stable;
       max-height: calc(100vh - 180px);
       background: var(--bg-card);
       border-radius: var(--radius-lg);
