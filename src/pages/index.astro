@@ -804,9 +804,9 @@ try {
        su columna queda más angosta que el badge, el texto se desborda encima de la celda vecina
        en vez de recortarse. overflow:hidden en el td convierte ese desborde en un simple recorte. */
     #section-tickets .table-wrap td { overflow: hidden; }
-    #section-tickets .table-wrap th:nth-child(1), #section-tickets .table-wrap td:nth-child(1) { width: 55px; }
-    #section-tickets .table-wrap th:nth-child(7), #section-tickets .table-wrap td:nth-child(7) { width: 105px; }
-    #section-tickets .table-wrap th:nth-child(10), #section-tickets .table-wrap td:nth-child(10) { width: 90px; }
+    #section-tickets .table-wrap th:nth-child(1), #section-tickets .table-wrap td:nth-child(1) { width: 60px; }
+    #section-tickets .table-wrap th:nth-child(7), #section-tickets .table-wrap td:nth-child(7) { width: 130px; }
+    #section-tickets .table-wrap th:nth-child(10), #section-tickets .table-wrap td:nth-child(10) { width: 120px; }
 
     /* Por debajo de 1300px no alcanza el espacio para las 10 columnas sin amontonarse (el
        sidebar se auto-colapsa a esta misma medida — ver SIDEBAR_AUTO_COLLAPSE_WIDTH en el JS—
@@ -816,15 +816,18 @@ try {
        el detalle del ticket— y se angostan Asunto/Contacto/Tipo para que el resto quepa. */
     @media (max-width: 1300px) {
       #section-tickets .table-wrap th, #section-tickets .table-wrap td { padding: 10px 10px; }
+      #section-tickets .table-wrap th:nth-child(1), #section-tickets .table-wrap td:nth-child(1) { width: 55px; }
       #section-tickets .table-wrap th:nth-child(2), #section-tickets .table-wrap td:nth-child(2),
       #section-tickets .table-wrap th:nth-child(3), #section-tickets .table-wrap td:nth-child(3) {
         min-width: 0; width: 110px;
       }
       #section-tickets .table-wrap th:nth-child(4), #section-tickets .table-wrap td:nth-child(4) { width: 100px; }
+      #section-tickets .table-wrap th:nth-child(7), #section-tickets .table-wrap td:nth-child(7) { width: 105px; }
       #section-tickets .table-wrap th:nth-child(8), #section-tickets .table-wrap td:nth-child(8),
       #section-tickets .table-wrap th:nth-child(9), #section-tickets .table-wrap td:nth-child(9) {
         display: none;
       }
+      #section-tickets .table-wrap th:nth-child(10), #section-tickets .table-wrap td:nth-child(10) { width: 90px; }
     }
     tbody tr.empresa-row td { border-top: 2px solid rgba(99,102,241,0.25) !important; }
     tbody tr.empresa-row:first-child td { border-top: none !important; }
