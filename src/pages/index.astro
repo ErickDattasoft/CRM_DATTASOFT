@@ -800,15 +800,32 @@ try {
     tr { transition: var(--transition-base); }
     tr:hover { background: var(--bg-table-row-hover); }
 
-    /* Tabla de tickets: columnas fijas obligan a scroll horizontal en vez de amontonarse.
-       Sin esto, cualquier ventana más angosta que ~1250px (no solo el breakpoint móvil)
-       comprime las columnas de Tipo/Prioridad/Estado/Facturación/Agente/Creado/Acciones y
-       su contenido (badges, fechas) se desborda encima de las celdas vecinas.
-       nth-child(7)=Facturación y nth-child(10)=Acciones (última columna). */
-    #section-tickets .table-wrap table { min-width: 1250px; }
-    #section-tickets .table-wrap th:nth-child(1), #section-tickets .table-wrap td:nth-child(1) { width: 60px; }
-    #section-tickets .table-wrap th:nth-child(7), #section-tickets .table-wrap td:nth-child(7) { width: 130px; }
-    #section-tickets .table-wrap th:nth-child(10), #section-tickets .table-wrap td:nth-child(10) { width: 120px; }
+    /* Tabla de tickets: los badges (Tipo/Prioridad/Estado/Facturación) no hacen wrap, así que si
+       su columna queda más angosta que el badge, el texto se desborda encima de la celda vecina
+       en vez de recortarse. overflow:hidden en el td convierte ese desborde en un simple recorte. */
+    #section-tickets .table-wrap td { overflow: hidden; }
+    #section-tickets .table-wrap th:nth-child(1), #section-tickets .table-wrap td:nth-child(1) { width: 55px; }
+    #section-tickets .table-wrap th:nth-child(7), #section-tickets .table-wrap td:nth-child(7) { width: 105px; }
+    #section-tickets .table-wrap th:nth-child(10), #section-tickets .table-wrap td:nth-child(10) { width: 90px; }
+
+    /* Por debajo de 1300px no alcanza el espacio para las 10 columnas sin amontonarse (el
+       sidebar se auto-colapsa a esta misma medida — ver SIDEBAR_AUTO_COLLAPSE_WIDTH en el JS—
+       pero aun así sobra poco para 10 columnas). En vez de forzar scroll horizontal (la barra
+       queda pegada al fondo de la tabla y con muchos tickets no es alcanzable sin bajar toda
+       la página), se ocultan Agente y Creado —columnas secundarias, visibles igual al abrir
+       el detalle del ticket— y se angostan Asunto/Contacto/Tipo para que el resto quepa. */
+    @media (max-width: 1300px) {
+      #section-tickets .table-wrap th, #section-tickets .table-wrap td { padding: 10px 10px; }
+      #section-tickets .table-wrap th:nth-child(2), #section-tickets .table-wrap td:nth-child(2),
+      #section-tickets .table-wrap th:nth-child(3), #section-tickets .table-wrap td:nth-child(3) {
+        min-width: 0; width: 110px;
+      }
+      #section-tickets .table-wrap th:nth-child(4), #section-tickets .table-wrap td:nth-child(4) { width: 100px; }
+      #section-tickets .table-wrap th:nth-child(8), #section-tickets .table-wrap td:nth-child(8),
+      #section-tickets .table-wrap th:nth-child(9), #section-tickets .table-wrap td:nth-child(9) {
+        display: none;
+      }
+    }
     tbody tr.empresa-row td { border-top: 2px solid rgba(99,102,241,0.25) !important; }
     tbody tr.empresa-row:first-child td { border-top: none !important; }
     tbody tr.empresa-row:nth-child(even) td { background: rgba(255,255,255,0.03); }
@@ -6149,25 +6166,33 @@ verificarSesion();
 
   const SIDEBAR_W = 260;
   const SIDEBAR_COLLAPSED_W = 68;
+  // El menú ocupa 260px fijos sin importar el ancho de la ventana; por debajo de este umbral
+  // no queda espacio para el contenido (ej. la tabla de tickets se amontona), así que se
+  // colapsa a solo-iconos automáticamente aunque el usuario no lo haya pedido. Su preferencia
+  // manual (sidebarCollapsed) sigue aplicando tal cual arriba del umbral.
+  const SIDEBAR_AUTO_COLLAPSE_WIDTH = 1300;
 
   function applySidebarState() {
-    if (sidebarCollapsed) {
-      mainSidebar?.classList.add('collapsed');
-      if (toggleBtn) {
-        toggleBtn.textContent = '›';
-        toggleBtn.title = 'Expandir menú';
-        toggleBtn.style.left = (SIDEBAR_COLLAPSED_W - 14) + 'px';
-      }
-    } else {
-      mainSidebar?.classList.remove('collapsed');
-      if (toggleBtn) {
-        toggleBtn.textContent = '‹';
-        toggleBtn.title = 'Colapsar menú';
-        toggleBtn.style.left = (SIDEBAR_W - 14) + 'px';
+    const anchoAngosto = window.innerWidth <= SIDEBAR_AUTO_COLLAPSE_WIDTH;
+    const colapsado = sidebarCollapsed || anchoAngosto;
+    mainSidebar?.classList.toggle('collapsed', colapsado);
+    if (toggleBtn) {
+      toggleBtn.style.display = anchoAngosto ? 'none' : '';
+      if (!anchoAngosto) {
+        if (sidebarCollapsed) {
+          toggleBtn.textContent = '›';
+          toggleBtn.title = 'Expandir menú';
+          toggleBtn.style.left = (SIDEBAR_COLLAPSED_W - 14) + 'px';
+        } else {
+          toggleBtn.textContent = '‹';
+          toggleBtn.title = 'Colapsar menú';
+          toggleBtn.style.left = (SIDEBAR_W - 14) + 'px';
+        }
       }
     }
   }
   applySidebarState();
+  window.addEventListener('resize', applySidebarState);
 
   toggleBtn?.addEventListener('click', () => {
     sidebarCollapsed = !sidebarCollapsed;
