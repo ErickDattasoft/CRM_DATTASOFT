@@ -5,7 +5,8 @@
       "Bash(npm run dev)",
       "Bash(npx astro build *)",
       "Bash(npx astro check *)",
-      "Bash(curl -sf http://localhost:4321/)"
+      "Bash(curl -sf http://localhost:4321/)",
+      "Bash(node /tmp/claude-1000/-home-erick-proyectos-agenda-clientes/fa6e7bed-ed11-47f7-a1c4-416ef174098f/scratchpad/measure_align.js)"
     ]
   }
 }
