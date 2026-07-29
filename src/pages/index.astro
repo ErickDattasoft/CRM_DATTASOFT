@@ -809,16 +809,27 @@ try {
        en vez de recortarse. overflow:hidden en el td convierte ese desborde en un simple recorte. */
     #section-tickets .table-wrap td { overflow: hidden; }
     #section-tickets .table-wrap th:nth-child(1), #section-tickets .table-wrap td:nth-child(1) { width: 60px; }
-    #section-tickets .table-wrap th:nth-child(7), #section-tickets .table-wrap td:nth-child(7) { width: 130px; }
+    /* El badge "NO FACTURADO" mide 115px con la fuente real (Plus Jakarta Sans, 700); con el
+       padding normal de esta columna (14px 18px) hacían falta 151px de ancho, no 130px, así que
+       el recuadro del badge se recortaba incluso en pantallas anchas (fuera del breakpoint
+       angosto de abajo). 166px deja margen de sobra. */
+    #section-tickets .table-wrap th:nth-child(7), #section-tickets .table-wrap td:nth-child(7) { width: 166px; }
     #section-tickets .table-wrap th:nth-child(10), #section-tickets .table-wrap td:nth-child(10) { width: 120px; }
+    /* Igual que Facturación: "Consultoría Remoto" mide 138px y esta columna quedaba sin ancho
+       propio, repartiéndose el espacio sobrante con Agente/Creado — justo entre 1600 y 1900px
+       ese sobrante no alcanzaba y el badge se recortaba. Mismo caso para Prioridad ("Urgente")
+       y Estado ("Pendiente"). */
+    #section-tickets .table-wrap th:nth-child(4), #section-tickets .table-wrap td:nth-child(4) { width: 190px; }
+    #section-tickets .table-wrap th:nth-child(5), #section-tickets .table-wrap td:nth-child(5) { width: 120px; }
+    #section-tickets .table-wrap th:nth-child(6), #section-tickets .table-wrap td:nth-child(6) { width: 135px; }
 
-    /* Por debajo de 1300px no alcanza el espacio para las 10 columnas sin amontonarse (el
-       sidebar se auto-colapsa a esta misma medida — ver SIDEBAR_AUTO_COLLAPSE_WIDTH en el JS—
-       pero aun así sobra poco para 10 columnas). En vez de forzar scroll horizontal (la barra
-       queda pegada al fondo de la tabla y con muchos tickets no es alcanzable sin bajar toda
-       la página), se ocultan Agente y Creado —columnas secundarias, visibles igual al abrir
-       el detalle del ticket— y se angostan Asunto/Contacto/Tipo para que el resto quepa. */
-    @media (max-width: 1300px) {
+    /* Por debajo de 1600px no alcanza el espacio para las 10 columnas con badges sin amontonarse
+       (el sidebar se auto-colapsa a esta misma medida — ver SIDEBAR_AUTO_COLLAPSE_WIDTH en el
+       JS — pero aun con eso sobra poco para 10 columnas). En vez de forzar scroll horizontal
+       (la barra queda pegada al fondo de la tabla y con muchos tickets no es alcanzable sin
+       bajar toda la página), se ocultan Agente y Creado —columnas secundarias, visibles igual
+       al abrir el detalle del ticket— y se angostan Asunto/Contacto/Tipo para que el resto quepa. */
+    @media (max-width: 1600px) {
       /* Anchos medidos sobre el badge más largo real de cada columna (con el padding de abajo):
          Tipo "Consultoría Remoto"=133px, Prioridad "Urgente"=66px, Estado "Pendiente"=78px,
          Facturación "NO FACTURADO"=115px. Sin esto los badges largos se recortan aunque no
@@ -827,12 +838,12 @@ try {
       #section-tickets .table-wrap th:nth-child(1), #section-tickets .table-wrap td:nth-child(1) { width: 60px; }
       #section-tickets .table-wrap th:nth-child(2), #section-tickets .table-wrap td:nth-child(2),
       #section-tickets .table-wrap th:nth-child(3), #section-tickets .table-wrap td:nth-child(3) {
-        min-width: 0; width: 90px;
+        min-width: 0; width: 85px;
       }
       #section-tickets .table-wrap th:nth-child(4), #section-tickets .table-wrap td:nth-child(4) { width: 148px; }
-      #section-tickets .table-wrap th:nth-child(5), #section-tickets .table-wrap td:nth-child(5) { width: 88px; }
-      #section-tickets .table-wrap th:nth-child(6), #section-tickets .table-wrap td:nth-child(6) { width: 98px; }
-      #section-tickets .table-wrap th:nth-child(7), #section-tickets .table-wrap td:nth-child(7) { width: 136px; }
+      #section-tickets .table-wrap th:nth-child(5), #section-tickets .table-wrap td:nth-child(5) { width: 90px; }
+      #section-tickets .table-wrap th:nth-child(6), #section-tickets .table-wrap td:nth-child(6) { width: 105px; }
+      #section-tickets .table-wrap th:nth-child(7), #section-tickets .table-wrap td:nth-child(7) { width: 150px; }
       #section-tickets .table-wrap th:nth-child(8), #section-tickets .table-wrap td:nth-child(8),
       #section-tickets .table-wrap th:nth-child(9), #section-tickets .table-wrap td:nth-child(9) {
         display: none;
@@ -6183,7 +6194,7 @@ verificarSesion();
   // no queda espacio para el contenido (ej. la tabla de tickets se amontona), así que se
   // colapsa a solo-iconos automáticamente aunque el usuario no lo haya pedido. Su preferencia
   // manual (sidebarCollapsed) sigue aplicando tal cual arriba del umbral.
-  const SIDEBAR_AUTO_COLLAPSE_WIDTH = 1300;
+  const SIDEBAR_AUTO_COLLAPSE_WIDTH = 1600;
 
   function applySidebarState() {
     const anchoAngosto = window.innerWidth <= SIDEBAR_AUTO_COLLAPSE_WIDTH;
