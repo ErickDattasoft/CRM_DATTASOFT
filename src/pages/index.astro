@@ -819,19 +819,25 @@ try {
        la página), se ocultan Agente y Creado —columnas secundarias, visibles igual al abrir
        el detalle del ticket— y se angostan Asunto/Contacto/Tipo para que el resto quepa. */
     @media (max-width: 1300px) {
+      /* Anchos medidos sobre el badge más largo real de cada columna (con el padding de abajo):
+         Tipo "Consultoría Remoto"=133px, Prioridad "Urgente"=66px, Estado "Pendiente"=78px,
+         Facturación "NO FACTURADO"=115px. Sin esto los badges largos se recortan aunque no
+         se encimen con la celda vecina. */
       #section-tickets .table-wrap th, #section-tickets .table-wrap td { padding: 10px 10px; }
-      #section-tickets .table-wrap th:nth-child(1), #section-tickets .table-wrap td:nth-child(1) { width: 55px; }
+      #section-tickets .table-wrap th:nth-child(1), #section-tickets .table-wrap td:nth-child(1) { width: 60px; }
       #section-tickets .table-wrap th:nth-child(2), #section-tickets .table-wrap td:nth-child(2),
       #section-tickets .table-wrap th:nth-child(3), #section-tickets .table-wrap td:nth-child(3) {
-        min-width: 0; width: 110px;
+        min-width: 0; width: 90px;
       }
-      #section-tickets .table-wrap th:nth-child(4), #section-tickets .table-wrap td:nth-child(4) { width: 100px; }
-      #section-tickets .table-wrap th:nth-child(7), #section-tickets .table-wrap td:nth-child(7) { width: 105px; }
+      #section-tickets .table-wrap th:nth-child(4), #section-tickets .table-wrap td:nth-child(4) { width: 148px; }
+      #section-tickets .table-wrap th:nth-child(5), #section-tickets .table-wrap td:nth-child(5) { width: 88px; }
+      #section-tickets .table-wrap th:nth-child(6), #section-tickets .table-wrap td:nth-child(6) { width: 98px; }
+      #section-tickets .table-wrap th:nth-child(7), #section-tickets .table-wrap td:nth-child(7) { width: 136px; }
       #section-tickets .table-wrap th:nth-child(8), #section-tickets .table-wrap td:nth-child(8),
       #section-tickets .table-wrap th:nth-child(9), #section-tickets .table-wrap td:nth-child(9) {
         display: none;
       }
-      #section-tickets .table-wrap th:nth-child(10), #section-tickets .table-wrap td:nth-child(10) { width: 90px; }
+      #section-tickets .table-wrap th:nth-child(10), #section-tickets .table-wrap td:nth-child(10) { width: 88px; }
     }
     tbody tr.empresa-row td { border-top: 2px solid rgba(99,102,241,0.25) !important; }
     tbody tr.empresa-row:first-child td { border-top: none !important; }
