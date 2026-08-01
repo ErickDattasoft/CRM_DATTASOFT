@@ -2487,6 +2487,10 @@ try {
       <a href="/ticket-publico/" target="_blank" class="sidebar-portal-btn" title="Abrir portal de tickets para clientes">
         <span>🔗</span><span class="portal-label">Portal Clientes</span>
       </a>
+      <div class="nav-item" id="btnMiFirma" data-tooltip="Mi firma">
+        <span class="nav-icon">✍️</span>
+        <span class="nav-label">Mi firma</span>
+      </div>
       <div class="nav-item" id="btnCuentaSegura" data-tooltip="Cuenta segura">
         <span class="nav-icon">🔒</span>
         <span class="nav-label">Cuenta segura</span>
@@ -3287,6 +3291,7 @@ try {
               <button type="button" data-cmd="insertOrderedList" title="Lista numerada">1. Lista</button>
               <button type="button" data-cmd="fontSize" data-val="5" title="Texto grande">A+</button>
               <button type="button" data-cmd="fontSize" data-val="2" title="Texto pequeño">A-</button>
+              <button type="button" id="btnAgregarFirmaTk" title="Agregar tu firma configurada (Mi firma, en el menú)" style="margin-left:auto;">🖊️ Firma</button>
             </div>
             <div class="rte-editor" contenteditable="true" id="form-tk-descripcion" data-placeholder="Describe el problema en detalle..."></div>
           </div>
@@ -5019,6 +5024,31 @@ try {
 </div>
 
 <!-- ===== MODAL: Activar cuenta segura ===== -->
+<div id="modal-mi-firma" class="modal-center" style="display:none;">
+  <div class="modal-box" style="width:480px; max-width:95%;">
+    <div class="modal-header">
+      <h2>✍️ Mi firma</h2>
+      <button class="modal-close" id="btnCerrarMiFirma">×</button>
+    </div>
+    <div style="padding:20px; display:flex; flex-direction:column; gap:10px;">
+      <p style="font-size:0.82rem; color:var(--text-muted); line-height:1.5;">
+        Se agrega al final de la descripción de un ticket con el botón "🖊️ Firma" del editor.
+        Solo tú la ves y la editas — cada usuario tiene la suya.
+      </p>
+      <div class="rte-toolbar" id="rte-toolbar-firma">
+        <button type="button" data-cmd="bold" title="Negrita"><b>B</b></button>
+        <button type="button" data-cmd="italic" title="Cursiva"><i>I</i></button>
+        <button type="button" data-cmd="underline" title="Subrayado"><u>U</u></button>
+      </div>
+      <div class="rte-editor" contenteditable="true" id="mi-firma-editor" data-placeholder="Ej: Saludos, Erick Casas — Soporte Técnico DATTASOFT" style="min-height:90px;"></div>
+      <div class="form-actions" style="margin-top:4px;">
+        <button class="btn btn-primary btn-sm" id="btnGuardarMiFirma">💾 Guardar firma</button>
+        <button class="btn btn-secondary btn-sm" id="btnCancelarMiFirma">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="modal-cuenta-segura" class="modal-center" style="display:none;">
   <div class="modal-box" style="width:440px; max-width:95%;">
     <div class="modal-header">
@@ -5242,7 +5272,7 @@ const BLOQUEO_LOGIN_MINUTOS = 15;
 // siempre deben apuntar aquí, nunca a location.origin (que en desarrollo sería localhost).
 const URL_PRODUCCION = "https://crm-dattasoft.pages.dev";
 
-interface Usuario { id: string; nombre: string; rol: "admin" | "normal"; passHash: string; activo: boolean; authEmail?: string; seccionesPermitidas?: string[]; contactosPropios?: { nombre: string; telefono: string }[]; }
+interface Usuario { id: string; nombre: string; rol: "admin" | "normal"; passHash: string; activo: boolean; authEmail?: string; seccionesPermitidas?: string[]; contactosPropios?: { nombre: string; telefono: string }[]; firma?: string; }
 
 // Secciones que un admin puede restringir por usuario "normal" desde Configuración → Usuarios.
 // Dashboard siempre es visible (es el home). Bitácora ya es admin-only por rol (regla aparte,
@@ -6814,6 +6844,42 @@ verificarSesion();
     }
     if (modal) modal.style.display = "flex";
   }
+
+  function abrirModalMiFirma() {
+    const modal = document.getElementById("modal-mi-firma");
+    const u = getUsuarioActual();
+    const registro = u ? getUsuarios().find((x: any) => x.nombre === u.nombre) : null;
+    const editor = document.getElementById("mi-firma-editor");
+    if (editor) editor.innerHTML = sanitizeDescripcionHtml(registro?.firma || "");
+    if (modal) modal.style.display = "flex";
+  }
+  document.getElementById("btnMiFirma")?.addEventListener("click", abrirModalMiFirma);
+  document.getElementById("btnCerrarMiFirma")?.addEventListener("click", () => {
+    const m = document.getElementById("modal-mi-firma"); if (m) m.style.display = "none";
+  });
+  document.getElementById("btnCancelarMiFirma")?.addEventListener("click", () => {
+    const m = document.getElementById("modal-mi-firma"); if (m) m.style.display = "none";
+  });
+  document.getElementById("rte-toolbar-firma")?.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest("button");
+    if (!btn) return;
+    e.preventDefault();
+    document.execCommand((btn as HTMLElement).dataset.cmd!, false, (btn as HTMLElement).dataset.val || null);
+    document.getElementById("mi-firma-editor")?.focus();
+  });
+  document.getElementById("btnGuardarMiFirma")?.addEventListener("click", async () => {
+    const u = getUsuarioActual();
+    if (!u) return;
+    const html = sanitizeDescripcionHtml(document.getElementById("mi-firma-editor")?.innerHTML.trim() || "");
+    const usuarios = getUsuarios();
+    const i = usuarios.findIndex(x => x.nombre === u.nombre);
+    if (i === -1) return;
+    usuarios[i].firma = html;
+    saveUsuariosLocal(usuarios);
+    if (!crmLocalOnly) await guardarUsuarios(usuarios).catch(() => {});
+    toast("✍️ Firma guardada");
+    const m = document.getElementById("modal-mi-firma"); if (m) m.style.display = "none";
+  });
 
   document.getElementById("btnCuentaSegura")?.addEventListener("click", () => abrirModalCuentaSegura());
   document.getElementById("btnCerrarCuentaSegura")?.addEventListener("click", () => {
@@ -10693,6 +10759,18 @@ verificarSesion();
     const btn = e.target.closest("button");
     if (!btn) return;
     e.preventDefault();
+    if (btn.id === "btnAgregarFirmaTk") {
+      const u = getUsuarioActual();
+      const registro = u ? getUsuarios().find(x => x.nombre === u.nombre) : null;
+      const firma = registro?.firma?.trim();
+      if (!firma) { toast("⚠️ No tienes una firma configurada — ábrela en \"Mi firma\", en el menú"); return; }
+      const desc = document.getElementById("form-tk-descripcion");
+      if (desc) {
+        desc.innerHTML = desc.innerHTML.trim() ? desc.innerHTML + "<br>" + firma : firma;
+        desc.focus();
+      }
+      return;
+    }
     const cmd = btn.dataset.cmd;
     const val = btn.dataset.val || null;
     document.execCommand(cmd, false, val);
