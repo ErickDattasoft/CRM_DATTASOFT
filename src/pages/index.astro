@@ -3514,6 +3514,20 @@ try {
           </div>
         </div>
 
+        <!-- Limpieza de un solo uso: SOPORTE (Knowledge Base) se retiró y quedó con documentos
+             duplicados por una prueba de "Indexar / Actualizar". Quitar esta tarjeta cuando ya
+             no queden documentos que borrar. -->
+        <div class="card" id="cfg-card-kb-retiro" style="border-color: rgba(248,113,113,0.3);">
+          <div class="card-title" style="color:#f87171;">🗑️ Retirar SOPORTE (Base de Conocimiento)</div>
+          <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">
+            Esa sección ya no se va a usar y quedó oculta del menú. Este botón borra <strong style="color:var(--text-main);">todos</strong> los documentos que quedaron guardados ahí (incluyendo los duplicados de la prueba de indexado). Acción de un solo uso — no se puede deshacer.
+          </p>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <button id="btn-vaciar-kb" class="btn btn-danger btn-sm">🗑️ Borrar todo el contenido de SOPORTE</button>
+            <span id="btn-vaciar-kb-status" style="font-size:0.78rem; color:var(--text-muted);"></span>
+          </div>
+        </div>
+
         <div class="card" id="cfg-card-github">
           <div class="card-title">🔖 Puntos de Restauración (GitHub)</div>
           <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">
@@ -5238,7 +5252,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket } from "../data/firebase.js";
+import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, cargarKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket } from "../data/firebase.js";
 import { parseEmailList, hoyLocalStr, parseFechaLocal, escapeHtml, slugBadge, esConsultoria, formatearDuracion, colorPuntoEstado, formatMoney } from "../data/utils.js";
 
 // ── Modal confirmación (reemplaza confirm() — funciona en móvil) ──
@@ -6192,7 +6206,9 @@ verificarSesion();
     if (sectionId === "configuracion") renderUsuariosPanel();
     if (sectionId === "configuracion") renderN8nPanel();
     if (sectionId === "eventos") renderSeccionEventos();
-    if (sectionId === "knowledge") initKB();
+    // SOPORTE (Knowledge Base) retirado — ver initKB(). Si alguien llega aquí por una vía
+    // distinta al nav oculto (ej. tecleando la URL con hash a mano), se manda al Dashboard.
+    if (sectionId === "knowledge") { navegarA("dashboard"); return; }
   }
 
   // Click en stat-cards del dashboard
@@ -16648,6 +16664,10 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   }
 
   function initKB() {
+    // SOPORTE (Knowledge Base) se retiró: se decidió no seguir usando esta sección (el indexado
+    // duplicaba documentos), así que se queda oculta del menú para todos sin importar kbAcceso.
+    // El código se deja intacto por si se retoma más adelante — basta con quitar este "return".
+    return;
     const usuario = getUsuarioActual();
     const tieneAcceso = kbAcceso.includes(usuario?.nombre || "");
     if (!usuario || !tieneAcceso) return;
@@ -17043,6 +17063,40 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const n = await migrarContactosDeEmpresas(true);
     if (btn) { btn.disabled = false; btn.textContent = "🔄 Sincronizar ahora"; }
     if (status) status.textContent = n ? `${n} contacto(s) agregados` : "Sin cambios";
+  });
+
+  // Limpieza de un solo uso de SOPORTE (Knowledge Base), retirado — ver initKB(). Se hace un
+  // fetch directo con cargarKB() en vez de usar kbDocs/suscribirKB porque esa suscripción ya no
+  // se arranca (initKB no-opea desde que se ocultó la sección).
+  document.getElementById("btn-vaciar-kb")?.addEventListener("click", async () => {
+    const u = getUsuarioActual();
+    if (!u || u.rol !== "admin") { toast("⚠️ Solo un administrador puede hacer esto", "warning"); return; }
+    const btn = document.getElementById("btn-vaciar-kb") as HTMLButtonElement;
+    const status = document.getElementById("btn-vaciar-kb-status");
+    btn.disabled = true;
+    if (status) status.textContent = "Buscando documentos...";
+    const docs = await cargarKB();
+    if (!docs.length) {
+      if (status) status.textContent = "✅ Ya está vacío — nada que borrar";
+      btn.disabled = false;
+      return;
+    }
+    if (!await confirmar(`Esto borrará permanentemente los ${docs.length} documentos guardados en SOPORTE (incluye los duplicados). No se puede deshacer. ¿Continuar?`, "🗑️")) {
+      if (status) status.textContent = "";
+      btn.disabled = false;
+      return;
+    }
+    let ok = 0;
+    const BATCH = 8;
+    for (let i = 0; i < docs.length; i += BATCH) {
+      const lote = docs.slice(i, i + BATCH);
+      await Promise.allSettled(lote.map(async (d) => { if (await eliminarDocKB(d._id)) ok++; }));
+      if (status) status.textContent = `Borrando... ${Math.min(i + BATCH, docs.length)}/${docs.length}`;
+    }
+    if (status) status.textContent = `✅ ${ok} de ${docs.length} documentos borrados`;
+    logBitacora(`SOPORTE (Knowledge Base) vaciado: ${ok} documentos eliminados`, "🗑️");
+    toast(`🗑️ SOPORTE vaciado: ${ok} documentos borrados`);
+    btn.disabled = false;
   });
 
   // ============================================================
