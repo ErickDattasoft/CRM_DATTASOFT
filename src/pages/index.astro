@@ -2525,9 +2525,7 @@ try {
       </div>
       <div class="topbar-actions">
         <button class="btn btn-ghost btn-sm" id="btnToggleDarkMode" title="Cambiar tema">🌙</button>
-        <button class="btn btn-ghost btn-sm" id="btnExportarExcel" title="Exportar a Excel">📊 Excel</button>
-        <button class="btn btn-ghost btn-sm" id="btnImportarJSON" title="Restaurar un backup completo del CRM (JSON) — no confundir con Importar CSV/Excel de Empresas">📂 Importar Backup</button>
-        <button class="btn btn-ghost btn-sm" id="btnExportarJSON" title="Descargar un backup completo del CRM (JSON) — no confundir con Exportar CSV de Empresas">💾 Exportar Backup</button>
+        <button class="btn btn-primary btn-sm" id="btnAccesoRapidoCrearTicket" title="Crear un ticket nuevo — funciona desde cualquier sección">➕ Crear Ticket</button>
       </div>
     </div>
 
@@ -3491,10 +3489,17 @@ try {
           </div>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
             <button id="btn-backup-completo" class="btn btn-primary btn-sm">🛡️ Descargar Backup Completo</button>
+            <button class="btn btn-secondary btn-sm" id="btnImportarJSON" title="Restaurar un backup completo del CRM desde un archivo JSON — no confundir con Importar CSV/Excel de Empresas">📂 Restaurar Backup</button>
             <span style="font-size:0.72rem; color:var(--text-muted);">Archivo: <code>crm-backup-AAAA-MM-DD_HH-MM-SS.json</code></span>
           </div>
           <div id="backup-alerta" style="display:none; margin-top:12px; padding:10px 14px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px; font-size:0.8rem; color:#f59e0b;">
             ⚠️ <span id="backup-alerta-msg"></span> — Se recomienda hacer backup cada semana.
+          </div>
+          <div style="border-top:1px dashed rgba(255,255,255,0.08); margin-top:16px; padding-top:14px;">
+            <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:10px; line-height:1.5;">
+              Exporta empresas, contactos o tickets a una hoja de <strong style="color:var(--text-main);">Excel (.xlsx)</strong> — para revisar o compartir datos puntuales, no sustituye el backup de arriba.
+            </p>
+            <button class="btn btn-secondary btn-sm" id="btnExportarExcel" title="Exportar a Excel">📊 Exportar a Excel</button>
           </div>
         </div>
 
@@ -4553,7 +4558,7 @@ try {
               <tr><th>Botón</th><th>¿Qué hace?</th></tr>
               <tr><td>🔄 Actualizar</td><td>Trae las entradas más recientes registradas por otros usuarios, sin recargar la página.</td></tr>
               <tr><td>🗑️ Limpiar</td><td>Borra por completo el historial de la bitácora (pide confirmación). Esta acción es permanente.</td></tr>
-              <tr><td>📊 Excel / 📂 Importar Backup / 💾 Exportar Backup</td><td>Botones generales del CRM en la barra superior — no son exclusivos de la Bitácora.</td></tr>
+              <tr><td>📊 Excel / 🛡️ Backup</td><td>No son exclusivos de la Bitácora — viven en Configuración → Backup, junto con la exportación/restauración completa del CRM.</td></tr>
             </table>
           </div>
 
@@ -7071,6 +7076,17 @@ verificarSesion();
 
   document.getElementById("btnToggleDarkMode")?.addEventListener("click", toggleTema);
   document.getElementById("btnToggleTema")?.addEventListener("click", toggleTema);
+
+  // Acceso rápido a "Crear Ticket" desde la barra superior (visible en cualquier sección, no
+  // solo en Tickets). Reutiliza navegarA + abrirFormularioNuevoTicket tal cual, así que respeta
+  // los mismos permisos por rol: si el usuario no tiene acceso a Tickets, navegarA lo manda al
+  // Dashboard y aquí simplemente no se abre el formulario.
+  document.getElementById("btnAccesoRapidoCrearTicket")?.addEventListener("click", () => {
+    navegarA("tickets");
+    if (document.getElementById("section-tickets")?.classList.contains("active")) {
+      abrirFormularioNuevoTicket();
+    }
+  });
   aplicarTema();
 
   // ============================================================
@@ -10336,16 +10352,15 @@ verificarSesion();
     // junto a cada elemento). Si el admin no marcó ninguno, def.<campo> queda vacío y el select de
     // un ticket nuevo nace en blanco (opción "" al inicio) hasta que alguien elija algo a mano.
     const def = configTickets.defaults || {};
-    // Ticket nuevo (sin "ticket" aún): Tipo nace en "Soporte Técnico" (el caso más común, para no
-    // tener que elegirlo a mano cada vez) y Agente nace con la persona que inició sesión —
-    // ambos por encima del default configurado en Configuración → Tickets, que sigue aplicando
-    // tal cual al editar un ticket existente.
+    // Ticket nuevo (sin "ticket" aún): Agente nace con la persona que inició sesión, por encima
+    // del default configurado en Configuración → Tickets — esto es lo único que el check ⭐ de
+    // Configuración no puede resolver por sí solo (⭐ fija SIEMPRE el mismo agente para todos,
+    // no "quien esté en sesión"). Tipo, Grupo y el resto de catálogos usan el ⭐ tal cual, sin
+    // ninguna regla extra aquí — para cambiarlos, se marca el favorito en Configuración → Tickets.
     const esTicketNuevo = !ticket;
-    const tipoSoporteTecnico = configTickets.tipos?.find(t => t.toLowerCase().includes("soporte")) || "";
-    const grupoSoporte = configTickets.grupos?.find(g => g.toLowerCase().includes("soporte")) || "";
     const listaAgentesDisponibles = getListaAgentes();
     const agenteSesion = getUsuarioActual()?.nombre || "";
-    populateSelectOptions("form-tk-tipo", ["", ...configTickets.tipos], ticket?.tipo || (esTicketNuevo && tipoSoporteTecnico ? tipoSoporteTecnico : def.tipos) || "");
+    populateSelectOptions("form-tk-tipo", ["", ...configTickets.tipos], ticket?.tipo || def.tipos || "");
     populateSelectOptions("form-tk-sistema", ["", "No aplica", ...(configTickets.sistemas || listaSistemas), "__otro__"], ticket?.sistema || def.sistemas || "");
     const optOtroSistema = document.querySelector('#form-tk-sistema option[value="__otro__"]');
     if (optOtroSistema) optOtroSistema.textContent = "➕ Otro (especificar)";
@@ -10354,7 +10369,7 @@ verificarSesion();
     populateSelectOptions("form-tk-estado", ["", ...configTickets.estados], ticket?.estado || def.estados || "");
     populateSelectOptions("form-tk-facturado", ["", ...configTickets.facturacion], ticket?.facturado || def.facturacion || "");
     populateSelectOptions("form-tk-prioridad", ["", ...configTickets.prioridades], ticket?.prioridad || def.prioridades || "");
-    populateSelectOptions("form-tk-grupo", ["", ...configTickets.grupos], ticket?.grupo || (esTicketNuevo && grupoSoporte ? grupoSoporte : def.grupos) || "");
+    populateSelectOptions("form-tk-grupo", ["", ...configTickets.grupos], ticket?.grupo || def.grupos || "");
     populateSelectOptions("form-tk-agente", ["", ...listaAgentesDisponibles], ticket?.agente || (esTicketNuevo && agenteSesion && listaAgentesDisponibles.includes(agenteSesion) ? agenteSesion : def.agentes) || "");
 
     // Selector de estado del modal de detalle: siempre debe representar el estado real del ticket
@@ -13267,8 +13282,9 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     reader.onload = e => {
       try {
         const raw = JSON.parse(e.target.result);
-        // "Backup Completo" (descargarBackupCompleto) anida todo bajo .datos; "Exportar JSON"
-        // (btnExportarJSON) lo deja plano. Se aceptan ambos formatos.
+        // "Backup Completo" (descargarBackupCompleto) anida todo bajo .datos. También se acepta
+        // un JSON plano (formato viejo de la extinta "Exportar Backup" del topbar) por compatibilidad
+        // con backups ya descargados antes de unificar todo en "Descargar Backup Completo".
         const data = raw.datos || raw;
         jsonImportData = data;
         const mode = document.getElementById("json-import-mode")?.value || "full";
@@ -13454,21 +13470,6 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   });
 
   // ============================================================
-  // EXPORT JSON
-  // ============================================================
-  document.getElementById("btnExportarJSON")?.addEventListener("click", () => {
-    const allData = { clientes, contactos, tickets, versionesMercado, cartasTecnicas, configTickets, plantillaMensaje, plantillaLicencias };
-    const str = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allData, null, 2));
-    const a = document.createElement("a");
-    a.setAttribute("href", str);
-    a.setAttribute("download", "crm_completo.json");
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    toast("📥 JSON exportado");
-  });
-
-  // ============================================================
   // BACKUP COMPLETO
   // ============================================================
   const BACKUP_KEY = "crm_ultimo_backup";
@@ -13485,6 +13486,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         versionesMercado,
         cartasTecnicas,
         plantillaMensaje,
+        plantillaLicencias,
         configTickets,
         configCorreo,
         bitacora: bitacoraLog,
