@@ -835,20 +835,24 @@ try {
          Facturación "NO FACTURADO"=115px. Sin esto los badges largos se recortan aunque no
          se encimen con la celda vecina. */
       #section-tickets .table-wrap th, #section-tickets .table-wrap td { padding: 10px 10px; }
-      #section-tickets .table-wrap th:nth-child(1), #section-tickets .table-wrap td:nth-child(1) { width: 60px; }
+      /* !important: a partir de que Tickets tiene columnas redimensionables a mano (ancho guardado
+         en localStorage y aplicado inline por JS), este breakpoint angosto necesita ganarle a ese
+         inline style para seguir colapsando igual que antes — si no, un ancho guardado en pantalla
+         grande se quedaría fijo aquí y volvería a romper el acomodo pensado para poco espacio. */
+      #section-tickets .table-wrap th:nth-child(1), #section-tickets .table-wrap td:nth-child(1) { width: 60px !important; min-width: 60px !important; }
       #section-tickets .table-wrap th:nth-child(2), #section-tickets .table-wrap td:nth-child(2),
       #section-tickets .table-wrap th:nth-child(3), #section-tickets .table-wrap td:nth-child(3) {
-        min-width: 0; width: 85px;
+        min-width: 0 !important; width: 85px !important;
       }
-      #section-tickets .table-wrap th:nth-child(4), #section-tickets .table-wrap td:nth-child(4) { width: 148px; }
-      #section-tickets .table-wrap th:nth-child(5), #section-tickets .table-wrap td:nth-child(5) { width: 90px; }
-      #section-tickets .table-wrap th:nth-child(6), #section-tickets .table-wrap td:nth-child(6) { width: 105px; }
-      #section-tickets .table-wrap th:nth-child(7), #section-tickets .table-wrap td:nth-child(7) { width: 150px; }
+      #section-tickets .table-wrap th:nth-child(4), #section-tickets .table-wrap td:nth-child(4) { width: 148px !important; min-width: 148px !important; }
+      #section-tickets .table-wrap th:nth-child(5), #section-tickets .table-wrap td:nth-child(5) { width: 90px !important; min-width: 90px !important; }
+      #section-tickets .table-wrap th:nth-child(6), #section-tickets .table-wrap td:nth-child(6) { width: 105px !important; min-width: 105px !important; }
+      #section-tickets .table-wrap th:nth-child(7), #section-tickets .table-wrap td:nth-child(7) { width: 150px !important; min-width: 150px !important; }
       #section-tickets .table-wrap th:nth-child(8), #section-tickets .table-wrap td:nth-child(8),
       #section-tickets .table-wrap th:nth-child(9), #section-tickets .table-wrap td:nth-child(9) {
         display: none;
       }
-      #section-tickets .table-wrap th:nth-child(10), #section-tickets .table-wrap td:nth-child(10) { width: 88px; }
+      #section-tickets .table-wrap th:nth-child(10), #section-tickets .table-wrap td:nth-child(10) { width: 88px !important; min-width: 88px !important; }
     }
     tbody tr.empresa-row td { border-top: 2px solid rgba(99,102,241,0.25) !important; }
     tbody tr.empresa-row:first-child td { border-top: none !important; }
@@ -3208,10 +3212,13 @@ try {
           <div class="card-title" id="form-tk-titulo">➕ Crear Ticket de Soporte</div>
           <input type="hidden" id="edit-tk-index">
 
-          <!-- Buscador de contacto - ancho completo arriba -->
-          <div class="form-group autocomplete-wrap" style="margin-bottom:12px;">
-            <label style="color:var(--brand-secondary); font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.03em;">🔍 Buscar Contacto por Empresa, Nombre o Correo <span class="required">*</span></label>
-            <input id="form-tk-contacto-buscar" placeholder="Escribe el nombre de la empresa, contacto o correo..." autocomplete="off" style="font-size:0.83rem;">
+          <!-- Buscador de contacto - ancho completo arriba, resaltado como primer paso -->
+          <div class="form-group autocomplete-wrap" style="margin-bottom:12px; background:rgba(245,158,11,0.08); border:1.5px solid rgba(245,158,11,0.45); border-radius:var(--radius-md); padding:12px;">
+            <label style="display:flex; align-items:center; gap:8px; color:#f59e0b; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.03em;">
+              <span style="display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:#f59e0b; color:#1a1e2e; font-size:0.7rem; font-weight:800; flex-shrink:0;">1</span>
+              🔍 Buscar Contacto por Empresa, Nombre o Correo <span class="required">*</span>
+            </label>
+            <input id="form-tk-contacto-buscar" placeholder="Escribe el nombre de la empresa, contacto o correo..." autocomplete="off" style="font-size:0.83rem; border-color:rgba(245,158,11,0.5);">
             <div class="autocomplete-list hidden" id="tk-contacto-autocomplete"></div>
           </div>
           <div style="margin-bottom:16px; background:rgba(99,102,241,0.05); border:1px solid rgba(99,102,241,0.15); border-radius:var(--radius-md); padding:12px;">
@@ -3327,6 +3334,7 @@ try {
           </div>
           <div class="form-actions" style="align-items:center; gap:16px;">
             <button class="btn btn-primary" id="btnGuardarTicket">💾 Guardar Ticket</button>
+            <button class="btn btn-secondary hidden" id="btnGuardarYNuevoTicket" title="Guarda este ticket y deja el formulario listo para capturar el siguiente">💾➕ Guardar y Crear Nuevo</button>
             <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.83rem; color:var(--text-light); user-select:none;">
               <input type="checkbox" id="chk-enviar-correo" checked style="width:16px; height:16px; accent-color:#6366f1; cursor:pointer;">
               Enviar notificación por correo al contacto
@@ -3336,19 +3344,19 @@ try {
         </div>
 
         <div class="table-wrap">
-          <table>
+          <table id="tabla-tickets" style="table-layout:fixed;">
             <thead>
               <tr>
-                <th class="th-sortable" id="th-sort-tk-numero" style="width:80px; text-align:center;">Ticket # <span class="sort-arrow active" id="sort-arrow-tk-numero">↓</span></th>
-                <th>Asunto</th>
-                <th class="th-sortable" id="th-sort-tk-contacto">Contacto / Empresa <span class="sort-arrow" id="sort-arrow-tk-contacto">↕</span></th>
-                <th style="text-align:center">Tipo</th>
-                <th style="text-align:center">Prioridad</th>
-                <th style="text-align:center">Estado</th>
-                <th style="text-align:center">Facturación</th>
-                <th>Agente</th>
-                <th>Creado</th>
-                <th style="text-align:center">Acciones</th>
+                <th class="th-sortable" id="th-sort-tk-numero" style="width:80px; min-width:60px; text-align:center;">Ticket # <span class="sort-arrow active" id="sort-arrow-tk-numero">↓</span><div class="col-resize-handle"></div></th>
+                <th style="width:220px; min-width:140px;">Asunto<div class="col-resize-handle"></div></th>
+                <th class="th-sortable" id="th-sort-tk-contacto" style="width:240px; min-width:140px;">Contacto / Empresa <span class="sort-arrow" id="sort-arrow-tk-contacto">↕</span><div class="col-resize-handle"></div></th>
+                <th style="width:190px; min-width:120px; text-align:center;">Tipo<div class="col-resize-handle"></div></th>
+                <th style="width:120px; min-width:90px; text-align:center;">Prioridad<div class="col-resize-handle"></div></th>
+                <th style="width:135px; min-width:95px; text-align:center;">Estado<div class="col-resize-handle"></div></th>
+                <th style="width:166px; min-width:120px; text-align:center;">Facturación<div class="col-resize-handle"></div></th>
+                <th style="width:100px; min-width:70px;">Agente<div class="col-resize-handle"></div></th>
+                <th style="width:110px; min-width:80px;">Creado<div class="col-resize-handle"></div></th>
+                <th style="width:120px; min-width:120px; text-align:center;">Acciones</th>
               </tr>
             </thead>
             <tbody id="tabla-tickets-body"></tbody>
@@ -10328,7 +10336,16 @@ verificarSesion();
     // junto a cada elemento). Si el admin no marcó ninguno, def.<campo> queda vacío y el select de
     // un ticket nuevo nace en blanco (opción "" al inicio) hasta que alguien elija algo a mano.
     const def = configTickets.defaults || {};
-    populateSelectOptions("form-tk-tipo", ["", ...configTickets.tipos], ticket?.tipo || def.tipos || "");
+    // Ticket nuevo (sin "ticket" aún): Tipo nace en "Soporte Técnico" (el caso más común, para no
+    // tener que elegirlo a mano cada vez) y Agente nace con la persona que inició sesión —
+    // ambos por encima del default configurado en Configuración → Tickets, que sigue aplicando
+    // tal cual al editar un ticket existente.
+    const esTicketNuevo = !ticket;
+    const tipoSoporteTecnico = configTickets.tipos?.find(t => t.toLowerCase().includes("soporte")) || "";
+    const grupoSoporte = configTickets.grupos?.find(g => g.toLowerCase().includes("soporte")) || "";
+    const listaAgentesDisponibles = getListaAgentes();
+    const agenteSesion = getUsuarioActual()?.nombre || "";
+    populateSelectOptions("form-tk-tipo", ["", ...configTickets.tipos], ticket?.tipo || (esTicketNuevo && tipoSoporteTecnico ? tipoSoporteTecnico : def.tipos) || "");
     populateSelectOptions("form-tk-sistema", ["", "No aplica", ...(configTickets.sistemas || listaSistemas), "__otro__"], ticket?.sistema || def.sistemas || "");
     const optOtroSistema = document.querySelector('#form-tk-sistema option[value="__otro__"]');
     if (optOtroSistema) optOtroSistema.textContent = "➕ Otro (especificar)";
@@ -10337,8 +10354,8 @@ verificarSesion();
     populateSelectOptions("form-tk-estado", ["", ...configTickets.estados], ticket?.estado || def.estados || "");
     populateSelectOptions("form-tk-facturado", ["", ...configTickets.facturacion], ticket?.facturado || def.facturacion || "");
     populateSelectOptions("form-tk-prioridad", ["", ...configTickets.prioridades], ticket?.prioridad || def.prioridades || "");
-    populateSelectOptions("form-tk-grupo", ["", ...configTickets.grupos], ticket?.grupo || def.grupos || "");
-    populateSelectOptions("form-tk-agente", ["", ...getListaAgentes()], ticket?.agente || def.agentes || "");
+    populateSelectOptions("form-tk-grupo", ["", ...configTickets.grupos], ticket?.grupo || (esTicketNuevo && grupoSoporte ? grupoSoporte : def.grupos) || "");
+    populateSelectOptions("form-tk-agente", ["", ...listaAgentesDisponibles], ticket?.agente || (esTicketNuevo && agenteSesion && listaAgentesDisponibles.includes(agenteSesion) ? agenteSesion : def.agentes) || "");
 
     // Selector de estado del modal de detalle: siempre debe representar el estado real del ticket
     // que se está viendo (nunca queda en blanco), por eso aquí sí cae al primer estado configurado.
@@ -10740,11 +10757,19 @@ verificarSesion();
     }
   });
 
-  document.getElementById("btnNuevoTicket")?.addEventListener("click", () => {
+  function abrirFormularioNuevoTicket() {
     cerrarFormTicket();
     document.getElementById("form-tk-titulo").textContent = "➕ Crear Ticket de Soporte";
     initTicketFormDropdowns();
     formTk?.classList.remove("hidden");
+    // Solo tiene sentido "Guardar y Crear Nuevo" al capturar varios tickets seguidos desde cero,
+    // no al editar uno existente (ver prepararEdicionTicket, que la oculta).
+    document.getElementById("btnGuardarYNuevoTicket")?.classList.remove("hidden");
+    document.getElementById("form-tk-contacto-buscar")?.focus();
+  }
+
+  document.getElementById("btnNuevoTicket")?.addEventListener("click", () => {
+    abrirFormularioNuevoTicket();
   });
 
   document.getElementById("btnCancelarTicket")?.addEventListener("click", () => {
@@ -10811,7 +10836,11 @@ verificarSesion();
     } catch (err) { console.warn("[n8n] Error al enviar recordatorio", err); }
   }
 
-  document.getElementById("btnGuardarTicket")?.addEventListener("click", async () => {
+  // Guarda el ticket del formulario (nuevo o edición). Devuelve false si se quedó en validación
+  // (ya mostró su propio toast de advertencia) para que quien llama sepa que no debe continuar
+  // con el paso final (cerrar/limpiar el formulario, refrescar tablas, etc.) — ver los dos
+  // botones que la usan: "Guardar Ticket" y "Guardar y Crear Nuevo".
+  async function guardarTicketDesdeFormulario() {
     const idx = editTkIdx.value;
     const contacto = document.getElementById("form-tk-contacto").value.trim();
     const contactoCorreo = document.getElementById("form-tk-correo-contacto").value.trim();
@@ -10840,14 +10869,14 @@ verificarSesion();
 
     if (!contacto || !asunto || !descripcion) {
       toast("⚠️ Por favor rellena los campos obligatorios: Contacto, Asunto, Descripción.", "warning");
-      return;
+      return false;
     }
 
     if (sistema === "__otro__") {
       const sistemaOtro = (document.getElementById("form-tk-sistema-otro") as HTMLInputElement | null)?.value.trim() || "";
       if (!sistemaOtro) {
         toast("⚠️ Especifica el nombre del sistema.", "warning");
-        return;
+        return false;
       }
       sistema = sistemaOtro;
       if (!configTickets.sistemas) configTickets.sistemas = [];
@@ -10960,10 +10989,7 @@ verificarSesion();
     guardarLocal("crm_tickets", tickets);
     if (crmLocalOnly) {
       toast("💾 Ticket guardado (Local)");
-      cerrarFormTicket();
-      renderTickets();
-      renderDashboard();
-      return;
+      return true;
     }
     mostrarEstado("💾 Guardando ticket...");
     const ok = await guardarTickets(tickets);
@@ -10980,9 +11006,24 @@ verificarSesion();
       // adjuntos que "se guardaban" y desaparecían al reabrir el ticket.
       mostrarEstado("⚠️ No se pudo guardar en el servidor — revisa la consola o inténtalo de nuevo. Quedó solo en este dispositivo.", 5000);
     }
+    return true;
+  }
+
+  document.getElementById("btnGuardarTicket")?.addEventListener("click", async () => {
+    const ok = await guardarTicketDesdeFormulario();
+    if (!ok) return;
     cerrarFormTicket();
     renderTickets();
     renderDashboard();
+  });
+
+  document.getElementById("btnGuardarYNuevoTicket")?.addEventListener("click", async () => {
+    const ok = await guardarTicketDesdeFormulario();
+    if (!ok) return;
+    renderTickets();
+    renderDashboard();
+    abrirFormularioNuevoTicket();
+    toast("💾 Ticket guardado — listo para capturar el siguiente");
   });
 
   // Resalta en la tabla la fila del ticket que se está editando y la centra dentro del
@@ -11026,6 +11067,7 @@ verificarSesion();
     renderAdjuntosForm();
     initTicketFormDropdowns(t);
     formTk?.classList.remove("hidden");
+    document.getElementById("btnGuardarYNuevoTicket")?.classList.add("hidden");
     formTk?.scrollIntoView({ behavior: "smooth" });
   }
 
@@ -13663,8 +13705,10 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   }
   initColResize('tabla-empresas');
   initColResize('tabla-contactos');
+  initColResize('tabla-tickets');
   restoreColWidths('tabla-empresas');
   restoreColWidths('tabla-contactos');
+  restoreColWidths('tabla-tickets');
 
   // ============================================================
   // MOBILE SIDEBAR MENU
