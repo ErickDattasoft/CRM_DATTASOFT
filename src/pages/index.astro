@@ -4781,7 +4781,8 @@ try {
         <option value="full">CRM Completo (todo)</option>
         <option value="empresas">Solo Empresas</option>
         <option value="contactos">Solo Contactos</option>
-        <option value="tickets">Solo Tickets</option>
+        <option value="tickets">Solo Tickets (agregar, folio nuevo)</option>
+        <option value="tickets-reemplazar">🔴 Tickets: REEMPLAZAR TODO (conserva folios, borra los actuales)</option>
       </select>
     </div>
     <div class="import-zone" id="import-json-zone">
@@ -13297,6 +13298,9 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         if (mode === "full" || mode === "empresas") resumen += `• Empresas: <strong>${(data.clientes||[]).length}</strong><br>`;
         if (mode === "full" || mode === "contactos") resumen += `• Contactos: <strong>${(data.contactos||[]).length}</strong><br>`;
         if (mode === "full" || mode === "tickets") resumen += `• Tickets: <strong>${(data.tickets||[]).length}</strong><br>`;
+        if (mode === "tickets-reemplazar") {
+          resumen += `⚠️ Esto va a <strong>BORRAR los ${tickets.length} tickets actuales</strong> y dejar en su lugar los <strong>${(data.tickets||[]).length}</strong> de este archivo, con sus folios tal cual vienen (no se renumeran). Úsalo solo para restaurar un respaldo tras una pérdida de datos.<br>`;
+        }
         if (mode === "full") {
           if (Array.isArray(data.usuarios) && data.usuarios.length) resumen += `• Usuarios: <strong>${data.usuarios.length}</strong><br>`;
           if (Array.isArray(data.eventos) && data.eventos.length) resumen += `• Eventos: <strong>${data.eventos.length}</strong><br>`;
@@ -13344,6 +13348,21 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       const nuevos = jsonImportData.tickets.map((t, i) => ({ ...t, numero: maxNum + i + 1 }));
       tickets.push(...nuevos);
       msg += `✅ ${nuevos.length} tickets importados. `;
+      if (crmLocalOnly) guardarLocal("crm_tickets", tickets); else await guardarTickets(tickets);
+    }
+    // Modo de emergencia para recuperar de una pérdida de datos: a diferencia de "Solo Tickets"
+    // (aditivo, siempre renumera), esto BORRA por completo el arreglo actual de tickets y lo
+    // sustituye por el del archivo tal cual, conservando los folios originales — necesario para
+    // restaurar un respaldo después de que un guardado con datos desactualizados sobrescribiera
+    // el arreglo en vivo (ver historial_registros para diagnosticar este tipo de incidentes).
+    if (mode === "tickets-reemplazar" && Array.isArray(jsonImportData.tickets)) {
+      const confirmado = confirm(
+        `¿Seguro? Esto va a BORRAR los ${tickets.length} tickets actuales y dejar en su lugar los ${jsonImportData.tickets.length} de este archivo, con sus folios tal cual vienen. No se puede deshacer desde aquí (solo restaurando otro respaldo).`
+      );
+      if (!confirmado) return;
+      tickets.length = 0;
+      tickets.push(...jsonImportData.tickets.map(t => ({ ...t })));
+      msg += `✅ ${tickets.length} tickets reemplazados (folios originales conservados). `;
       if (crmLocalOnly) guardarLocal("crm_tickets", tickets); else await guardarTickets(tickets);
     }
 
