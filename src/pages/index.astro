@@ -3295,7 +3295,8 @@ try {
               <button type="button" data-cmd="insertOrderedList" title="Lista numerada">1. Lista</button>
               <button type="button" data-cmd="fontSize" data-val="5" title="Texto grande">A+</button>
               <button type="button" data-cmd="fontSize" data-val="2" title="Texto pequeño">A-</button>
-              <button type="button" id="btnAgregarFirmaTk" title="Agregar tu firma configurada (Mi firma, en el menú)" style="margin-left:auto;">🖊️ Firma</button>
+              <button type="button" id="btnAgregarPlantillaTk" title="Agrega un encabezado (Fecha/Síntoma/Problema/Solución/Tiempo trabajado) al inicio, para llenarlo a mano" style="margin-left:auto;">📋 Encabezado</button>
+              <button type="button" id="btnAgregarFirmaTk" title="Agregar tu firma configurada (Mi firma, en el menú)">🖊️ Firma</button>
             </div>
             <div class="rte-editor" contenteditable="true" id="form-tk-descripcion" data-placeholder="Describe el problema en detalle..."></div>
           </div>
@@ -11357,6 +11358,16 @@ verificarSesion();
     const btn = e.target.closest("button");
     if (!btn) return;
     e.preventDefault();
+    if (btn.id === "btnAgregarPlantillaTk") {
+      const desc = document.getElementById("form-tk-descripcion");
+      if (desc) {
+        const hoy = new Date().toLocaleDateString("es-MX");
+        const plantilla = `<b>Fecha:</b> ${hoy}<br><br><b>Síntoma:</b><br><br><b>Problema:</b><br><br><b>Solución:</b><br><br><b>Tiempo trabajado:</b><br><br>`;
+        desc.innerHTML = plantilla + desc.innerHTML;
+        desc.focus();
+      }
+      return;
+    }
     if (btn.id === "btnAgregarFirmaTk") {
       const u = getUsuarioActual();
       const registro = u ? getUsuarios().find(x => x.nombre === u.nombre) : null;
