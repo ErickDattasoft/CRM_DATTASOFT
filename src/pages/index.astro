@@ -2525,6 +2525,7 @@ try {
       </div>
       <div class="topbar-actions">
         <button class="btn btn-ghost btn-sm" id="btnToggleDarkMode" title="Cambiar tema">🌙</button>
+        <button class="btn btn-ghost btn-sm" id="btnBackupCompletoDashboard" title="Descargar backup completo del CRM en JSON (mismo respaldo que en Configuración) — funciona desde cualquier sección">🛡️ Respaldar</button>
         <button class="btn btn-primary btn-sm" id="btnAccesoRapidoCrearTicket" title="Crear un ticket nuevo — funciona desde cualquier sección">➕ Crear Ticket</button>
       </div>
     </div>
@@ -13582,6 +13583,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   }
 
   document.getElementById("btn-backup-completo")?.addEventListener("click", descargarBackupCompleto);
+  document.getElementById("btnBackupCompletoDashboard")?.addEventListener("click", descargarBackupCompleto);
   setTimeout(checkBackupAlerta, 5000);
 
   document.getElementById("btnExportarTicketsJSON")?.addEventListener("click", () => {

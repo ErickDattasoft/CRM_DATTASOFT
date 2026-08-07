@@ -126,12 +126,61 @@ export async function cargarDatosCRM() {
 }
 
 /**
+ * Historial automático por registro (respaldo continuo): cada vez que se guarda el arreglo
+ * completo de tickets/clientes/contactos, se compara contra lo que YA había en el servidor
+ * (no contra la copia en memoria del navegador que llama a esto, que puede estar desactualizada)
+ * y se guarda un documento pequeño y aparte por cada alta/edición/baja detectada, con el estado
+ * anterior y el nuevo. Objetivo: si un guardado concurrente pisa silenciosamente el trabajo de
+ * otra sesión (ver comentario de condición de carrera en guardarTickets/guardarContactos más
+ * abajo), quede un rastro para poder ver exactamente qué cambió y cuándo, y recuperar el dato
+ * perdido a mano. No debe frenar ni tumbar el guardado real si algo aquí falla — de ahí el
+ * try/catch que solo registra en consola.
+ */
+async function registrarHistorial(tipo, anteriores, nuevos, idFn) {
+  try {
+    const antesPorId = new Map((anteriores || []).map(r => [String(idFn(r)), r]));
+    const nuevoPorId = new Map((nuevos || []).map(r => [String(idFn(r)), r]));
+    const cambios = [];
+    for (const [id, nuevo] of nuevoPorId) {
+      const anterior = antesPorId.get(id);
+      if (!anterior) {
+        cambios.push({ identificador: id, accion: "crear", snapshotAnterior: null, snapshotNuevo: nuevo });
+      } else if (JSON.stringify(anterior) !== JSON.stringify(nuevo)) {
+        cambios.push({ identificador: id, accion: "editar", snapshotAnterior: anterior, snapshotNuevo: nuevo });
+      }
+    }
+    for (const [id, anterior] of antesPorId) {
+      if (!nuevoPorId.has(id)) {
+        cambios.push({ identificador: id, accion: "eliminar", snapshotAnterior: anterior, snapshotNuevo: null });
+      }
+    }
+    if (!cambios.length) return;
+    await Promise.all(cambios.map(c => addDoc(collection(db, "historial_registros"), {
+      tipo,
+      identificador: c.identificador,
+      accion: c.accion,
+      snapshotAnterior: limpiar(c.snapshotAnterior),
+      snapshotNuevo: limpiar(c.snapshotNuevo),
+      fecha: serverTimestamp()
+    })));
+  } catch (error) {
+    console.error(`[Historial] Error al registrar cambios de ${tipo}:`, error);
+  }
+}
+
+/**
  * Guarda los datos de clientes actualizados en Firestore.
  */
 export async function guardarClientes(clientes) {
   try {
     const docRef = doc(db, "agenda", "datos");
+    let anteriores = [];
+    try {
+      const snapAntes = await getDoc(docRef);
+      anteriores = snapAntes.exists() ? (snapAntes.data().clientes || []) : [];
+    } catch { /* si falla la lectura previa, el guardado real sigue de todas formas */ }
     await setDoc(docRef, { clientes: limpiar(clientes) }, { merge: true });
+    registrarHistorial("empresa", anteriores, clientes, c => c?.EMPRESA ?? "");
     return true;
   } catch (error) {
     avisarErrorGuardado("clientes", error);
@@ -184,7 +233,13 @@ export async function guardarPlantillaLicencias(plantillaLicencias) {
 export async function guardarTickets(tickets) {
   try {
     const docRef = doc(db, "agenda", "datos");
+    let anteriores = [];
+    try {
+      const snapAntes = await getDoc(docRef);
+      anteriores = snapAntes.exists() ? (snapAntes.data().tickets || []) : [];
+    } catch { /* si falla la lectura previa, el guardado real sigue de todas formas */ }
     await setDoc(docRef, { tickets: limpiar(tickets) }, { merge: true });
+    registrarHistorial("ticket", anteriores, tickets, t => t?.numero ?? "");
     return true;
   } catch (error) {
     avisarErrorGuardado("tickets", error);
@@ -245,7 +300,14 @@ export async function eliminarAdjuntoTicket(id) {
 export async function guardarContactos(contactos) {
   try {
     const docRef = doc(db, "agenda", "datos");
+    let anteriores = [];
+    try {
+      const snapAntes = await getDoc(docRef);
+      anteriores = snapAntes.exists() ? (snapAntes.data().contactos || []) : [];
+    } catch { /* si falla la lectura previa, el guardado real sigue de todas formas */ }
     await setDoc(docRef, { contactos: limpiar(contactos) }, { merge: true });
+    // Los contactos no tienen id propio: nombre+empresa es lo más cercano a único que hay.
+    registrarHistorial("contacto", anteriores, contactos, c => `${c?.nombre ?? ""}__${c?.empresa ?? ""}`);
     return true;
   } catch (error) {
     avisarErrorGuardado("contactos", error);
