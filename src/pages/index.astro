@@ -2781,9 +2781,6 @@ try {
                 <button class="btn btn-ghost btn-sm" id="btnFiltrosGuardados" title="Filtros Guardados">🔖 Filtros</button>
               </div>
               <div class="controls-right">
-                <button class="btn btn-ghost btn-sm" id="btnImportCSVEmpresas">📥 Importar CSV</button>
-                <button class="btn btn-ghost btn-sm" id="btnImportXLSEmpresas">📥 Importar Excel</button>
-                <input type="file" id="input-import-xls" accept=".xlsx,.xls" style="display:none">
                 <button class="btn btn-ghost btn-sm" id="btnExportCSVEmpresas">📤 Exportar CSV</button>
                 <div style="position:relative;">
                   <button class="btn btn-whatsapp btn-sm" id="btnWspMasivo" title="Abre WhatsApp Web/App por cada empresa seleccionada, una por una — tienes que darle Enviar en cada una"><svg class="icon-whatsapp" viewBox="0 0 512 512" width="15" height="15" fill="white"><path d="M497.4 361.8l-112-48a24 24 0 0 0-28 6.9l-49.6 60.6A370.7 370.7 0 0 1 130.6 204.1l60.6-49.6a23.9 23.9 0 0 0 6.9-28l-48-112A24.2 24.2 0 0 0 122.6.6l-104 24A24 24 0 0 0 0 48c0 256.9 207.9 464 464 464a24 24 0 0 0 23.4-18.6l24-104a24.3 24.3 0 0 0-13.999-27.6z"/></svg> WhatsApp Versiones (<span class="lblCountSel">0</span>)</button>
@@ -2915,7 +2912,6 @@ try {
             </div>
           </div>
           <div class="controls-right">
-            <button class="btn btn-ghost btn-sm" id="btnImportCSVContactos">📥 Importar CSV</button>
             <button class="btn btn-ghost btn-sm" id="btnExportCSVContactos">📤 Exportar CSV</button>
             <button class="btn btn-ghost btn-sm" id="btnVerPapeleraContactos" title="Papelera de contactos eliminados">🗑️ Papelera <span id="badge-papelera-contactos" class="nav-badge" style="display:none;">0</span></button>
             <button class="btn btn-primary btn-sm" id="btnNuevoContacto">➕ Agregar Contacto</button>
@@ -3500,9 +3496,12 @@ try {
           </div>
           <div style="border-top:1px dashed rgba(255,255,255,0.08); margin-top:16px; padding-top:14px;">
             <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:10px; line-height:1.5;">
-              Exporta empresas, contactos o tickets a una hoja de <strong style="color:var(--text-main);">Excel (.xlsx)</strong> — para revisar o compartir datos puntuales, no sustituye el backup de arriba.
+              Exporta empresas, contactos y/o tickets a un <strong style="color:var(--text-main);">Excel (.xlsx) editable</strong> — para revisar, editar a mano o combinar datos de dos respaldos, y volver a importarlo. No sustituye el backup completo de arriba (ese sí incluye todo: usuarios, base de conocimiento, configuración, etc.).
             </p>
-            <button class="btn btn-secondary btn-sm" id="btnExportarExcel" title="Exportar a Excel">📊 Exportar a Excel</button>
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+              <button class="btn btn-secondary btn-sm" id="btnExportarExcel" title="Exportar a Excel">📊 Exportar a Excel</button>
+              <button class="btn btn-secondary btn-sm" id="btnImportarExcel" title="Importar desde Excel">📥 Importar Excel</button>
+            </div>
           </div>
         </div>
 
@@ -4706,66 +4705,6 @@ try {
   </div>
 </div>
 
-<!-- ===== MODAL: Import CSV ===== -->
-<div id="modal-import-csv" class="modal-center" style="display:none;">
-  <div class="modal-box" style="width:550px;">
-    <div class="modal-header">
-      <h2 id="import-csv-titulo">📥 Importar CSV</h2>
-      <button class="modal-close" id="btnCerrarImportCSV">×</button>
-    </div>
-    <div class="import-zone" id="import-csv-zone">
-      <div style="font-size:2rem; margin-bottom:8px;">📁</div>
-      <div>Arrastra un archivo CSV aquí o haz clic para seleccionar</div>
-      <input type="file" accept=".csv" id="import-csv-input" style="display:none;">
-    </div>
-    <div id="import-csv-preview" class="hidden">
-      <div style="font-size:0.82rem; color:var(--text-muted); margin-bottom:8px;">Vista previa (<span id="import-csv-count">0</span> registros):</div>
-      <div class="table-wrap" style="max-height:250px;">
-        <table>
-          <thead id="import-csv-thead"><tr></tr></thead>
-          <tbody id="import-csv-tbody"></tbody>
-        </table>
-      </div>
-      <div class="form-actions">
-        <button class="btn btn-success" id="btnConfirmarImport">✅ Importar</button>
-        <button class="btn btn-secondary" id="btnCancelarImport">Cancelar</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== MODAL: Importar XLS - Confirmación ===== -->
-<div id="modal-xls-summary" class="modal-center" style="display:none;">
-  <div class="modal-box" style="width:680px; max-width:95%;">
-    <div class="modal-header">
-      <h2>📥 Resumen de Importación</h2>
-      <button class="modal-close" id="btnCerrarXlsSummary">×</button>
-    </div>
-    <div style="padding:12px 18px;">
-      <div id="xls-summary-msg" style="font-size:0.95rem; color:var(--text-main); margin-bottom:8px;"></div>
-      <div style="display:flex; gap:12px;">
-        <div style="flex:1;">
-          <div style="font-weight:700; margin-bottom:6px;">Empresas (preview)</div>
-          <div class="table-wrap" style="max-height:180px; overflow:auto; border:1px solid var(--border-color); padding:6px; border-radius:6px; background:var(--bg-card);">
-            <table><tbody id="xls-preview-clientes"></tbody></table>
-          </div>
-        </div>
-        <div style="flex:1;">
-          <div style="font-weight:700; margin-bottom:6px;">Contactos (preview)</div>
-          <div class="table-wrap" style="max-height:180px; overflow:auto; border:1px solid var(--border-color); padding:6px; border-radius:6px; background:var(--bg-card);">
-            <table><tbody id="xls-preview-contactos"></tbody></table>
-          </div>
-        </div>
-      </div>
-      <div class="form-actions" style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end;">
-        <button class="btn btn-secondary btn-sm" id="btnXlsDescargarRespaldo" title="Descarga un JSON con todos tus datos actuales antes de reemplazar">⬇️ Descargar respaldo primero</button>
-        <button class="btn btn-success" id="btnXlsConfirmUpload">☁️ Reemplazar datos en Firebase</button>
-        <button class="btn btn-ghost btn-sm" id="btnCerrarXlsSummary2">Cancelar</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- ===== MODAL: Importar JSON ===== -->
 <div id="modal-import-json" class="modal-center" style="display:none;">
   <div class="modal-box" style="width:580px;">
@@ -5218,19 +5157,50 @@ try {
       <button class="modal-close" id="btnCerrarExportExcel">×</button>
     </div>
     <div style="padding:16px 18px; display:flex; flex-direction:column; gap:12px;">
-      <p style="font-size:0.82rem; color:var(--text-muted);">Selecciona qué datos exportar:</p>
-      <button class="btn btn-success" id="btnExcelEmpresas" style="text-align:left; padding:14px 18px; font-size:0.88rem;">
-        🏢 Solo Empresas y Versiones
-      </button>
-      <button class="btn btn-success" id="btnExcelContactos" style="text-align:left; padding:14px 18px; font-size:0.88rem;">
-        👥 Solo Contactos
-      </button>
-      <button class="btn btn-success" id="btnExcelTickets" style="text-align:left; padding:14px 18px; font-size:0.88rem;">
-        🎫 Solo Tickets
-      </button>
-      <button class="btn btn-primary" id="btnExcelTodo" style="text-align:left; padding:14px 18px; font-size:0.88rem; margin-top:4px;">
-        📦 Todo (Empresas + Contactos + Tickets)
-      </button>
+      <p style="font-size:0.82rem; color:var(--text-muted);">Genera un solo archivo .xlsx editable, con una hoja por cada tipo marcado. Puedes editarlo a mano (por ejemplo, copiar filas de otro Excel exportado aquí) y volver a subirlo con "📥 Importar Excel".</p>
+      <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:700; cursor:pointer;">
+        <input type="checkbox" id="chkExportTodo" checked> Seleccionar todo
+      </label>
+      <div style="border-top:1px dashed var(--border-color); padding-top:10px; display:flex; flex-direction:column; gap:8px;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; cursor:pointer;">
+          <input type="checkbox" class="chk-export-tipo" id="chkExportEmpresas" checked> 🏢 Empresas
+        </label>
+        <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; cursor:pointer;">
+          <input type="checkbox" class="chk-export-tipo" id="chkExportContactos" checked> 👥 Contactos
+        </label>
+        <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; cursor:pointer;">
+          <input type="checkbox" class="chk-export-tipo" id="chkExportTickets" checked> 🎫 Tickets
+        </label>
+      </div>
+      <div style="font-size:0.72rem; color:var(--text-muted); background:rgba(148,163,184,0.08); border-radius:8px; padding:8px 10px; line-height:1.5;">
+        ℹ️ No incluye adjuntos, notas internas de seguimiento, historial de estados ni actividad de tickets — esos datos no se pierden en el CRM, solo no viajan en este Excel (no se pueden editar bien en una celda). Para una copia con absolutamente todo, usa "📂 Restaurar Backup".
+      </div>
+      <button class="btn btn-primary" id="btnConfirmarExportExcel" style="margin-top:4px;">📊 Exportar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: Importar Excel ===== -->
+<div id="modal-import-excel" class="modal-center" style="display:none;">
+  <div class="modal-box" style="width:600px; max-width:96%;">
+    <div class="modal-header">
+      <h2>📥 Importar desde Excel</h2>
+      <button class="modal-close" id="btnCerrarImportExcel">×</button>
+    </div>
+    <div style="padding:14px 18px;">
+      <p style="font-size:0.82rem; color:var(--text-muted); line-height:1.5; margin-bottom:12px;">
+        Selecciona un archivo <strong>.xlsx</strong> exportado con "📊 Exportar a Excel" (o editado a mano a partir de uno). Se detecta automáticamente qué hojas trae.
+      </p>
+      <div class="import-zone" id="import-excel-zone">
+        <div style="font-size:2rem; margin-bottom:8px;">📊</div>
+        <div>Arrastra un archivo <strong>.xlsx</strong> aquí o haz clic para seleccionar</div>
+        <input type="file" accept=".xlsx,.xls" id="import-excel-input" style="display:none;">
+      </div>
+      <div id="import-excel-info" class="hidden" style="margin-top:12px;"></div>
+      <div class="form-actions" id="import-excel-actions" style="display:none;">
+        <button class="btn btn-success" id="btnConfirmarImportExcel">✅ Importar</button>
+        <button class="btn btn-secondary" id="btnCancelarImportExcel">Cancelar</button>
+      </div>
     </div>
   </div>
 </div>
@@ -5887,8 +5857,6 @@ verificarSesion();
   let sortContactosDir = 'asc';
   let sortTicketsCol = 'numero';
   let sortTicketsDir = 'desc';
-  let importCSVTarget = "empresas"; // or "contactos"
-  let csvParsedData = [];
 
   // ============================================================
   // UTILITY
@@ -6480,7 +6448,7 @@ verificarSesion();
   function hayFormularioActivo() {
     const formsInline = ["formulario-empresa", "formulario-contacto", "formulario-ticket", "formulario-evento"];
     if (formsInline.some(id => { const el = document.getElementById(id); return el && !el.classList.contains("hidden"); })) return true;
-    const modalesForm = ["modal-empresa-rapida", "modal-acerca-de", "modal-xls-summary"];
+    const modalesForm = ["modal-empresa-rapida", "modal-acerca-de"];
     return modalesForm.some(id => { const m = document.getElementById(id); return m && m.style.display !== "none" && m.style.display !== ""; });
   }
 
@@ -7730,51 +7698,294 @@ verificarSesion();
     if (m) m.style.display = "none";
   });
 
-  function exportarExcel(tipo) {
-    const wb = XLSX.utils.book_new();
-    const fnClose = () => { const m = document.getElementById("modal-exportar-excel"); if(m) m.style.display = "none"; };
-
-    if (tipo === "empresas" || tipo === "todo") {
-      const rows = clientes.map(c => {
-        const row = { Empresa: c.EMPRESA, Contacto: c.CONTACTO, Correo: c.CORREO, RFC: c.RFC || "", Teléfono1: c.TELEFONO_1, Teléfono2: c.TELEFONO_2 };
-        listaSistemas.forEach(s => { row[s] = c.SISTEMAS?.[s.toUpperCase().trim()] || ""; });
-        return row;
-      });
-      const ws = XLSX.utils.json_to_sheet(rows);
-      XLSX.utils.book_append_sheet(wb, ws, "Empresas");
-    }
-
-    if (tipo === "contactos" || tipo === "todo") {
-      const rows = contactos.map(c => ({ Nombre: c.nombre, Correo: c.correo, Teléfono1: c.telefono1, Teléfono2: c.telefono2, Empresa: c.empresa }));
-      const ws = XLSX.utils.json_to_sheet(rows);
-      XLSX.utils.book_append_sheet(wb, ws, "Contactos");
-    }
-
-    if (tipo === "tickets" || tipo === "todo") {
-      const rows = tickets.map(t => ({
-        Folio: t.numero, Asunto: t.asunto, Empresa: t.empresa, Contacto: t.contacto,
-        Tipo: t.tipo, Sistema: t.sistema || "", Estado: t.estado, Facturación: t.facturado || "NO FACTURADO", Prioridad: t.prioridad, Grupo: t.grupo,
-        Agente: t.agente, Solicitado: t.solicitado,
-        Canalizado: t.canalizado,
-        Descripción: (t.descripcion || "").replace(/<[^>]+>/g, ""),
-        Creado: t.fechaCreacion ? new Date(t.fechaCreacion).toLocaleString('es-MX') : "",
-        Actualizado: t.fechaActualizacion ? new Date(t.fechaActualizacion).toLocaleString('es-MX') : ""
-      }));
-      const ws = XLSX.utils.json_to_sheet(rows);
-      XLSX.utils.book_append_sheet(wb, ws, "Tickets");
-    }
-
-    const nombre = tipo === "todo" ? "CRM_DATTASOFT_completo" : `CRM_DATTASOFT_${tipo}`;
-    XLSX.writeFile(wb, `${nombre}_${new Date().toISOString().slice(0,10)}.xlsx`);
-    logBitacora(`Exportación Excel: ${tipo}`, "📊");
-    toast(`📊 Excel exportado: ${nombre}`);
-    fnClose();
+  // Fila de Empresa para el Excel: se incluyen TODOS los campos editables (incluyendo los que
+  // el export viejo omitía — Contacto 2/Correo 2/RFC/Favorito/Vencimientos) para que el archivo
+  // se pueda reimportar sin perder nada, no solo para verlo.
+  function filaEmpresaExcel(c) {
+    const fila: Record<string, any> = {
+      "Empresa": c.EMPRESA || "",
+      "Contacto": c.CONTACTO || "",
+      "Correo": c.CORREO || "",
+      "Contacto 2": c.CONTACTO_2 || "",
+      "Correo 2": c.CORREO_2 || "",
+      "Teléfono 1": c.TELEFONO_1 || "",
+      "Teléfono 2": c.TELEFONO_2 || "",
+      "RFC": c.RFC || "",
+      "Favorito": c.FAVORITO ? "SI" : "NO",
+    };
+    listaSistemas.forEach(s => {
+      const k = s.toUpperCase().trim();
+      fila[s] = c.SISTEMAS?.[k] || "";
+      fila[`${s} Vencimiento`] = c.VENCIMIENTOS?.[k] || "";
+    });
+    if (c.CAMPOS_EXTRAS && Object.keys(c.CAMPOS_EXTRAS).length) fila["Campos Extras (JSON)"] = JSON.stringify(c.CAMPOS_EXTRAS);
+    return fila;
   }
 
-  document.getElementById("btnExcelEmpresas")?.addEventListener("click", () => exportarExcel("empresas"));
-  document.getElementById("btnExcelContactos")?.addEventListener("click", () => exportarExcel("contactos"));
-  document.getElementById("btnExcelTickets")?.addEventListener("click", () => exportarExcel("tickets"));
-  document.getElementById("btnExcelTodo")?.addEventListener("click", () => exportarExcel("todo"));
+  function filaContactoExcel(c) {
+    return { "Nombre": c.nombre || "", "Correo": c.correo || "", "Teléfono 1": c.telefono1 || "", "Teléfono 2": c.telefono2 || "", "Empresa": c.empresa || "" };
+  }
+
+  // Fila de Ticket para el Excel: fechas como texto ISO crudo (nunca toLocaleString) para que se
+  // puedan volver a leer como fecha exacta al reimportar — ese era justo el defecto del export viejo.
+  // Adjuntos/notas/actividad/historialEstados se excluyen a propósito (ver nota en el modal).
+  function filaTicketExcel(t) {
+    return {
+      "Folio": t.numero, "Asunto": t.asunto || "", "Empresa": t.empresa || "", "Contacto": t.contacto || "",
+      "Correo Contacto": t.contactoCorreo || "", "Tipo": t.tipo || "", "Sistema": t.sistema || "", "Estado": t.estado || "",
+      "Facturado": t.facturado || "NO FACTURADO", "Prioridad": t.prioridad || "", "Grupo": t.grupo || "",
+      "Agente": t.agente || "", "Agente Asignado": t.agenteAsignado || "", "Solicitado": t.solicitado || "", "Canalizado": t.canalizado || "",
+      "Fecha Programada": t.fechaProgramada || "", "Hora Programada": t.horaProgramada || "",
+      "Descripción": (t.descripcion || "").replace(/<[^>]+>/g, ""),
+      "Notas Internas": (t.notasInternas || "").replace(/<[^>]+>/g, ""),
+      "CC": t.cc || "", "CCO": t.cco || "",
+      "Fecha Creación": t.fechaCreacion || "", "Fecha Actualización": t.fechaActualizacion || "",
+    };
+  }
+
+  function exportarExcelUnificado() {
+    const incluirEmpresas = (document.getElementById("chkExportEmpresas") as HTMLInputElement)?.checked;
+    const incluirContactos = (document.getElementById("chkExportContactos") as HTMLInputElement)?.checked;
+    const incluirTickets = (document.getElementById("chkExportTickets") as HTMLInputElement)?.checked;
+    if (!incluirEmpresas && !incluirContactos && !incluirTickets) { toast("Selecciona al menos un tipo de dato", "error"); return; }
+
+    const wb = XLSX.utils.book_new();
+    const partes = [];
+    if (incluirEmpresas) { XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(clientes.map(filaEmpresaExcel)), "Empresas"); partes.push("empresas"); }
+    if (incluirContactos) { XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(contactos.map(filaContactoExcel)), "Contactos"); partes.push("contactos"); }
+    if (incluirTickets) { XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(tickets.map(filaTicketExcel)), "Tickets"); partes.push("tickets"); }
+
+    const nombre = partes.length === 3 ? "CRM_DATTASOFT_completo" : `CRM_DATTASOFT_${partes.join("-")}`;
+    XLSX.writeFile(wb, `${nombre}_${new Date().toISOString().slice(0,10)}.xlsx`);
+    logBitacora(`Exportación Excel: ${partes.join(", ")}`, "📊");
+    toast(`📊 Excel exportado: ${nombre}`);
+    const m = document.getElementById("modal-exportar-excel");
+    if (m) m.style.display = "none";
+  }
+
+  document.getElementById("btnConfirmarExportExcel")?.addEventListener("click", exportarExcelUnificado);
+  document.getElementById("chkExportTodo")?.addEventListener("change", (e) => {
+    const checked = (e.target as HTMLInputElement).checked;
+    document.querySelectorAll(".chk-export-tipo").forEach(chk => { (chk as HTMLInputElement).checked = checked; });
+  });
+  document.querySelectorAll(".chk-export-tipo").forEach(chk => chk.addEventListener("change", () => {
+    const todos = Array.from(document.querySelectorAll(".chk-export-tipo")) as HTMLInputElement[];
+    const chkTodo = document.getElementById("chkExportTodo") as HTMLInputElement;
+    if (chkTodo) chkTodo.checked = todos.every(c => c.checked);
+  }));
+
+  // ============================================================
+  // IMPORT EXCEL (unificado: Empresas/Contactos/Tickets)
+  // ============================================================
+  const modalImportExcel = document.getElementById("modal-import-excel");
+  let excelImportData: { empresas: any[] | null; contactos: any[] | null; tickets: any[] | null } | null = null;
+
+  document.getElementById("btnImportarExcel")?.addEventListener("click", () => {
+    excelImportData = null;
+    document.getElementById("import-excel-info")?.classList.add("hidden");
+    const actions = document.getElementById("import-excel-actions");
+    if (actions) (actions as HTMLElement).style.display = "none";
+    const inp = document.getElementById("import-excel-input") as HTMLInputElement;
+    if (inp) inp.value = "";
+    if (modalImportExcel) modalImportExcel.style.display = "flex";
+  });
+  document.getElementById("btnCerrarImportExcel")?.addEventListener("click", () => {
+    if (modalImportExcel) modalImportExcel.style.display = "none";
+  });
+  document.getElementById("btnCancelarImportExcel")?.addEventListener("click", () => {
+    excelImportData = null;
+    document.getElementById("import-excel-info")?.classList.add("hidden");
+    const actions = document.getElementById("import-excel-actions");
+    if (actions) (actions as HTMLElement).style.display = "none";
+  });
+
+  const excelZone = document.getElementById("import-excel-zone");
+  const excelInput = document.getElementById("import-excel-input") as HTMLInputElement;
+  excelZone?.addEventListener("click", () => excelInput?.click());
+  excelZone?.addEventListener("dragover", e => { e.preventDefault(); (excelZone as HTMLElement).style.borderColor = "var(--brand-primary)"; });
+  excelZone?.addEventListener("dragleave", () => { (excelZone as HTMLElement).style.borderColor = ""; });
+  excelZone?.addEventListener("drop", e => {
+    e.preventDefault(); (excelZone as HTMLElement).style.borderColor = "";
+    if (e.dataTransfer.files.length) processImportExcel(e.dataTransfer.files[0]);
+  });
+  excelInput?.addEventListener("change", () => { if (excelInput.files.length) processImportExcel(excelInput.files[0]); });
+
+  function nombreHojaExcel(wb, nombre: string) {
+    return wb.SheetNames.find((n: string) => n.trim().toLowerCase() === nombre.toLowerCase());
+  }
+
+  function processImportExcel(file) {
+    const reader = new FileReader();
+    reader.onload = (ev: any) => {
+      try {
+        const data = new Uint8Array(ev.target.result);
+        const wb = XLSX.read(data, { type: "array" });
+        const leer = (nombre: string) => {
+          const hoja = nombreHojaExcel(wb, nombre);
+          return hoja ? XLSX.utils.sheet_to_json(wb.Sheets[hoja]) : null;
+        };
+        excelImportData = { empresas: leer("Empresas"), contactos: leer("Contactos"), tickets: leer("Tickets") };
+        renderImportExcelPreview(file.name);
+      } catch (err) {
+        toast("❌ Error al leer el archivo Excel. Asegúrate de que sea un .xlsx válido.", "error");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function filaPreviewImportExcel(entidad: string, icono: string, nombre: string, filas: any[] | null) {
+    const encontrada = Array.isArray(filas);
+    return `
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px 14px; margin-bottom:8px; ${encontrada ? "" : "opacity:0.5;"}">
+        <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; cursor:pointer;">
+          <input type="checkbox" class="chk-imp-xls-entidad" data-entidad="${entidad}" ${encontrada ? "checked" : "disabled"}>
+          ${icono} ${nombre} ${encontrada ? `— <strong>${filas.length}</strong> fila(s)` : `<span style="color:var(--text-muted);">— no encontradas en este archivo</span>`}
+        </label>
+        ${encontrada ? `<label style="display:flex; align-items:center; gap:6px; font-size:0.78rem; color:#f87171; cursor:pointer; white-space:nowrap;">
+          <input type="checkbox" class="chk-imp-xls-sustituir" data-entidad="${entidad}"> 🔴 Sustituir todo
+        </label>` : ""}
+      </div>`;
+  }
+
+  function renderImportExcelPreview(nombreArchivo: string) {
+    const info = document.getElementById("import-excel-info");
+    const actions = document.getElementById("import-excel-actions");
+    if (!info || !excelImportData) return;
+    const { empresas, contactos, tickets: tks } = excelImportData;
+    if (!empresas && !contactos && !tks) {
+      info.innerHTML = `<strong>📄 ${nombreArchivo}</strong><br><span style="color:#f87171;">No se encontró ninguna hoja "Empresas", "Contactos" o "Tickets" en este archivo.</span>`;
+      info.classList.remove("hidden");
+      if (actions) (actions as HTMLElement).style.display = "none";
+      return;
+    }
+    info.innerHTML = `<strong style="display:block; margin-bottom:10px;">📄 ${nombreArchivo}</strong>` +
+      filaPreviewImportExcel("empresas", "🏢", "Empresas", empresas) +
+      filaPreviewImportExcel("contactos", "👥", "Contactos", contactos) +
+      filaPreviewImportExcel("tickets", "🎫", "Tickets", tks);
+    info.classList.remove("hidden");
+    if (actions) (actions as HTMLElement).style.display = "flex";
+  }
+
+  // Convierte una fila del Excel de vuelta al objeto empresa — espejo de filaEmpresaExcel().
+  function filaExcelAEmpresa(row: any) {
+    const empresa: any = {
+      EMPRESA: String(row["Empresa"] ?? "").trim().toUpperCase(),
+      CONTACTO: row["Contacto"] ?? "", CORREO: row["Correo"] ?? "",
+      CONTACTO_2: row["Contacto 2"] ?? "", CORREO_2: row["Correo 2"] ?? "",
+      TELEFONO_1: row["Teléfono 1"] ?? "", TELEFONO_2: row["Teléfono 2"] ?? "",
+      RFC: row["RFC"] ?? "", FAVORITO: String(row["Favorito"] ?? "").trim().toUpperCase() === "SI",
+      SISTEMAS: {}, VENCIMIENTOS: {}, CAMPOS_EXTRAS: {},
+    };
+    listaSistemas.forEach(s => {
+      const k = s.toUpperCase().trim();
+      if (row[s] !== undefined && row[s] !== "") empresa.SISTEMAS[k] = String(row[s]);
+      if (row[`${s} Vencimiento`] !== undefined && row[`${s} Vencimiento`] !== "") empresa.VENCIMIENTOS[k] = String(row[`${s} Vencimiento`]);
+    });
+    if (row["Campos Extras (JSON)"]) { try { empresa.CAMPOS_EXTRAS = JSON.parse(row["Campos Extras (JSON)"]); } catch {} }
+    return empresa;
+  }
+
+  function filaExcelAContacto(row: any) {
+    return { nombre: row["Nombre"] ?? "", correo: row["Correo"] ?? "", telefono1: row["Teléfono 1"] ?? "", telefono2: row["Teléfono 2"] ?? "", empresa: row["Empresa"] ?? "" };
+  }
+
+  function filaExcelATicket(row: any) {
+    return {
+      numero: Number(row["Folio"]),
+      asunto: row["Asunto"] ?? "", empresa: row["Empresa"] ?? "", contacto: row["Contacto"] ?? "",
+      contactoCorreo: row["Correo Contacto"] ?? "", tipo: row["Tipo"] ?? "", sistema: row["Sistema"] ?? "", estado: row["Estado"] ?? "",
+      facturado: row["Facturado"] ?? "", prioridad: row["Prioridad"] ?? "", grupo: row["Grupo"] ?? "",
+      agente: row["Agente"] ?? "", agenteAsignado: row["Agente Asignado"] ?? "", solicitado: row["Solicitado"] ?? "", canalizado: row["Canalizado"] ?? "",
+      fechaProgramada: row["Fecha Programada"] ?? "", horaProgramada: row["Hora Programada"] ?? "",
+      descripcion: row["Descripción"] ?? "", notasInternas: row["Notas Internas"] ?? "",
+      cc: row["CC"] ?? "", cco: row["CCO"] ?? "",
+      fechaCreacion: row["Fecha Creación"] || new Date().toISOString(), fechaActualizacion: row["Fecha Actualización"] || new Date().toISOString(),
+      adjuntos: [], notas: [], actividad: [], historialEstados: [],
+    };
+  }
+
+  document.getElementById("btnConfirmarImportExcel")?.addEventListener("click", () => {
+    if (!excelImportData) return;
+    const marcadas = Array.from(document.querySelectorAll(".chk-imp-xls-entidad:checked")).map(chk => (chk as HTMLElement).dataset.entidad);
+    if (!marcadas.length) { toast("Selecciona al menos un tipo de dato para importar", "error"); return; }
+    const sustituir = (entidad: string) => (document.querySelector(`.chk-imp-xls-sustituir[data-entidad="${entidad}"]`) as HTMLInputElement)?.checked;
+
+    let msg = "";
+
+    if (marcadas.includes("empresas") && excelImportData.empresas) {
+      const filas = excelImportData.empresas.map(filaExcelAEmpresa).filter(e => e.EMPRESA);
+      const invalidas = excelImportData.empresas.length - filas.length;
+      if (sustituir("empresas")) {
+        if (!confirm(`¿Seguro? Esto va a BORRAR las ${clientes.length} empresas actuales y dejar en su lugar las ${filas.length} de este archivo. No se puede deshacer desde aquí (solo restaurando otro respaldo).`)) return;
+        clientes.length = 0;
+        clientes.push(...filas);
+        msg += `✅ ${filas.length} empresas reemplazadas. `;
+      } else {
+        const nuevas = filas.filter(n => !clientes.find(c => c.EMPRESA === n.EMPRESA));
+        clientes.push(...nuevas);
+        msg += `✅ ${nuevas.length} empresas agregadas${filas.length - nuevas.length ? ` (${filas.length - nuevas.length} ya existían, omitidas)` : ""}. `;
+      }
+      if (invalidas) msg += `⚠️ ${invalidas} fila(s) sin Empresa, omitidas. `;
+    }
+
+    if (marcadas.includes("contactos") && excelImportData.contactos) {
+      const filas = excelImportData.contactos.map(filaExcelAContacto).filter(c => c.nombre);
+      const invalidas = excelImportData.contactos.length - filas.length;
+      if (sustituir("contactos")) {
+        if (!confirm(`¿Seguro? Esto va a BORRAR los ${contactos.length} contactos actuales y dejar en su lugar los ${filas.length} de este archivo. No se puede deshacer desde aquí (solo restaurando otro respaldo).`)) return;
+        contactos.length = 0;
+        contactos.push(...filas);
+        msg += `✅ ${filas.length} contactos reemplazados. `;
+      } else {
+        const nuevos = filas.filter(n => !(n.correo && contactos.find(c => c.correo === n.correo)));
+        contactos.push(...nuevos);
+        msg += `✅ ${nuevos.length} contactos agregados${filas.length - nuevos.length ? ` (${filas.length - nuevos.length} ya existían, omitidos)` : ""}. `;
+      }
+      if (invalidas) msg += `⚠️ ${invalidas} fila(s) sin Nombre, omitidas. `;
+    }
+
+    if (marcadas.includes("tickets") && excelImportData.tickets) {
+      const filas = [];
+      let invalidas = 0;
+      excelImportData.tickets.forEach(row => {
+        if (!Number(row["Folio"])) { invalidas++; return; }
+        filas.push(filaExcelATicket(row));
+      });
+      if (sustituir("tickets")) {
+        if (!confirm(`¿Seguro? Esto va a BORRAR los ${tickets.length} tickets actuales y dejar en su lugar los ${filas.length} de este archivo, con sus folios tal cual vienen. No se puede deshacer desde aquí (solo restaurando otro respaldo).`)) return;
+        tickets.length = 0;
+        tickets.push(...filas);
+        msg += `✅ ${filas.length} tickets reemplazados (folios originales conservados). `;
+      } else {
+        // Nunca se renumera un folio en modo aditivo: si ya existe, la fila se omite y se
+        // reporta — es justo lo contrario del bug que duplicó 21 tickets a 42 en esta misma sesión.
+        const conflictos = [];
+        const nuevos = [];
+        filas.forEach(t => { if (tickets.some(ex => ex.numero === t.numero)) conflictos.push(t.numero); else nuevos.push(t); });
+        tickets.push(...nuevos);
+        msg += `✅ ${nuevos.length} tickets agregados (folio original conservado). `;
+        if (conflictos.length) msg += `⚠️ ${conflictos.length} ticket(s) omitido(s) por folio ya existente: #${conflictos.join(", #")} — corrígelos en el Excel y reimporta si quieres agregarlos. `;
+      }
+      if (invalidas) msg += `⚠️ ${invalidas} fila(s) sin Folio válido, omitidas. `;
+    }
+
+    // Igual que el resto de la app: se refresca la pantalla de inmediato y el guardado en
+    // Firebase se dispara sin esperarlo.
+    renderEmpresas(); renderContactos(); renderTickets(); renderDashboard();
+    toast(msg || "No había nada que importar.");
+    logBitacora(`Importación desde Excel: ${msg}`, "📥");
+    if (crmLocalOnly) {
+      if (marcadas.includes("empresas")) guardarLocal("crm_clientes", clientes);
+      if (marcadas.includes("contactos")) guardarLocal("crm_contactos", contactos);
+      if (marcadas.includes("tickets")) guardarLocal("crm_tickets", tickets);
+    } else {
+      if (marcadas.includes("empresas")) guardarClientes(clientes).catch(() => {});
+      if (marcadas.includes("contactos")) guardarContactos(contactos).catch(() => {});
+      if (marcadas.includes("tickets")) guardarTickets(tickets).catch(() => {});
+    }
+    excelImportData = null;
+    if (modalImportExcel) modalImportExcel.style.display = "none";
+  });
 
   // ============================================================
   // REPORTE DE VERSIONES Y LICENCIAS DESACTUALIZADAS
@@ -12929,660 +13140,6 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       toast(`⚠️ Se migraron ${ok} adjunto(s), pero el guardado final falló — puede que el documento siga demasiado lleno. Vuelve a intentar o revisa la consola.`, "error");
     }
     renderTickets();
-  });
-
-  // ============================================================
-  // CSV IMPORT
-  // ============================================================
-  const modalCSV = document.getElementById("modal-import-csv");
-
-  document.getElementById("btnImportCSVEmpresas")?.addEventListener("click", () => {
-    importCSVTarget = "empresas";
-    document.getElementById("import-csv-titulo").textContent = "📥 Importar CSV — Empresas";
-    document.getElementById("import-csv-preview")?.classList.add("hidden");
-    csvParsedData = [];
-    if (modalCSV) modalCSV.style.display = "flex";
-  });
-
-  // Importar Excel (client-side) desde UI
-  document.getElementById("btnImportXLSEmpresas")?.addEventListener("click", () => {
-    document.getElementById("input-import-xls").click();
-  });
-
-  document.getElementById("input-import-xls")?.addEventListener("change", async (e) => {
-    const f = e.target.files[0];
-    if (!f) return;
-    try {
-      const reader = new FileReader();
-      reader.onload = async (ev) => {
-        try {
-          const data = new Uint8Array(ev.target.result);
-          const wb = XLSX.read(data, { type: 'array' });
-
-          // Lee una hoja detectando automáticamente la fila de encabezados (la que más columnas tiene)
-          const leerHojaInteligente = (sheet) => {
-            // Leer todo como filas crudas (sin asumir que la fila 1 es el encabezado)
-            const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as any[][];
-            if (!rawRows.length) return [];
-            // Encontrar la fila con más celdas no vacías → ese es el encabezado real
-            let headerIdx = 0, maxCols = 0;
-            rawRows.forEach((row, i) => {
-              const nonEmpty = row.filter(v => v !== '' && v !== null && v !== undefined).length;
-              if (nonEmpty > maxCols) { maxCols = nonEmpty; headerIdx = i; }
-            });
-            const headerRow = rawRows[headerIdx] as string[];
-            console.log('[Import] Encabezado encontrado en fila', headerIdx + 1, '→', headerRow);
-            // Construir objetos clave-valor para cada fila de datos
-            return rawRows.slice(headerIdx + 1)
-              .filter(row => row.some(v => v !== '' && v !== null && v !== undefined))
-              .map(row => {
-                const obj: any = {};
-                headerRow.forEach((key, i) => { if (key) obj[String(key).trim()] = row[i] ?? ''; });
-                return obj;
-              });
-          };
-
-          // Elegir la hoja con MÁS columnas (datos más completos)
-          const sheetRanking = wb.SheetNames.map(name => {
-            const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: '' }) as any[][];
-            const maxCols = Math.max(0, ...rows.map(r => r.filter(v => v !== '').length));
-            return { name, cols: maxCols };
-          }).sort((a, b) => b.cols - a.cols);
-          const sheetDefault = wb.SheetNames.find(n => /empresa|cliente/i.test(n)) || sheetRanking[0]?.name || wb.SheetNames[0];
-
-          let clientesArr = leerHojaInteligente(wb.Sheets[sheetDefault]);
-          let contactosArr = clientesArr; // misma hoja — contactos se derivan de empresas
-          console.log('[Import] Hoja:', sheetDefault, '| Columnas detectadas:', Object.keys(clientesArr[0] || {}));
-
-          // helpers para mapear cabeceras
-          const normalize = (s) => (s||'').toString().normalize('NFKD').replace(/\p{Diacritic}/gu, '').replace(/[^a-z0-9]/gi,'').toLowerCase();
-          const findKeyByNames = (sampleObj, candidates=[]) => {
-            const keys = Object.keys(sampleObj||{});
-            for (const c of candidates) {
-              const nc = normalize(c);
-              for (const k of keys) if (normalize(k) === nc) return k;
-            }
-            // try partial contains
-            for (const k of keys) {
-              const nk = normalize(k);
-              for (const c of candidates) if (nk.includes(normalize(c))) return k;
-            }
-            return null;
-          };
-
-          let sampleCli = clientesArr[0] || {};
-          const sampleCt = contactosArr[0] || {};
-
-          // ── Función para (re)calcular el mapeo de columnas ──────────
-          const calcularMapeo = (sample) => ({
-            empresaKey:   findKeyByNames(sample, ['empresa','empresas','razon social','razon_social','company','nombre empresa']),
-            contactoKey:  findKeyByNames(sample, ['contacto principal','contacto','contactos','nombre','name','representante']),
-            contacto2Key: findKeyByNames(sample, ['contacto alternativo','contacto2','contacto alt','contacto_2','contactoalternativo']),
-            correoKey:    findKeyByNames(sample, ['correo electronico contacto principal','correo contacto principal','correo principal','correo','correo electronico','email','mail']),
-            correo2Key:   findKeyByNames(sample, ['correo electronico contacto alternativo','correo alternativo','correo2','correo_2']),
-            telKey:       findKeyByNames(sample, ['telefono contacto principal','telefono principal','telefono1','telefono_1','telefono','phone','celular']),
-            tel2Key:      findKeyByNames(sample, ['telefono contacto alternativo','telefono alternativo','telefono2','telefono_2']),
-            rfcKey:       findKeyByNames(sample, ['rfc','r.f.c','registro federal','tax id']),
-          });
-          let mapeo = calcularMapeo(sampleCli);
-
-          // Normalizar y validar correos antes de guardar en localStorage
-          const normalizeEmailRaw = (s) => {
-            if (!s && s !== 0) return '';
-            let t = String(s).trim();
-            if (!t) return '';
-            // Reemplazos comunes
-            t = t.replace(/\s+/g, '');
-            t = t.replace(/\(at\)|\[at\]|\s+at\s+|\s+AT\s+/gi, '@');
-            t = t.replace(/[;,]+/g, '');
-            // quitar caracteres angulares o comillas
-            t = t.replace(/[<>"']/g, '');
-            // normalizar múltiple arroba
-            t = t.replace(/@+/g, '@');
-            t = t.toLowerCase();
-            return t;
-          };
-          const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
-
-          let emailsCorregidos = 0;
-          let emailsInvalidos = 0;
-          const invalidEmailsList = [];
-
-          // helper para buscar clave de email en un objeto
-          const findEmailKey = (obj) => {
-            const keys = Object.keys(obj||{});
-            const candidates = ['correo','correo electronico','correo_electronico','correoelectrico','email','e-mail','mail','correo1','email1'];
-            for (const c of candidates) {
-              for (const k of keys) if (k && k.toString().toLowerCase().replace(/\s|_|-/g,'').includes(c.replace(/\s|_|-/g,''))) return k;
-            }
-            return null;
-          };
-
-          // Normalizar contactos
-          contactosArr.forEach(r => {
-            const key = findEmailKey(r) || 'CORREO' || 'EMAIL';
-            const orig = r[key] || r['CORREO'] || r['CORREO ELECTRONICO'] || r['EMAIL'] || '';
-            const norm = normalizeEmailRaw(orig);
-            if (norm && norm !== String(orig).trim()) emailsCorregidos++;
-            if (norm && isValidEmail(norm)) {
-              r['CORREO'] = norm;
-            } else {
-              if (norm) {
-                emailsInvalidos++;
-                invalidEmailsList.push({ source: 'contacto', raw: orig, normalized: norm });
-              }
-              r['CORREO'] = '';
-            }
-          });
-
-          // Normalizar emails en clientes (si existen columnas de email)
-          clientesArr.forEach(r => {
-            const key = findEmailKey(r) || null;
-            if (key) {
-              const orig = r[key] || '';
-              const norm = normalizeEmailRaw(orig);
-              if (norm && norm !== String(orig).trim()) emailsCorregidos++;
-              if (norm && isValidEmail(norm)) {
-                r['CORREO'] = norm;
-              } else {
-                if (norm) {
-                  emailsInvalidos++;
-                  invalidEmailsList.push({ source: 'empresa', raw: orig, normalized: norm });
-                }
-                r['CORREO'] = '';
-              }
-            } else {
-              // si no hay clave, dejar como está o vacio
-              r['CORREO'] = r['CORREO'] || '';
-            }
-          });
-
-          // Respaldo de los datos reales antes de pisarlos con la vista previa — si el usuario
-          // cancela, se restauran. Antes, cancelar dejaba la vista previa del Excel viva en
-          // memoria, y cualquier guardado no relacionado posterior la subía a Firebase sin querer.
-          const clientesAntesImportXls = clientes;
-          const contactosAntesImportXls = contactos;
-
-          // Vista previa: cargar en memoria sin tocar localStorage ni Firebase aún
-          clientes = normalizeImportedClientes(clientesArr || []);
-          contactos = normalizeImportedContactos ? normalizeImportedContactos(contactosArr || []) : (contactosArr || []);
-          renderEmpresas();
-          renderContactos();
-
-          // Preparar modal de confirmación/resumen
-          const modal = document.getElementById('modal-xls-summary');
-          if (modal) {
-            document.getElementById('xls-summary-msg').textContent = `Se importaron ${clientesArr.length} empresas y ${contactosArr.length} contactos. Correos corregidos: ${emailsCorregidos}. Inválidos: ${emailsInvalidos}. Revisa la vista previa y confirma la subida a Firebase.`;
-            const previewCli = document.getElementById('xls-preview-clientes');
-            const previewCt = document.getElementById('xls-preview-contactos');
-            previewCli.innerHTML = '';
-            previewCt.innerHTML = '';
-
-            // Mostrar columnas detectadas / mapeo
-            const detectedDivId = 'xls-detected-columns';
-            let detDiv = document.getElementById(detectedDivId);
-            if (!detDiv) {
-              detDiv = document.createElement('div');
-              detDiv.id = detectedDivId;
-              detDiv.style.marginBottom = '10px';
-              detDiv.style.color = 'var(--muted)';
-              const anchor = document.getElementById('xls-summary-msg');
-              if (anchor) anchor.insertAdjacentElement('afterend', detDiv);
-              else modal.prepend(detDiv);
-            }
-            const detectedHtml = [];
-            detectedHtml.push(`<strong>Columnas detectadas (Empresa):</strong> ${Object.keys(sampleCli||{}).join(', ') || '—'}`);
-            detectedHtml.push(`<strong>Columnas detectadas (Contacto):</strong> ${Object.keys(sampleCt||{}).join(', ') || '—'}`);
-            detectedHtml.push(`<strong>Mapeo inferido:</strong> Empresa → ${mapeo.empresaKey||'(no detectada)'}; Contacto → ${mapeo.contactoKey||'(no detectado)'}; Correo → ${mapeo.correoKey||'(no detectado)'} `);
-            detDiv.innerHTML = detectedHtml.join('<br>');
-            // Mostrar lista de emails inválidos si existen
-            let invalidDiv = document.getElementById('xls-invalid-emails');
-            if (!invalidDiv) {
-              invalidDiv = document.createElement('div');
-              invalidDiv.id = 'xls-invalid-emails';
-              invalidDiv.style.marginTop = '8px';
-              invalidDiv.style.fontSize = '0.85rem';
-              invalidDiv.style.color = 'var(--warning)';
-              detDiv.insertAdjacentElement('afterend', invalidDiv);
-            }
-            if (invalidEmailsList.length > 0) {
-              let editableHtml = `<strong>Correos inválidos detectados (${invalidEmailsList.length}) - Editar:</strong>`;
-              editableHtml += `<div style="margin-top:6px; max-height:200px; overflow-y:auto; padding:6px; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-subtle);">`;
-              invalidEmailsList.slice(0,50).forEach((x, i) => {
-                editableHtml += `<div style="display:flex; gap:6px; margin-bottom:6px; align-items:center; font-size:0.8rem;">`;
-                editableHtml += `<span style="flex:1; color:var(--text-light);">[${x.source}]</span>`;
-                editableHtml += `<input type="text" id="xls-invalid-edit-${i}" value="${x.normalized}" style="flex:2; padding:4px; border:1px solid var(--border-color); border-radius:3px; background:var(--bg-card); color:var(--text-main);">`;
-                editableHtml += `</div>`;
-              });
-              editableHtml += `</div>`;
-              invalidDiv.innerHTML = editableHtml;
-            } else {
-              invalidDiv.innerHTML = '';
-            }
-
-            // Añadir mapeador manual (selects) debajo del bloque detectado
-            const mapContainerId = 'xls-map-controls';
-            let mapContainer = document.getElementById(mapContainerId);
-            if (!mapContainer) {
-              mapContainer = document.createElement('div');
-              mapContainer.id = mapContainerId;
-              mapContainer.style.display = 'flex';
-              mapContainer.style.gap = '8px';
-              mapContainer.style.marginBottom = '8px';
-              detDiv.insertAdjacentElement('afterend', mapContainer);
-            }
-            mapContainer.innerHTML = '';
-            const makeSelect = (id, label, keys, selected) => {
-              const wrapper = document.createElement('div');
-              wrapper.style.cssText = 'display:flex;flex-direction:column;min-width:160px;';
-              const lab = document.createElement('label');
-              lab.style.cssText = 'font-size:0.75rem;margin-bottom:3px;color:var(--text-muted);';
-              lab.textContent = label;
-              const sel = document.createElement('select');
-              sel.id = id;
-              sel.style.padding = '5px';
-              const noneOpt = document.createElement('option'); noneOpt.value = ''; noneOpt.textContent = '(ninguno)'; sel.appendChild(noneOpt);
-              keys.forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = k; if (k===selected) o.selected = true; sel.appendChild(o); });
-              wrapper.appendChild(lab); wrapper.appendChild(sel);
-              return wrapper;
-            };
-
-            const renderColumnSelects = () => {
-              // Limpiar selectores de columna (no el de hoja)
-              Array.from(mapContainer.children).forEach(ch => {
-                if ((ch as HTMLElement).dataset.role !== 'sheet-selector') ch.remove();
-              });
-              const allKeys = Object.keys(sampleCli || {});
-              const m = calcularMapeo(sampleCli);
-              mapContainer.appendChild(makeSelect('xls-map-empresa',   '★ Empresa (obligatorio)',  allKeys, m.empresaKey   || allKeys[0]));
-              mapContainer.appendChild(makeSelect('xls-map-contacto',  '★ Contacto principal',     allKeys, m.contactoKey  || ''));
-              mapContainer.appendChild(makeSelect('xls-map-contacto2', 'Contacto alternativo',     allKeys, m.contacto2Key || ''));
-              mapContainer.appendChild(makeSelect('xls-map-correo',    'Correo principal',         allKeys, m.correoKey    || ''));
-              mapContainer.appendChild(makeSelect('xls-map-correo2',   'Correo alternativo',       allKeys, m.correo2Key   || ''));
-              mapContainer.appendChild(makeSelect('xls-map-telefono',  '📱 Celular principal',     allKeys, m.telKey       || ''));
-              mapContainer.appendChild(makeSelect('xls-map-telefono2', '📱 Celular alternativo',   allKeys, m.tel2Key      || ''));
-              mapContainer.appendChild(makeSelect('xls-map-rfc',       'RFC',                      allKeys, m.rfcKey       || ''));
-            };
-
-            // Selector de hoja (primero, destacado)
-            mapContainer.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;';
-            const sheetWrapper = document.createElement('div');
-            sheetWrapper.dataset.role = 'sheet-selector';
-            sheetWrapper.style.cssText = 'display:flex;flex-direction:column;min-width:200px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:6px;padding:6px 8px;';
-            const sheetLabel = document.createElement('label');
-            sheetLabel.style.cssText = 'font-size:0.75rem;font-weight:700;color:#a5b4fc;margin-bottom:3px;';
-            sheetLabel.textContent = '📋 Hoja del Excel';
-            const sheetSel = document.createElement('select');
-            sheetSel.id = 'xls-map-hoja';
-            sheetSel.style.padding = '5px';
-            wb.SheetNames.forEach(name => {
-              const sample = XLSX.utils.sheet_to_json(wb.Sheets[name])[0] || {};
-              const cols = Object.keys(sample).length;
-              const o = document.createElement('option');
-              o.value = name;
-              o.textContent = `${name} (${cols} columnas)`;
-              if (name === sheetDefault) o.selected = true;
-              sheetSel.appendChild(o);
-            });
-            sheetSel.addEventListener('change', () => {
-              clientesArr = leerHojaInteligente(wb.Sheets[sheetSel.value]);
-              contactosArr = clientesArr;
-              sampleCli = clientesArr[0] || {};
-              renderColumnSelects();
-            });
-            sheetWrapper.appendChild(sheetLabel); sheetWrapper.appendChild(sheetSel);
-            mapContainer.appendChild(sheetWrapper);
-            renderColumnSelects();
-
-            // función para renderizar preview según mapeo actual
-            const renderPreview = () => {
-              previewCli.innerHTML = '';
-              previewCt.innerHTML = '';
-              const mEmp = document.getElementById('xls-map-empresa')?.value;
-              const mCt = document.getElementById('xls-map-contacto')?.value;
-              const mMail = document.getElementById('xls-map-correo')?.value;
-              const mTel = document.getElementById('xls-map-telefono')?.value;
-              const mEmpMail = document.getElementById('xls-map-empresa-correo')?.value;
-              clientesArr.slice(0,5).forEach((r) => {
-                const tr = document.createElement('tr');
-                const val = mEmp ? (r[mEmp] || '—') : (r.EMPRESA||r.Empresa||r.company||r['RAZON SOCIAL']||'—');
-                const tel = mTel ? (r[mTel] || '') : (r.TELEFONO||r.TELEFONO1||'');
-                const empMail = mEmpMail ? (r[mEmpMail] ? (' - '+r[mEmpMail]) : '') : (r.CORREO?(' - '+r.CORREO):'');
-                tr.innerHTML = `<td style="padding:6px; border-bottom:1px solid var(--border-subtle);">${val}${tel?(' — '+tel):''}${empMail}</td>`;
-                previewCli.appendChild(tr);
-              });
-              contactosArr.slice(0,5).forEach((r) => {
-                const tr = document.createElement('tr');
-                const name = mCt ? (r[mCt] || '—') : (r.CONTACTO||r['CONTACTO PRINCIPAL']||r.nombre||r.name||'—');
-                const mail = mMail ? (r[mMail] ? (' - '+r[mMail]) : '') : (r.CORREO?(' - '+r.CORREO):'');
-                tr.innerHTML = `<td style="padding:6px; border-bottom:1px solid var(--border-subtle);">${name}${mail}</td>`;
-                previewCt.appendChild(tr);
-              });
-            };
-
-            // actualizar preview cuando cambien selects
-            ['xls-map-empresa','xls-map-contacto','xls-map-correo'].forEach(id => {
-              document.getElementById(id)?.addEventListener('change', renderPreview);
-            });
-
-            // render inicial
-            renderPreview();
-            // deshabilitar el botón de subir hasta mapear Empresa y Contacto
-            const btnUpload = document.getElementById('btnXlsConfirmUpload');
-            if (btnUpload) {
-              const ensureToggle = () => {
-                const ok = Boolean(document.getElementById('xls-map-empresa')?.value && document.getElementById('xls-map-contacto')?.value);
-                btnUpload.disabled = !ok;
-                btnUpload.style.opacity = ok ? '1' : '0.5';
-              };
-              // inicial
-              ensureToggle();
-              ['xls-map-empresa','xls-map-contacto','xls-map-correo','xls-map-telefono','xls-map-empresa-correo'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.addEventListener('change', ensureToggle);
-              });
-            }
-            modal.style.display = 'flex';
-
-            // Setup modal buttons
-            const cancelarImportXls = () => {
-              modal.style.display = 'none';
-              clientes = clientesAntesImportXls;
-              contactos = contactosAntesImportXls;
-              renderEmpresas();
-              renderContactos();
-            };
-            document.getElementById('btnCerrarXlsSummary2').onclick = cancelarImportXls;
-            document.getElementById('btnCerrarXlsSummary').onclick = cancelarImportXls;
-
-            document.getElementById('btnXlsDescargarRespaldo').onclick = () => {
-              const backup = { clientes, contactos, ts: new Date().toISOString() };
-              const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-              const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-              a.download = `respaldo-crm-${new Date().toISOString().slice(0,10)}.json`; a.click();
-              toast('⬇️ Respaldo descargado');
-            };
-
-            document.getElementById('btnXlsConfirmUpload').onclick = async () => {
-              // Re-detectar mapeo desde los datos actuales (más confiable que leer los SELECTs)
-              const currentSheet = (document.getElementById('xls-map-hoja') as HTMLSelectElement)?.value || sheetDefault;
-              const currentArr   = leerHojaInteligente(wb.Sheets[currentSheet]);
-              const currentSample = (currentArr[0] as any) || {};
-              const autoM = calcularMapeo(currentSample);
-              console.log('[Import] Hoja final:', currentSheet, '| Columnas:', Object.keys(currentSample));
-              console.log('[Import] AutoMapeo → ct2:', autoM.contacto2Key, '| mail2:', autoM.correo2Key, '| tel2:', autoM.tel2Key);
-
-              // SELECT tiene prioridad; si está vacío usa auto-detección
-              const mEmp  = (document.getElementById('xls-map-empresa')  as HTMLSelectElement)?.value || autoM.empresaKey  || '';
-              const mCt   = (document.getElementById('xls-map-contacto') as HTMLSelectElement)?.value || autoM.contactoKey || '';
-              if (!mEmp) {
-                toast("⚠️ Por favor selecciona la columna de Empresa antes de subir.", "warning");
-                modal.style.display = 'flex';
-                return;
-              }
-              if (!await confirmar(`Esto REEMPLAZARÁ todas las empresas y contactos actuales con los datos del Excel.\n\n¿Ya descargaste el respaldo? Continuar de todos modos?`, "⚠️")) return;
-              modal.style.display = 'none';
-              mostrarEstado('🔄 Subiendo datos a Firebase...');
-              // Usar datos de la hoja seleccionada
-              clientesArr = currentArr as any[];
-              contactosArr = clientesArr;
-              try {
-                const mCt2   = (document.getElementById('xls-map-contacto2')  as HTMLSelectElement)?.value || autoM.contacto2Key || '';
-                const mMail  = (document.getElementById('xls-map-correo')     as HTMLSelectElement)?.value || autoM.correoKey   || '';
-                const mMail2 = (document.getElementById('xls-map-correo2')    as HTMLSelectElement)?.value || autoM.correo2Key  || '';
-                const mTel   = (document.getElementById('xls-map-telefono')   as HTMLSelectElement)?.value || autoM.telKey      || '';
-                const mTel2  = (document.getElementById('xls-map-telefono2')  as HTMLSelectElement)?.value || autoM.tel2Key     || '';
-                const mRfc   = (document.getElementById('xls-map-rfc')        as HTMLSelectElement)?.value || autoM.rfcKey      || '';
-                console.log('[Import] Mapeo final → mCt2:', mCt2, '| mMail2:', mMail2, '| mTel2:', mTel2);
-
-                // Convierte cualquier valor de celda Excel a string seguro para Firestore
-                const xs = v => {
-                  if (v === null || v === undefined) return '';
-                  if (v instanceof Date) return v.toISOString().slice(0,10);
-                  if (typeof v === 'object') return '';
-                  return String(v).trim();
-                };
-                const col = (r, key) => key ? xs(r[key]) : '';
-
-                // Mapear empresas desde el Excel — preservar versiones/vencimientos existentes
-                const mappedClientes = (clientesArr||[]).map(r => {
-                  // Buscar nombre de empresa en todas las columnas posibles
-                  const empRaw = col(r, mEmp) || xs(r.EMPRESA) || xs(r.Empresa) || xs(r.empresa) || '';
-                  const empNorm = empRaw.toUpperCase().trim();
-                  if (!empNorm || empNorm === 'UNDEFINED') return null;
-                  const previa = clientes.find(c => (c.EMPRESA||'').toUpperCase().trim() === empNorm);
-                  return {
-                    EMPRESA:     empNorm,
-                    CONTACTO:    col(r, mCt)   || xs(r['Contacto principal']) || xs(r.CONTACTO) || '',
-                    CONTACTO_2:  col(r, mCt2)  || '',
-                    CORREO:      (col(r, mMail)  || '').toLowerCase(),
-                    CORREO_2:    (col(r, mMail2) || '').toLowerCase(),
-                    RFC:         col(r, mRfc) || xs(previa?.RFC) || '',
-                    TELEFONO_1:  col(r, mTel)  || '',
-                    TELEFONO_2:  col(r, mTel2) || '',
-                    FAVORITO:    previa?.FAVORITO === true,
-                    CAMPOS_EXTRAS: previa?.CAMPOS_EXTRAS || {},
-                    SISTEMAS:      previa?.SISTEMAS      || {},
-                    VENCIMIENTOS:  previa?.VENCIMIENTOS  || {}
-                  };
-                }).filter(Boolean);
-
-                if (mappedClientes.length === 0) {
-                  toast('⚠️ No se detectaron empresas. Verifica que la columna "Empresa" esté seleccionada correctamente.');
-                  ocultarEstado();
-                  return;
-                }
-
-                // Sanitización profunda: garantiza que no haya undefined, funciones, ni tipos inválidos para Firestore
-                const fsClean = (v) => {
-                  if (v === undefined || v === null) return null;
-                  if (typeof v === 'function' || typeof v === 'symbol') return null;
-                  if (typeof v === 'number') return isFinite(v) ? v : null;
-                  if (typeof v === 'boolean' || typeof v === 'string') return v;
-                  if (v instanceof Date) return v.toISOString();
-                  if (Array.isArray(v)) return v.map(fsClean).filter(x => x !== undefined);
-                  if (typeof v === 'object') {
-                    const out = {};
-                    for (const [k, val] of Object.entries(v)) {
-                      if (typeof k === 'string' && k.length > 0) out[k] = fsClean(val);
-                    }
-                    return out;
-                  }
-                  return String(v);
-                };
-                const cleanedClientes = mappedClientes.map(fsClean);
-
-                // DEBUG: mostrar columna detectada para CONTACTO_2
-                const ct2Count = mappedClientes.filter(e => e.CONTACTO_2).length;
-                console.log('[Import] mCt2 =', mCt2, '| empresas con CONTACTO_2:', ct2Count);
-                console.log('[Import] Ejemplo CONTACTO_2:', mappedClientes.find(e => e.CONTACTO_2)?.CONTACTO_2 || '(ninguno)');
-                console.log('[Import] Primera empresa completa:', JSON.stringify(cleanedClientes[0]));
-
-                // Contactos desde empresa: principal + alternativo
-                const mappedContactos: any[] = [];
-                mappedClientes.forEach(e => {
-                  if (e.CONTACTO) {
-                    mappedContactos.push({ nombre: e.CONTACTO, correo: e.CORREO || '', telefono1: e.TELEFONO_1 || '', telefono2: '', empresa: e.EMPRESA });
-                  }
-                  if (e.CONTACTO_2) {
-                    mappedContactos.push({ nombre: e.CONTACTO_2, correo: e.CORREO_2 || '', telefono1: e.TELEFONO_2 || '', telefono2: '', empresa: e.EMPRESA });
-                  }
-                });
-
-                const ctPrincipales = mappedContactos.filter(c => mappedClientes.find(e => e.CONTACTO === c.nombre && e.EMPRESA === c.empresa)).length;
-                const ctAlternativos = mappedContactos.length - ctPrincipales;
-                console.log('[Import] Contactos totales:', mappedContactos.length, '| principales:', ctPrincipales, '| alternativos:', ctAlternativos);
-
-                // Guardar empresas primero
-                const okCli = await guardarClientes(cleanedClientes);
-                if (okCli === true) {
-                  clientes = mappedClientes;
-                  renderEmpresas(); renderDashboard();
-                } else {
-                  toast(`⚠️ Error al guardar empresas: ${okCli?.error || 'revisa la consola'}`);
-                  ocultarEstado(); return;
-                }
-
-                // Guardar contactos y forzar re-render después para ganar la race condition con onSnapshot
-                const okCt = await guardarContactos(mappedContactos);
-                if (okCt === true) {
-                  contactos = mappedContactos;
-                  renderContactos();
-                  renderDashboard();
-                  // Re-render adicional tras 1.5s para asegurar que onSnapshot no sobreescriba
-                  setTimeout(() => {
-                    contactos = mappedContactos;
-                    renderContactos();
-                  }, 1500);
-                }
-
-                toast(`✅ ${mappedClientes.length} empresas · ${mappedContactos.length} contactos (${ctAlternativos} alternativos) importados`);
-              } catch (err) {
-                console.error('Error subiendo a Firebase:', err);
-                toast('❌ Error subiendo a Firebase. Revisa la consola.');
-              } finally {
-                ocultarEstado();
-              }
-            };
-          }
-        } catch (err) {
-          console.error('Error parseando Excel:', err);
-          toast("❌ Error leyendo el archivo Excel. Revisa el formato.", "error");
-        }
-      };
-      reader.readAsArrayBuffer(f);
-    } catch (err) {
-      console.error(err);
-      toast("❌ No se pudo leer el archivo.", "error");
-    }
-  });
-
-  document.getElementById("btnImportCSVContactos")?.addEventListener("click", () => {
-    importCSVTarget = "contactos";
-    document.getElementById("import-csv-titulo").textContent = "📥 Importar CSV — Contactos";
-    document.getElementById("import-csv-preview")?.classList.add("hidden");
-    csvParsedData = [];
-    if (modalCSV) modalCSV.style.display = "flex";
-  });
-
-  document.getElementById("btnCerrarImportCSV")?.addEventListener("click", () => {
-    if (modalCSV) modalCSV.style.display = "none";
-  });
-
-  document.getElementById("btnCancelarImport")?.addEventListener("click", () => {
-    document.getElementById("import-csv-preview")?.classList.add("hidden");
-    csvParsedData = [];
-  });
-
-  const csvZone = document.getElementById("import-csv-zone");
-  const csvInput = document.getElementById("import-csv-input");
-
-  csvZone?.addEventListener("click", () => csvInput?.click());
-  csvZone?.addEventListener("dragover", e => { e.preventDefault(); csvZone.style.borderColor = "var(--brand-primary)"; });
-  csvZone?.addEventListener("dragleave", () => { csvZone.style.borderColor = ""; });
-  csvZone?.addEventListener("drop", e => {
-    e.preventDefault();
-    csvZone.style.borderColor = "";
-    if (e.dataTransfer.files.length) processCSV(e.dataTransfer.files[0]);
-  });
-  csvInput?.addEventListener("change", () => { if (csvInput.files.length) processCSV(csvInput.files[0]); });
-
-  function processCSV(file) {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const text = e.target.result;
-      const lines = text.split(/\r?\n/).filter(l => l.trim());
-      if (lines.length < 2) { toast("⚠️ CSV vacío.", "warning"); return; }
-
-      const delimiter = lines[0].includes(";") ? ";" : ",";
-      const headers = lines[0].replace(/^\uFEFF/, "").split(delimiter).map(h => h.trim().replace(/^"|"$/g, "")).map(h => h.toUpperCase());
-      const rows = [];
-      for (let i = 1; i < lines.length; i++) {
-        const vals = lines[i].split(",").map(v => v.trim().replace(/^"|"$/g, ""));
-        const obj = {};
-        headers.forEach((h, j) => { obj[h] = vals[j] || ""; });
-        rows.push(obj);
-      }
-
-      csvParsedData = rows;
-      document.getElementById("import-csv-count").textContent = rows.length;
-
-      // Render preview
-      const thead = document.getElementById("import-csv-thead");
-      const tbody = document.getElementById("import-csv-tbody");
-      thead.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr>`;
-      tbody.innerHTML = "";
-      rows.slice(0, 10).forEach(row => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = headers.map(h => `<td>${row[h] || ""}</td>`).join("");
-        tbody.appendChild(tr);
-      });
-      document.getElementById("import-csv-preview")?.classList.remove("hidden");
-    };
-    // Leer primero como binario para detectar encoding Windows-1252 (Excel) vs UTF-8
-    const sniff = new FileReader();
-    sniff.onload = ev => {
-      const bytes = new Uint8Array(ev.target.result.slice(0, 4));
-      // BOM UTF-8: EF BB BF — si está presente, es UTF-8 seguro
-      const enc = (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF)
-        ? 'UTF-8' : 'windows-1252';
-      reader.readAsText(file, enc);
-    };
-    sniff.readAsArrayBuffer(file);
-  }
-
-  document.getElementById("btnConfirmarImport")?.addEventListener("click", async () => {
-    if (csvParsedData.length === 0) return;
-
-    if (importCSVTarget === "empresas") {
-      csvParsedData.forEach(row => {
-        const nombre = (row["EMPRESA"] || row["NOMBRE"] || row["EMPRESA"] || row["NOMBRE"] || "").toUpperCase().trim();
-        if (!nombre) return;
-        if (clientes.find(c => c.EMPRESA === nombre)) return; // skip duplicates
-        clientes.push({
-          EMPRESA: nombre,
-          CONTACTO: row["CONTACTO"] || row["Contacto"] || row["contacto"] || "",
-          CORREO: row["CORREO"] || row["Correo"] || row["correo"] || row["EMAIL"] || "",
-          TELEFONO_1: row["TELEFONO"] || row["Telefono"] || row["telefono1"] || row["TELEFONO_1"] || "",
-          TELEFONO_2: row["TELEFONO_2"] || row["telefono2"] || "",
-          FAVORITO: false,
-          CAMPOS_EXTRAS: {},
-          SISTEMAS: {}
-        });
-      });
-      if (crmLocalOnly) {
-        guardarLocal("crm_clientes", clientes);
-        toast(`✅ ${csvParsedData.length} empresas importadas (Local)`);
-      } else {
-        await guardarClientes(clientes);
-        toast(`✅ ${csvParsedData.length} empresas importadas`);
-      }
-      renderEmpresas();
-    } else {
-      csvParsedData.forEach(row => {
-        const nombre = (row["NOMBRE"] || row["Nombre"] || row["nombre"] || "").trim();
-        if (!nombre) return;
-        contactos.push({
-          nombre,
-          correo: row["CORREO"] || row["Correo"] || row["correo"] || row["EMAIL"] || "",
-          telefono1: row["TELEFONO"] || row["Telefono"] || row["telefono1"] || row["TELEFONO_1"] || "",
-          telefono2: row["TELEFONO_2"] || row["telefono2"] || "",
-          empresa: row["EMPRESA"] || row["Empresa"] || row["empresa"] || ""
-        });
-      });
-      if (crmLocalOnly) {
-        guardarLocal("crm_contactos", contactos);
-        toast(`✅ ${csvParsedData.length} contactos importados (Local)`);
-      } else {
-        await guardarContactos(contactos);
-        toast(`✅ ${csvParsedData.length} contactos importados`);
-      }
-      renderContactos();
-    }
-
-    csvParsedData = [];
-    if (modalCSV) modalCSV.style.display = "none";
-    renderDashboard();
   });
 
   // ============================================================
