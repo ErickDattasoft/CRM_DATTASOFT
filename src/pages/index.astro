@@ -12332,6 +12332,9 @@ verificarSesion();
 
     // Check "predeterminado" (⭐): solo puede haber uno marcado por catálogo. Si se desmarca,
     // el catálogo se queda sin predeterminado y el select nace vacío al crear un ticket nuevo.
+    // Se guarda de inmediato (no hasta que se le dé click a "Guardar Configuración" más abajo)
+    // porque antes se perdía en silencio si el usuario marcaba la estrella y recargaba sin
+    // acordarse de guardar todo el catálogo — igual que el ⭐ de "Favorito" en Empresas.
     document.querySelectorAll(".cfg-default-chk").forEach(chk => {
       chk.onchange = () => {
         const field = chk.dataset.field;
@@ -12340,6 +12343,8 @@ verificarSesion();
         if (chk.checked) configTickets.defaults[field] = configTickets[field][idx];
         else delete configTickets.defaults[field];
         renderConfig();
+        if (crmLocalOnly) guardarLocal("crm_config_tickets", configTickets);
+        else guardarConfigTickets({ defaults: configTickets.defaults }).catch(() => {});
       };
     });
   }
