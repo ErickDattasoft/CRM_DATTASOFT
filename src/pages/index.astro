@@ -2797,6 +2797,7 @@ try {
                 </div>
                 <button class="btn btn-email btn-sm" id="btnMailLicencias" title="Avisar por correo licencias vencidas o por vencer"><span class="icon-email">📧</span>🔒 Email Licencias (<span class="lblCountSel">0</span>)</button>
                 <button class="btn btn-ghost btn-sm" id="btnLicenciasPendientes" title="Empresas con licencias vencidas o por vencer que aún no se les ha avisado">⏰ Licencias por vencer (<span id="lblCountLicenciasPendientes">0</span>)</button>
+                <button class="btn btn-ghost btn-sm" id="btnVerPapeleraEmpresas" title="Papelera de empresas eliminadas">🗑️ Papelera <span id="badge-papelera-empresas" class="nav-badge" style="display:none;">0</span></button>
                 <button class="btn btn-primary btn-sm" id="btnNuevoEmpresa">➕ Registrar Empresa</button>
               </div>
             </div>
@@ -2916,6 +2917,7 @@ try {
           <div class="controls-right">
             <button class="btn btn-ghost btn-sm" id="btnImportCSVContactos">📥 Importar CSV</button>
             <button class="btn btn-ghost btn-sm" id="btnExportCSVContactos">📤 Exportar CSV</button>
+            <button class="btn btn-ghost btn-sm" id="btnVerPapeleraContactos" title="Papelera de contactos eliminados">🗑️ Papelera <span id="badge-papelera-contactos" class="nav-badge" style="display:none;">0</span></button>
             <button class="btn btn-primary btn-sm" id="btnNuevoContacto">➕ Agregar Contacto</button>
           </div>
         </div>
@@ -5107,7 +5109,7 @@ try {
 <div id="modal-papelera" class="modal-center" style="display:none;">
   <div class="modal-box" style="width:720px; max-width:96%;">
     <div class="modal-header">
-      <h2>🗑️ Papelera de Reciclaje</h2>
+      <h2>🗑️ Papelera de Reciclaje — Tickets</h2>
       <button class="modal-close" id="btnCerrarPapelera">×</button>
     </div>
     <div style="padding:14px 18px;">
@@ -5116,6 +5118,7 @@ try {
         <table>
           <thead>
             <tr>
+              <th style="width:36px; text-align:center;"><input type="checkbox" id="chkPapeleraTodoTickets" title="Seleccionar todos"></th>
               <th style="width:70px;">Folio</th>
               <th>Asunto</th>
               <th>Empresa</th>
@@ -5127,8 +5130,81 @@ try {
           <tbody id="tabla-papelera-body"></tbody>
         </table>
       </div>
-      <div class="form-actions" style="margin-top:12px; justify-content:flex-end;">
+      <div class="form-actions" style="margin-top:12px; justify-content:space-between;">
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-success btn-sm" id="btnRestaurarSeleccionadosTickets">↩️ Restaurar seleccionados</button>
+          <button class="btn btn-danger btn-sm" id="btnEliminarSeleccionadosTickets">🔥 Eliminar seleccionados</button>
+        </div>
         <button class="btn btn-danger btn-sm" id="btnVaciarPapelera">🔥 Vaciar Papelera</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: Papelera de Empresas ===== -->
+<div id="modal-papelera-empresas" class="modal-center" style="display:none;">
+  <div class="modal-box" style="width:640px; max-width:96%;">
+    <div class="modal-header">
+      <h2>🗑️ Papelera de Empresas</h2>
+      <button class="modal-close" id="btnCerrarPapeleraEmpresas">×</button>
+    </div>
+    <div style="padding:14px 18px;">
+      <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:12px;">Las empresas eliminadas quedan aquí hasta que las restaures o las borres definitivamente.</p>
+      <div class="table-wrap" style="max-height:350px;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:36px; text-align:center;"><input type="checkbox" id="chkPapeleraTodoEmpresas" title="Seleccionar todas"></th>
+              <th>Empresa</th>
+              <th>RFC</th>
+              <th>Eliminado</th>
+              <th style="text-align:center;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-papelera-empresas-body"></tbody>
+        </table>
+      </div>
+      <div class="form-actions" style="margin-top:12px; justify-content:space-between;">
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-success btn-sm" id="btnRestaurarSeleccionadosEmpresas">↩️ Restaurar seleccionadas</button>
+          <button class="btn btn-danger btn-sm" id="btnEliminarSeleccionadosEmpresas">🔥 Eliminar seleccionadas</button>
+        </div>
+        <button class="btn btn-danger btn-sm" id="btnVaciarPapeleraEmpresas">🔥 Vaciar Papelera</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: Papelera de Contactos ===== -->
+<div id="modal-papelera-contactos" class="modal-center" style="display:none;">
+  <div class="modal-box" style="width:640px; max-width:96%;">
+    <div class="modal-header">
+      <h2>🗑️ Papelera de Contactos</h2>
+      <button class="modal-close" id="btnCerrarPapeleraContactos">×</button>
+    </div>
+    <div style="padding:14px 18px;">
+      <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:12px;">Los contactos eliminados quedan aquí hasta que los restaures o los borres definitivamente.</p>
+      <div class="table-wrap" style="max-height:350px;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:36px; text-align:center;"><input type="checkbox" id="chkPapeleraTodoContactos" title="Seleccionar todos"></th>
+              <th>Nombre</th>
+              <th>Empresa</th>
+              <th>Correo</th>
+              <th>Eliminado</th>
+              <th style="text-align:center;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-papelera-contactos-body"></tbody>
+        </table>
+      </div>
+      <div class="form-actions" style="margin-top:12px; justify-content:space-between;">
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-success btn-sm" id="btnRestaurarSeleccionadosContactos">↩️ Restaurar seleccionados</button>
+          <button class="btn btn-danger btn-sm" id="btnEliminarSeleccionadosContactos">🔥 Eliminar seleccionados</button>
+        </div>
+        <button class="btn btn-danger btn-sm" id="btnVaciarPapeleraContactos">🔥 Vaciar Papelera</button>
       </div>
     </div>
   </div>
@@ -5240,7 +5316,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket } from "../data/firebase.js";
+import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarPapeleraEmpresas, guardarPapeleraContactos, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket } from "../data/firebase.js";
 import { parseEmailList, hoyLocalStr, parseFechaLocal, escapeHtml, slugBadge, esConsultoria, formatearDuracion, colorPuntoEstado, formatMoney } from "../data/utils.js";
 
 // ── Modal confirmación (reemplaza confirm() — funciona en móvil) ──
@@ -5724,6 +5800,8 @@ verificarSesion();
   let cartasTecnicas = {};
   let tickets = [];
   let papelera = [];
+  let papeleraEmpresas = [];
+  let papeleraContactos = [];
   let bitacoraLog = (() => { try { return JSON.parse(localStorage.getItem("crm_bitacora") || "[]"); } catch { return []; } })();
   let avisosVersionesLog = (() => { try { return JSON.parse(localStorage.getItem("crm_avisos_versiones") || "[]"); } catch { return []; } })();
   let avisosVersionesInited = false;
@@ -6449,6 +6527,8 @@ verificarSesion();
     // (primera carga, actualización remota, y botón "Actualizar" manual), porque usa
     // una lógica de fusión distinta a la sobreescritura directa que hace el resto de campos.
     if (datos.papelera) papelera = datos.papelera;
+    if (datos.papeleraEmpresas) papeleraEmpresas = datos.papeleraEmpresas;
+    if (datos.papeleraContactos) papeleraContactos = datos.papeleraContactos;
     if (datos.acercaDe) acercaDe = datos.acercaDe;
     if (datos.configCorreo) configCorreo = datos.configCorreo;
     if (datos.n8n && !preservarConfig) {
@@ -6480,6 +6560,8 @@ verificarSesion();
     renderContactos();
     renderTickets();
     actualizarBadgePapelera();
+    actualizarBadgePapeleraEmpresas();
+    actualizarBadgePapeleraContactos();
     checkLicenciasPorVencer();
     const secActiva = document.querySelector(".nav-item.active")?.dataset.section;
     if (secActiva === "bitacora") renderBitacora();
@@ -7154,13 +7236,16 @@ verificarSesion();
     const tbody = document.getElementById("tabla-papelera-body");
     if (!tbody) return;
     tbody.innerHTML = "";
+    const chkTodo = document.getElementById("chkPapeleraTodoTickets") as HTMLInputElement;
+    if (chkTodo) chkTodo.checked = false;
     if (!papelera.length) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:20px; font-style:italic;">Papelera vacía.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:20px; font-style:italic;">Papelera vacía.</td></tr>';
       return;
     }
     papelera.forEach((t, i) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
+        <td style="text-align:center;"><input type="checkbox" class="chk-papelera-tk" data-idx="${i}"></td>
         <td style="text-align:center; font-weight:700; color:var(--text-muted);">#${t.numero}</td>
         <td><strong>${escapeHtml(t.asunto) || "—"}</strong></td>
         <td>${escapeHtml(t.empresa) || "—"}</td>
@@ -7175,7 +7260,7 @@ verificarSesion();
       tbody.appendChild(tr);
     });
     tbody.querySelectorAll(".btn-restaurar-tk").forEach(b => b.addEventListener("click", async (e) => {
-      const i = parseInt(e.target.closest("button").dataset.idx);
+      const i = parseInt((e.target as HTMLElement).closest("button").dataset.idx);
       const t = papelera.splice(i, 1)[0];
       delete t.fechaEliminado;
       tickets.push(t);
@@ -7188,7 +7273,7 @@ verificarSesion();
       renderDashboard();
     }));
     tbody.querySelectorAll(".btn-eliminar-def-tk").forEach(b => b.addEventListener("click", async (e) => {
-      const i = parseInt(e.target.closest("button").dataset.idx);
+      const i = parseInt((e.target as HTMLElement).closest("button").dataset.idx);
       if (!await confirmar("¿Eliminar definitivamente? Esta acción no se puede deshacer.", "🔥")) return;
       const t = papelera.splice(i, 1)[0];
       if (firebaseEnabled) guardarPapelera(papelera).catch(() => {});
@@ -7224,6 +7309,265 @@ verificarSesion();
     toast("🔥 Papelera vaciada");
     actualizarBadgePapelera();
     renderPapelera();
+  });
+  document.getElementById("chkPapeleraTodoTickets")?.addEventListener("change", (e) => {
+    const checked = (e.target as HTMLInputElement).checked;
+    document.querySelectorAll(".chk-papelera-tk").forEach(chk => { (chk as HTMLInputElement).checked = checked; });
+  });
+  function idxsSeleccionados(claseChk: string): number[] {
+    return Array.from(document.querySelectorAll(`.${claseChk}:checked`)).map(chk => parseInt((chk as HTMLInputElement).dataset.idx)).sort((a, b) => b - a);
+  }
+  document.getElementById("btnRestaurarSeleccionadosTickets")?.addEventListener("click", async () => {
+    const idxs = idxsSeleccionados("chk-papelera-tk");
+    if (!idxs.length) { toast("Selecciona al menos un ticket", "error"); return; }
+    const restaurados = [];
+    idxs.forEach(i => { const t = papelera.splice(i, 1)[0]; if (t) { delete t.fechaEliminado; restaurados.push(t); } });
+    tickets.push(...restaurados);
+    if (firebaseEnabled) { guardarPapelera(papelera).catch(() => {}); await guardarTickets(tickets); }
+    restaurados.forEach(t => logBitacora(`Ticket #${t.numero} restaurado de papelera`, "↩️"));
+    toast(`↩️ ${restaurados.length} ticket(s) restaurado(s)`);
+    actualizarBadgePapelera();
+    renderPapelera();
+    renderTickets();
+    renderDashboard();
+  });
+  document.getElementById("btnEliminarSeleccionadosTickets")?.addEventListener("click", async () => {
+    const idxs = idxsSeleccionados("chk-papelera-tk");
+    if (!idxs.length) { toast("Selecciona al menos un ticket", "error"); return; }
+    if (!await confirmar(`¿Eliminar definitivamente ${idxs.length} ticket(s)? Esta acción no se puede deshacer.`, "🔥")) return;
+    idxs.forEach(i => papelera.splice(i, 1));
+    if (firebaseEnabled) guardarPapelera(papelera).catch(() => {});
+    logBitacora(`${idxs.length} ticket(s) eliminado(s) definitivamente de la papelera`, "🔥");
+    toast(`🔥 ${idxs.length} ticket(s) eliminado(s) definitivamente`);
+    actualizarBadgePapelera();
+    renderPapelera();
+  });
+
+  // ============================================================
+  // PAPELERA DE EMPRESAS
+  // ============================================================
+  function renderPapeleraEmpresas() {
+    const tbody = document.getElementById("tabla-papelera-empresas-body");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    const chkTodo = document.getElementById("chkPapeleraTodoEmpresas") as HTMLInputElement;
+    if (chkTodo) chkTodo.checked = false;
+    if (!papeleraEmpresas.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px; font-style:italic;">Papelera vacía.</td></tr>';
+      return;
+    }
+    papeleraEmpresas.forEach((emp, i) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td style="text-align:center;"><input type="checkbox" class="chk-papelera-emp" data-idx="${i}"></td>
+        <td><strong>${escapeHtml(emp.EMPRESA) || "—"}</strong></td>
+        <td>${escapeHtml(emp.RFC) || "—"}</td>
+        <td style="font-size:0.78rem; color:var(--text-light);">${emp.fechaEliminado ? new Date(emp.fechaEliminado).toLocaleDateString('es-MX') : "—"}</td>
+        <td style="text-align:center;">
+          <div style="display:inline-flex; gap:4px;">
+            <button class="btn btn-success btn-xs btn-restaurar-emp" data-idx="${i}" title="Restaurar">↩️</button>
+            <button class="btn btn-danger btn-xs btn-eliminar-def-emp" data-idx="${i}" title="Eliminar definitivamente">🔥</button>
+          </div>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+    tbody.querySelectorAll(".btn-restaurar-emp").forEach(b => b.addEventListener("click", async (e) => {
+      const i = parseInt((e.target as HTMLElement).closest("button").dataset.idx);
+      const emp = papeleraEmpresas.splice(i, 1)[0];
+      delete emp.fechaEliminado;
+      clientes.push(emp);
+      guardarLocal("crm_clientes", clientes);
+      if (!crmLocalOnly) { await guardarClientes(clientes); await guardarPapeleraEmpresas(papeleraEmpresas); }
+      logBitacora(`Empresa "${emp.EMPRESA}" restaurada de papelera`, "↩️");
+      toast(`↩️ Empresa "${emp.EMPRESA}" restaurada`);
+      actualizarBadgePapeleraEmpresas();
+      renderPapeleraEmpresas();
+      renderEmpresas();
+      renderDashboard();
+    }));
+    tbody.querySelectorAll(".btn-eliminar-def-emp").forEach(b => b.addEventListener("click", async (e) => {
+      const i = parseInt((e.target as HTMLElement).closest("button").dataset.idx);
+      if (!await confirmar("¿Eliminar definitivamente? Esta acción no se puede deshacer.", "🔥")) return;
+      const emp = papeleraEmpresas.splice(i, 1)[0];
+      if (!crmLocalOnly) await guardarPapeleraEmpresas(papeleraEmpresas);
+      logBitacora(`Empresa "${emp.EMPRESA}" eliminada definitivamente`, "🔥");
+      toast(`🔥 Empresa eliminada definitivamente`);
+      actualizarBadgePapeleraEmpresas();
+      renderPapeleraEmpresas();
+    }));
+  }
+
+  function actualizarBadgePapeleraEmpresas() {
+    const badge = document.getElementById("badge-papelera-empresas");
+    if (!badge) return;
+    if (papeleraEmpresas.length > 0) { badge.style.display = "inline-flex"; badge.textContent = papeleraEmpresas.length; }
+    else { badge.style.display = "none"; }
+  }
+
+  document.getElementById("btnVerPapeleraEmpresas")?.addEventListener("click", () => {
+    renderPapeleraEmpresas();
+    const m = document.getElementById("modal-papelera-empresas");
+    if (m) m.style.display = "flex";
+  });
+  document.getElementById("btnCerrarPapeleraEmpresas")?.addEventListener("click", () => {
+    const m = document.getElementById("modal-papelera-empresas");
+    if (m) m.style.display = "none";
+  });
+  document.getElementById("btnVaciarPapeleraEmpresas")?.addEventListener("click", async () => {
+    if (!papeleraEmpresas.length) return;
+    if (!await confirmar(`¿Vaciar papelera? Se eliminarán ${papeleraEmpresas.length} empresa(s) permanentemente.`, "🔥")) return;
+    papeleraEmpresas = [];
+    if (!crmLocalOnly) await guardarPapeleraEmpresas(papeleraEmpresas);
+    logBitacora("Papelera de empresas vaciada", "🔥");
+    toast("🔥 Papelera de empresas vaciada");
+    actualizarBadgePapeleraEmpresas();
+    renderPapeleraEmpresas();
+  });
+  document.getElementById("chkPapeleraTodoEmpresas")?.addEventListener("change", (e) => {
+    const checked = (e.target as HTMLInputElement).checked;
+    document.querySelectorAll(".chk-papelera-emp").forEach(chk => { (chk as HTMLInputElement).checked = checked; });
+  });
+  document.getElementById("btnRestaurarSeleccionadosEmpresas")?.addEventListener("click", async () => {
+    const idxs = idxsSeleccionados("chk-papelera-emp");
+    if (!idxs.length) { toast("Selecciona al menos una empresa", "error"); return; }
+    const restauradas = [];
+    idxs.forEach(i => { const emp = papeleraEmpresas.splice(i, 1)[0]; if (emp) { delete emp.fechaEliminado; restauradas.push(emp); } });
+    clientes.push(...restauradas);
+    guardarLocal("crm_clientes", clientes);
+    if (!crmLocalOnly) { await guardarClientes(clientes); await guardarPapeleraEmpresas(papeleraEmpresas); }
+    restauradas.forEach(emp => logBitacora(`Empresa "${emp.EMPRESA}" restaurada de papelera`, "↩️"));
+    toast(`↩️ ${restauradas.length} empresa(s) restaurada(s)`);
+    actualizarBadgePapeleraEmpresas();
+    renderPapeleraEmpresas();
+    renderEmpresas();
+    renderDashboard();
+  });
+  document.getElementById("btnEliminarSeleccionadosEmpresas")?.addEventListener("click", async () => {
+    const idxs = idxsSeleccionados("chk-papelera-emp");
+    if (!idxs.length) { toast("Selecciona al menos una empresa", "error"); return; }
+    if (!await confirmar(`¿Eliminar definitivamente ${idxs.length} empresa(s)? Esta acción no se puede deshacer.`, "🔥")) return;
+    idxs.forEach(i => papeleraEmpresas.splice(i, 1));
+    if (!crmLocalOnly) await guardarPapeleraEmpresas(papeleraEmpresas);
+    logBitacora(`${idxs.length} empresa(s) eliminada(s) definitivamente de la papelera`, "🔥");
+    toast(`🔥 ${idxs.length} empresa(s) eliminada(s) definitivamente`);
+    actualizarBadgePapeleraEmpresas();
+    renderPapeleraEmpresas();
+  });
+
+  // ============================================================
+  // PAPELERA DE CONTACTOS
+  // ============================================================
+  function renderPapeleraContactos() {
+    const tbody = document.getElementById("tabla-papelera-contactos-body");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    const chkTodo = document.getElementById("chkPapeleraTodoContactos") as HTMLInputElement;
+    if (chkTodo) chkTodo.checked = false;
+    if (!papeleraContactos.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:20px; font-style:italic;">Papelera vacía.</td></tr>';
+      return;
+    }
+    papeleraContactos.forEach((ct, i) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td style="text-align:center;"><input type="checkbox" class="chk-papelera-ct" data-idx="${i}"></td>
+        <td><strong>${escapeHtml(ct.nombre) || "—"}</strong></td>
+        <td>${escapeHtml(ct.empresa) || "—"}</td>
+        <td>${escapeHtml(ct.correo) || "—"}</td>
+        <td style="font-size:0.78rem; color:var(--text-light);">${ct.fechaEliminado ? new Date(ct.fechaEliminado).toLocaleDateString('es-MX') : "—"}</td>
+        <td style="text-align:center;">
+          <div style="display:inline-flex; gap:4px;">
+            <button class="btn btn-success btn-xs btn-restaurar-ct" data-idx="${i}" title="Restaurar">↩️</button>
+            <button class="btn btn-danger btn-xs btn-eliminar-def-ct" data-idx="${i}" title="Eliminar definitivamente">🔥</button>
+          </div>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+    tbody.querySelectorAll(".btn-restaurar-ct").forEach(b => b.addEventListener("click", async (e) => {
+      const i = parseInt((e.target as HTMLElement).closest("button").dataset.idx);
+      const ct = papeleraContactos.splice(i, 1)[0];
+      delete ct.fechaEliminado;
+      contactos.push(ct);
+      guardarLocal("crm_contactos", contactos);
+      if (ct.empresa) sincronizarEmpresaDesdeContactos(ct.empresa);
+      if (!crmLocalOnly) { await guardarContactos(contactos); await guardarPapeleraContactos(papeleraContactos); }
+      logBitacora(`Contacto "${ct.nombre}" restaurado de papelera`, "↩️");
+      toast(`↩️ Contacto "${ct.nombre}" restaurado`);
+      actualizarBadgePapeleraContactos();
+      renderPapeleraContactos();
+      renderContactos();
+      renderEmpresas();
+      renderDashboard();
+    }));
+    tbody.querySelectorAll(".btn-eliminar-def-ct").forEach(b => b.addEventListener("click", async (e) => {
+      const i = parseInt((e.target as HTMLElement).closest("button").dataset.idx);
+      if (!await confirmar("¿Eliminar definitivamente? Esta acción no se puede deshacer.", "🔥")) return;
+      const ct = papeleraContactos.splice(i, 1)[0];
+      if (!crmLocalOnly) await guardarPapeleraContactos(papeleraContactos);
+      logBitacora(`Contacto "${ct.nombre}" eliminado definitivamente`, "🔥");
+      toast(`🔥 Contacto eliminado definitivamente`);
+      actualizarBadgePapeleraContactos();
+      renderPapeleraContactos();
+    }));
+  }
+
+  function actualizarBadgePapeleraContactos() {
+    const badge = document.getElementById("badge-papelera-contactos");
+    if (!badge) return;
+    if (papeleraContactos.length > 0) { badge.style.display = "inline-flex"; badge.textContent = papeleraContactos.length; }
+    else { badge.style.display = "none"; }
+  }
+
+  document.getElementById("btnVerPapeleraContactos")?.addEventListener("click", () => {
+    renderPapeleraContactos();
+    const m = document.getElementById("modal-papelera-contactos");
+    if (m) m.style.display = "flex";
+  });
+  document.getElementById("btnCerrarPapeleraContactos")?.addEventListener("click", () => {
+    const m = document.getElementById("modal-papelera-contactos");
+    if (m) m.style.display = "none";
+  });
+  document.getElementById("btnVaciarPapeleraContactos")?.addEventListener("click", async () => {
+    if (!papeleraContactos.length) return;
+    if (!await confirmar(`¿Vaciar papelera? Se eliminarán ${papeleraContactos.length} contacto(s) permanentemente.`, "🔥")) return;
+    papeleraContactos = [];
+    if (!crmLocalOnly) await guardarPapeleraContactos(papeleraContactos);
+    logBitacora("Papelera de contactos vaciada", "🔥");
+    toast("🔥 Papelera de contactos vaciada");
+    actualizarBadgePapeleraContactos();
+    renderPapeleraContactos();
+  });
+  document.getElementById("chkPapeleraTodoContactos")?.addEventListener("change", (e) => {
+    const checked = (e.target as HTMLInputElement).checked;
+    document.querySelectorAll(".chk-papelera-ct").forEach(chk => { (chk as HTMLInputElement).checked = checked; });
+  });
+  document.getElementById("btnRestaurarSeleccionadosContactos")?.addEventListener("click", async () => {
+    const idxs = idxsSeleccionados("chk-papelera-ct");
+    if (!idxs.length) { toast("Selecciona al menos un contacto", "error"); return; }
+    const restaurados = [];
+    idxs.forEach(i => { const ct = papeleraContactos.splice(i, 1)[0]; if (ct) { delete ct.fechaEliminado; restaurados.push(ct); } });
+    contactos.push(...restaurados);
+    guardarLocal("crm_contactos", contactos);
+    restaurados.forEach(ct => { if (ct.empresa) sincronizarEmpresaDesdeContactos(ct.empresa); });
+    if (!crmLocalOnly) { await guardarContactos(contactos); await guardarPapeleraContactos(papeleraContactos); }
+    restaurados.forEach(ct => logBitacora(`Contacto "${ct.nombre}" restaurado de papelera`, "↩️"));
+    toast(`↩️ ${restaurados.length} contacto(s) restaurado(s)`);
+    actualizarBadgePapeleraContactos();
+    renderPapeleraContactos();
+    renderContactos();
+    renderEmpresas();
+    renderDashboard();
+  });
+  document.getElementById("btnEliminarSeleccionadosContactos")?.addEventListener("click", async () => {
+    const idxs = idxsSeleccionados("chk-papelera-ct");
+    if (!idxs.length) { toast("Selecciona al menos un contacto", "error"); return; }
+    if (!await confirmar(`¿Eliminar definitivamente ${idxs.length} contacto(s)? Esta acción no se puede deshacer.`, "🔥")) return;
+    idxs.forEach(i => papeleraContactos.splice(i, 1));
+    if (!crmLocalOnly) await guardarPapeleraContactos(papeleraContactos);
+    logBitacora(`${idxs.length} contacto(s) eliminado(s) definitivamente de la papelera`, "🔥");
+    toast(`🔥 ${idxs.length} contacto(s) eliminado(s) definitivamente`);
+    actualizarBadgePapeleraContactos();
+    renderPapeleraContactos();
   });
 
   // ============================================================
@@ -9094,10 +9438,11 @@ verificarSesion();
     const nombreEmp = clientes[idx]?.EMPRESA || "desconocida";
     const contactosLigados = contactos.filter((c: any) => c.empresa === nombreEmp).length;
     const aviso = contactosLigados > 0
-      ? `¿Eliminar esta empresa? Tiene ${contactosLigados} contacto(s) asociado(s) — quedarán sin empresa asignada (no se borran).`
-      : "¿Eliminar esta empresa?";
+      ? `¿Eliminar esta empresa? Tiene ${contactosLigados} contacto(s) asociado(s) — quedarán sin empresa asignada (no se borran). Podrás recuperarla desde la papelera.`
+      : "¿Eliminar esta empresa? Podrás recuperarla desde la papelera.";
     if (!await confirmar(aviso, "🗑️")) return;
-    clientes.splice(idx, 1);
+    const [empresaEliminada] = clientes.splice(idx, 1);
+    papeleraEmpresas.push({ ...empresaEliminada, fechaEliminado: new Date().toISOString() });
     // No se borran los contactos de esa empresa: se desvinculan para que no queden
     // apuntando a una empresa fantasma, pero siguen visibles/editables en Contactos.
     let contactosDesvinculados = 0;
@@ -9107,6 +9452,7 @@ verificarSesion();
     });
     guardarLocal("crm_clientes", clientes);
     guardarLocal("crm_contactos", contactos);
+    actualizarBadgePapeleraEmpresas();
     logBitacora(`Empresa "${nombreEmp}" eliminada${contactosDesvinculados ? ` (${contactosDesvinculados} contactos desvinculados)` : ""}`, "🗑️");
     if (crmLocalOnly) {
       toast("🗑️ Empresa eliminada (Local)");
@@ -9117,6 +9463,7 @@ verificarSesion();
     }
     await guardarClientes(clientes);
     if (contactosDesvinculados) await guardarContactos(contactos);
+    await guardarPapeleraEmpresas(papeleraEmpresas);
     renderEmpresas();
     renderContactos();
     renderDashboard();
@@ -10271,14 +10618,16 @@ verificarSesion();
 
   async function eliminarContacto(e) {
     const idx = parseInt(e.target.closest("button").dataset.idx);
-    if (!await confirmar("¿Eliminar este contacto?", "🗑️")) return;
+    if (!await confirmar("¿Eliminar este contacto? Podrás recuperarlo desde la papelera.", "🗑️")) return;
     const ct = contactos[idx];
     const nombreCt = ct?.nombre || "desconocido";
     const empresaCt = ct?.empresa || "";
     contactos.splice(idx, 1);
+    papeleraContactos.push({ ...ct, fechaEliminado: new Date().toISOString() });
     logBitacora(`Contacto "${nombreCt}"${empresaCt ? ` (${empresaCt})` : ""} eliminado`, "🗑️");
     if (empresaCt) sincronizarEmpresaDesdeContactos(empresaCt);
     guardarLocal("crm_contactos", contactos);
+    actualizarBadgePapeleraContactos();
     if (crmLocalOnly) {
       toast("🗑️ Contacto eliminado (Local)");
       renderContactos();
@@ -10287,6 +10636,7 @@ verificarSesion();
       return;
     }
     await guardarContactos(contactos);
+    await guardarPapeleraContactos(papeleraContactos);
     renderContactos();
     renderEmpresas();
     renderDashboard();
@@ -15309,18 +15659,20 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
   // Inicializar badge papelera
   actualizarBadgePapelera();
+  actualizarBadgePapeleraEmpresas();
+  actualizarBadgePapeleraContactos();
 
   // Cerrar modales con Escape
   document.addEventListener("keydown", e => {
     if (e.key !== "Escape") return;
-    ["modal-acerca-de", "modal-papelera", "modal-exportar-excel", "kb-export-modal", "modal-inscritos", "modal-nueva-tarea"].forEach(id => {
+    ["modal-acerca-de", "modal-papelera", "modal-papelera-empresas", "modal-papelera-contactos", "modal-exportar-excel", "kb-export-modal", "modal-inscritos", "modal-nueva-tarea"].forEach(id => {
       const m = document.getElementById(id);
       if (m && m.style.display !== "none") m.style.display = "none";
     });
   });
 
   // Cerrar modales al click fuera
-  ["modal-acerca-de", "modal-papelera", "modal-exportar-excel"].forEach(id => {
+  ["modal-acerca-de", "modal-papelera", "modal-papelera-empresas", "modal-papelera-contactos", "modal-exportar-excel"].forEach(id => {
     const m = document.getElementById(id);
     m?.addEventListener("click", e => { if (e.target === m) m.style.display = "none"; });
   });

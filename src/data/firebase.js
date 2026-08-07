@@ -393,6 +393,28 @@ export async function guardarPapelera(papelera) {
   }
 }
 
+export async function guardarPapeleraEmpresas(papeleraEmpresas) {
+  try {
+    const docRef = doc(db, "agenda", "datos");
+    await setDoc(docRef, { papeleraEmpresas }, { merge: true });
+    return true;
+  } catch (error) {
+    avisarErrorGuardado("papelera de empresas", error);
+    return false;
+  }
+}
+
+export async function guardarPapeleraContactos(papeleraContactos) {
+  try {
+    const docRef = doc(db, "agenda", "datos");
+    await setDoc(docRef, { papeleraContactos }, { merge: true });
+    return true;
+  } catch (error) {
+    avisarErrorGuardado("papelera de contactos", error);
+    return false;
+  }
+}
+
 /**
  * Guarda el contenido del Acerca De en Firestore.
  */
