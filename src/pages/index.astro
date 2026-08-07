@@ -7259,28 +7259,28 @@ verificarSesion();
         </td>`;
       tbody.appendChild(tr);
     });
-    tbody.querySelectorAll(".btn-restaurar-tk").forEach(b => b.addEventListener("click", async (e) => {
+    tbody.querySelectorAll(".btn-restaurar-tk").forEach(b => b.addEventListener("click", (e) => {
       const i = parseInt((e.target as HTMLElement).closest("button").dataset.idx);
       const t = papelera.splice(i, 1)[0];
       delete t.fechaEliminado;
       tickets.push(t);
-      if (firebaseEnabled) { guardarPapelera(papelera).catch(() => {}); await guardarTickets(tickets); }
       logBitacora(`Ticket #${t.numero} restaurado de papelera`, "↩️");
       toast(`↩️ Ticket #${t.numero} restaurado`);
       actualizarBadgePapelera();
       renderPapelera();
       renderTickets();
       renderDashboard();
+      if (firebaseEnabled) { guardarPapelera(papelera).catch(() => {}); guardarTickets(tickets).catch(() => {}); }
     }));
     tbody.querySelectorAll(".btn-eliminar-def-tk").forEach(b => b.addEventListener("click", async (e) => {
       const i = parseInt((e.target as HTMLElement).closest("button").dataset.idx);
       if (!await confirmar("¿Eliminar definitivamente? Esta acción no se puede deshacer.", "🔥")) return;
       const t = papelera.splice(i, 1)[0];
-      if (firebaseEnabled) guardarPapelera(papelera).catch(() => {});
       logBitacora(`Ticket #${t.numero} eliminado definitivamente`, "🔥");
       toast(`🔥 Ticket eliminado definitivamente`);
       actualizarBadgePapelera();
       renderPapelera();
+      if (firebaseEnabled) guardarPapelera(papelera).catch(() => {});
     }));
   }
 
@@ -7304,11 +7304,11 @@ verificarSesion();
     if (!papelera.length) return;
     if (!await confirmar(`¿Vaciar papelera? Se eliminarán ${papelera.length} ticket(s) permanentemente.`, "🔥")) return;
     papelera = [];
-    if (firebaseEnabled) guardarPapelera(papelera).catch(() => {});
     logBitacora("Papelera vaciada", "🔥");
     toast("🔥 Papelera vaciada");
     actualizarBadgePapelera();
     renderPapelera();
+    if (firebaseEnabled) guardarPapelera(papelera).catch(() => {});
   });
   document.getElementById("chkPapeleraTodoTickets")?.addEventListener("change", (e) => {
     const checked = (e.target as HTMLInputElement).checked;
@@ -7317,30 +7317,30 @@ verificarSesion();
   function idxsSeleccionados(claseChk: string): number[] {
     return Array.from(document.querySelectorAll(`.${claseChk}:checked`)).map(chk => parseInt((chk as HTMLInputElement).dataset.idx)).sort((a, b) => b - a);
   }
-  document.getElementById("btnRestaurarSeleccionadosTickets")?.addEventListener("click", async () => {
+  document.getElementById("btnRestaurarSeleccionadosTickets")?.addEventListener("click", () => {
     const idxs = idxsSeleccionados("chk-papelera-tk");
     if (!idxs.length) { toast("Selecciona al menos un ticket", "error"); return; }
     const restaurados = [];
     idxs.forEach(i => { const t = papelera.splice(i, 1)[0]; if (t) { delete t.fechaEliminado; restaurados.push(t); } });
     tickets.push(...restaurados);
-    if (firebaseEnabled) { guardarPapelera(papelera).catch(() => {}); await guardarTickets(tickets); }
     restaurados.forEach(t => logBitacora(`Ticket #${t.numero} restaurado de papelera`, "↩️"));
     toast(`↩️ ${restaurados.length} ticket(s) restaurado(s)`);
     actualizarBadgePapelera();
     renderPapelera();
     renderTickets();
     renderDashboard();
+    if (firebaseEnabled) { guardarPapelera(papelera).catch(() => {}); guardarTickets(tickets).catch(() => {}); }
   });
   document.getElementById("btnEliminarSeleccionadosTickets")?.addEventListener("click", async () => {
     const idxs = idxsSeleccionados("chk-papelera-tk");
     if (!idxs.length) { toast("Selecciona al menos un ticket", "error"); return; }
     if (!await confirmar(`¿Eliminar definitivamente ${idxs.length} ticket(s)? Esta acción no se puede deshacer.`, "🔥")) return;
     idxs.forEach(i => papelera.splice(i, 1));
-    if (firebaseEnabled) guardarPapelera(papelera).catch(() => {});
     logBitacora(`${idxs.length} ticket(s) eliminado(s) definitivamente de la papelera`, "🔥");
     toast(`🔥 ${idxs.length} ticket(s) eliminado(s) definitivamente`);
     actualizarBadgePapelera();
     renderPapelera();
+    if (firebaseEnabled) guardarPapelera(papelera).catch(() => {});
   });
 
   // ============================================================
@@ -7371,29 +7371,29 @@ verificarSesion();
         </td>`;
       tbody.appendChild(tr);
     });
-    tbody.querySelectorAll(".btn-restaurar-emp").forEach(b => b.addEventListener("click", async (e) => {
+    tbody.querySelectorAll(".btn-restaurar-emp").forEach(b => b.addEventListener("click", (e) => {
       const i = parseInt((e.target as HTMLElement).closest("button").dataset.idx);
       const emp = papeleraEmpresas.splice(i, 1)[0];
       delete emp.fechaEliminado;
       clientes.push(emp);
       guardarLocal("crm_clientes", clientes);
-      if (!crmLocalOnly) { await guardarClientes(clientes); await guardarPapeleraEmpresas(papeleraEmpresas); }
       logBitacora(`Empresa "${emp.EMPRESA}" restaurada de papelera`, "↩️");
       toast(`↩️ Empresa "${emp.EMPRESA}" restaurada`);
       actualizarBadgePapeleraEmpresas();
       renderPapeleraEmpresas();
       renderEmpresas();
       renderDashboard();
+      if (!crmLocalOnly) { guardarClientes(clientes).catch(() => {}); guardarPapeleraEmpresas(papeleraEmpresas).catch(() => {}); }
     }));
     tbody.querySelectorAll(".btn-eliminar-def-emp").forEach(b => b.addEventListener("click", async (e) => {
       const i = parseInt((e.target as HTMLElement).closest("button").dataset.idx);
       if (!await confirmar("¿Eliminar definitivamente? Esta acción no se puede deshacer.", "🔥")) return;
       const emp = papeleraEmpresas.splice(i, 1)[0];
-      if (!crmLocalOnly) await guardarPapeleraEmpresas(papeleraEmpresas);
       logBitacora(`Empresa "${emp.EMPRESA}" eliminada definitivamente`, "🔥");
       toast(`🔥 Empresa eliminada definitivamente`);
       actualizarBadgePapeleraEmpresas();
       renderPapeleraEmpresas();
+      if (!crmLocalOnly) guardarPapeleraEmpresas(papeleraEmpresas).catch(() => {});
     }));
   }
 
@@ -7417,41 +7417,41 @@ verificarSesion();
     if (!papeleraEmpresas.length) return;
     if (!await confirmar(`¿Vaciar papelera? Se eliminarán ${papeleraEmpresas.length} empresa(s) permanentemente.`, "🔥")) return;
     papeleraEmpresas = [];
-    if (!crmLocalOnly) await guardarPapeleraEmpresas(papeleraEmpresas);
     logBitacora("Papelera de empresas vaciada", "🔥");
     toast("🔥 Papelera de empresas vaciada");
     actualizarBadgePapeleraEmpresas();
     renderPapeleraEmpresas();
+    if (!crmLocalOnly) guardarPapeleraEmpresas(papeleraEmpresas).catch(() => {});
   });
   document.getElementById("chkPapeleraTodoEmpresas")?.addEventListener("change", (e) => {
     const checked = (e.target as HTMLInputElement).checked;
     document.querySelectorAll(".chk-papelera-emp").forEach(chk => { (chk as HTMLInputElement).checked = checked; });
   });
-  document.getElementById("btnRestaurarSeleccionadosEmpresas")?.addEventListener("click", async () => {
+  document.getElementById("btnRestaurarSeleccionadosEmpresas")?.addEventListener("click", () => {
     const idxs = idxsSeleccionados("chk-papelera-emp");
     if (!idxs.length) { toast("Selecciona al menos una empresa", "error"); return; }
     const restauradas = [];
     idxs.forEach(i => { const emp = papeleraEmpresas.splice(i, 1)[0]; if (emp) { delete emp.fechaEliminado; restauradas.push(emp); } });
     clientes.push(...restauradas);
     guardarLocal("crm_clientes", clientes);
-    if (!crmLocalOnly) { await guardarClientes(clientes); await guardarPapeleraEmpresas(papeleraEmpresas); }
     restauradas.forEach(emp => logBitacora(`Empresa "${emp.EMPRESA}" restaurada de papelera`, "↩️"));
     toast(`↩️ ${restauradas.length} empresa(s) restaurada(s)`);
     actualizarBadgePapeleraEmpresas();
     renderPapeleraEmpresas();
     renderEmpresas();
     renderDashboard();
+    if (!crmLocalOnly) { guardarClientes(clientes).catch(() => {}); guardarPapeleraEmpresas(papeleraEmpresas).catch(() => {}); }
   });
   document.getElementById("btnEliminarSeleccionadosEmpresas")?.addEventListener("click", async () => {
     const idxs = idxsSeleccionados("chk-papelera-emp");
     if (!idxs.length) { toast("Selecciona al menos una empresa", "error"); return; }
     if (!await confirmar(`¿Eliminar definitivamente ${idxs.length} empresa(s)? Esta acción no se puede deshacer.`, "🔥")) return;
     idxs.forEach(i => papeleraEmpresas.splice(i, 1));
-    if (!crmLocalOnly) await guardarPapeleraEmpresas(papeleraEmpresas);
     logBitacora(`${idxs.length} empresa(s) eliminada(s) definitivamente de la papelera`, "🔥");
     toast(`🔥 ${idxs.length} empresa(s) eliminada(s) definitivamente`);
     actualizarBadgePapeleraEmpresas();
     renderPapeleraEmpresas();
+    if (!crmLocalOnly) guardarPapeleraEmpresas(papeleraEmpresas).catch(() => {});
   });
 
   // ============================================================
@@ -7483,14 +7483,13 @@ verificarSesion();
         </td>`;
       tbody.appendChild(tr);
     });
-    tbody.querySelectorAll(".btn-restaurar-ct").forEach(b => b.addEventListener("click", async (e) => {
+    tbody.querySelectorAll(".btn-restaurar-ct").forEach(b => b.addEventListener("click", (e) => {
       const i = parseInt((e.target as HTMLElement).closest("button").dataset.idx);
       const ct = papeleraContactos.splice(i, 1)[0];
       delete ct.fechaEliminado;
       contactos.push(ct);
       guardarLocal("crm_contactos", contactos);
       if (ct.empresa) sincronizarEmpresaDesdeContactos(ct.empresa);
-      if (!crmLocalOnly) { await guardarContactos(contactos); await guardarPapeleraContactos(papeleraContactos); }
       logBitacora(`Contacto "${ct.nombre}" restaurado de papelera`, "↩️");
       toast(`↩️ Contacto "${ct.nombre}" restaurado`);
       actualizarBadgePapeleraContactos();
@@ -7498,16 +7497,17 @@ verificarSesion();
       renderContactos();
       renderEmpresas();
       renderDashboard();
+      if (!crmLocalOnly) { guardarContactos(contactos).catch(() => {}); guardarPapeleraContactos(papeleraContactos).catch(() => {}); }
     }));
     tbody.querySelectorAll(".btn-eliminar-def-ct").forEach(b => b.addEventListener("click", async (e) => {
       const i = parseInt((e.target as HTMLElement).closest("button").dataset.idx);
       if (!await confirmar("¿Eliminar definitivamente? Esta acción no se puede deshacer.", "🔥")) return;
       const ct = papeleraContactos.splice(i, 1)[0];
-      if (!crmLocalOnly) await guardarPapeleraContactos(papeleraContactos);
       logBitacora(`Contacto "${ct.nombre}" eliminado definitivamente`, "🔥");
       toast(`🔥 Contacto eliminado definitivamente`);
       actualizarBadgePapeleraContactos();
       renderPapeleraContactos();
+      if (!crmLocalOnly) guardarPapeleraContactos(papeleraContactos).catch(() => {});
     }));
   }
 
@@ -7531,17 +7531,17 @@ verificarSesion();
     if (!papeleraContactos.length) return;
     if (!await confirmar(`¿Vaciar papelera? Se eliminarán ${papeleraContactos.length} contacto(s) permanentemente.`, "🔥")) return;
     papeleraContactos = [];
-    if (!crmLocalOnly) await guardarPapeleraContactos(papeleraContactos);
     logBitacora("Papelera de contactos vaciada", "🔥");
     toast("🔥 Papelera de contactos vaciada");
     actualizarBadgePapeleraContactos();
     renderPapeleraContactos();
+    if (!crmLocalOnly) guardarPapeleraContactos(papeleraContactos).catch(() => {});
   });
   document.getElementById("chkPapeleraTodoContactos")?.addEventListener("change", (e) => {
     const checked = (e.target as HTMLInputElement).checked;
     document.querySelectorAll(".chk-papelera-ct").forEach(chk => { (chk as HTMLInputElement).checked = checked; });
   });
-  document.getElementById("btnRestaurarSeleccionadosContactos")?.addEventListener("click", async () => {
+  document.getElementById("btnRestaurarSeleccionadosContactos")?.addEventListener("click", () => {
     const idxs = idxsSeleccionados("chk-papelera-ct");
     if (!idxs.length) { toast("Selecciona al menos un contacto", "error"); return; }
     const restaurados = [];
@@ -7549,7 +7549,6 @@ verificarSesion();
     contactos.push(...restaurados);
     guardarLocal("crm_contactos", contactos);
     restaurados.forEach(ct => { if (ct.empresa) sincronizarEmpresaDesdeContactos(ct.empresa); });
-    if (!crmLocalOnly) { await guardarContactos(contactos); await guardarPapeleraContactos(papeleraContactos); }
     restaurados.forEach(ct => logBitacora(`Contacto "${ct.nombre}" restaurado de papelera`, "↩️"));
     toast(`↩️ ${restaurados.length} contacto(s) restaurado(s)`);
     actualizarBadgePapeleraContactos();
@@ -7557,17 +7556,18 @@ verificarSesion();
     renderContactos();
     renderEmpresas();
     renderDashboard();
+    if (!crmLocalOnly) { guardarContactos(contactos).catch(() => {}); guardarPapeleraContactos(papeleraContactos).catch(() => {}); }
   });
   document.getElementById("btnEliminarSeleccionadosContactos")?.addEventListener("click", async () => {
     const idxs = idxsSeleccionados("chk-papelera-ct");
     if (!idxs.length) { toast("Selecciona al menos un contacto", "error"); return; }
     if (!await confirmar(`¿Eliminar definitivamente ${idxs.length} contacto(s)? Esta acción no se puede deshacer.`, "🔥")) return;
     idxs.forEach(i => papeleraContactos.splice(i, 1));
-    if (!crmLocalOnly) await guardarPapeleraContactos(papeleraContactos);
     logBitacora(`${idxs.length} contacto(s) eliminado(s) definitivamente de la papelera`, "🔥");
     toast(`🔥 ${idxs.length} contacto(s) eliminado(s) definitivamente`);
     actualizarBadgePapeleraContactos();
     renderPapeleraContactos();
+    if (!crmLocalOnly) guardarPapeleraContactos(papeleraContactos).catch(() => {});
   });
 
   // ============================================================
@@ -9454,19 +9454,17 @@ verificarSesion();
     guardarLocal("crm_contactos", contactos);
     actualizarBadgePapeleraEmpresas();
     logBitacora(`Empresa "${nombreEmp}" eliminada${contactosDesvinculados ? ` (${contactosDesvinculados} contactos desvinculados)` : ""}`, "🗑️");
-    if (crmLocalOnly) {
-      toast("🗑️ Empresa eliminada (Local)");
-      renderEmpresas();
-      renderContactos();
-      renderDashboard();
-      return;
-    }
-    await guardarClientes(clientes);
-    if (contactosDesvinculados) await guardarContactos(contactos);
-    await guardarPapeleraEmpresas(papeleraEmpresas);
+    // Se actualiza la pantalla de inmediato con el estado local (ya modificado arriba) y el
+    // guardado en Firebase se dispara sin esperarlo — así no se siente tardado, y si falla el
+    // guardado remoto el propio guardarClientes/guardarContactos avisa el error por su cuenta.
     renderEmpresas();
     renderContactos();
     renderDashboard();
+    if (crmLocalOnly) { toast("🗑️ Empresa eliminada (Local)"); return; }
+    toast("🗑️ Empresa eliminada");
+    guardarClientes(clientes).catch(() => {});
+    if (contactosDesvinculados) guardarContactos(contactos).catch(() => {});
+    guardarPapeleraEmpresas(papeleraEmpresas).catch(() => {});
   }
 
   // Fuente única de verdad para datos de contacto de una empresa:
@@ -10628,18 +10626,13 @@ verificarSesion();
     if (empresaCt) sincronizarEmpresaDesdeContactos(empresaCt);
     guardarLocal("crm_contactos", contactos);
     actualizarBadgePapeleraContactos();
-    if (crmLocalOnly) {
-      toast("🗑️ Contacto eliminado (Local)");
-      renderContactos();
-      renderEmpresas();
-      renderDashboard();
-      return;
-    }
-    await guardarContactos(contactos);
-    await guardarPapeleraContactos(papeleraContactos);
     renderContactos();
     renderEmpresas();
     renderDashboard();
+    if (crmLocalOnly) { toast("🗑️ Contacto eliminado (Local)"); return; }
+    toast("🗑️ Contacto eliminado");
+    guardarContactos(contactos).catch(() => {});
+    guardarPapeleraContactos(papeleraContactos).catch(() => {});
   }
 
   document.getElementById("txtBuscarContacto")?.addEventListener("input", renderContactos);
