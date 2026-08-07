@@ -3350,7 +3350,7 @@ try {
               <tr>
                 <th class="th-sortable" id="th-sort-tk-numero" style="width:80px; min-width:60px; text-align:center;">Ticket # <span class="sort-arrow active" id="sort-arrow-tk-numero">↓</span><div class="col-resize-handle"></div></th>
                 <th style="width:220px; min-width:140px;">Asunto<div class="col-resize-handle"></div></th>
-                <th class="th-sortable" id="th-sort-tk-contacto" style="width:240px; min-width:140px;">Contacto / Empresa <span class="sort-arrow" id="sort-arrow-tk-contacto">↕</span><div class="col-resize-handle"></div></th>
+                <th class="th-sortable" id="th-sort-tk-contacto" style="width:240px; min-width:140px;">Empresa / Contacto <span class="sort-arrow" id="sort-arrow-tk-contacto">↕</span><div class="col-resize-handle"></div></th>
                 <th style="width:190px; min-width:120px; text-align:center;">Tipo<div class="col-resize-handle"></div></th>
                 <th style="width:120px; min-width:90px; text-align:center;">Prioridad<div class="col-resize-handle"></div></th>
                 <th style="width:135px; min-width:95px; text-align:center;">Estado<div class="col-resize-handle"></div></th>
@@ -11226,8 +11226,8 @@ verificarSesion();
         <td style="text-align:center; font-weight:700; color:var(--text-muted);">#${t.numero}</td>
         <td><strong style="color:var(--text-bright);">${escapeHtml(t.asunto)}</strong></td>
         <td>
-          <span style="display:block; font-weight:600;">👤 ${escapeHtml(t.contacto) || "—"}</span>
-          <span style="display:block; font-size:0.72rem; color:var(--text-light);">🏢 ${escapeHtml(t.empresa) || "—"}</span>
+          <span style="display:block; font-weight:700; color:var(--text-bright);">🏢 ${escapeHtml(t.empresa) || "—"}</span>
+          <span style="display:block; font-size:0.72rem; color:var(--text-light);">👤 ${escapeHtml(t.contacto) || "—"}</span>
         </td>
         <td style="text-align:center;">
           <span class="badge" style="background:rgba(99,102,241,0.12); color:#a5b4fc;">${escapeHtml(t.tipo) || "General"}</span>
