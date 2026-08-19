@@ -4784,6 +4784,28 @@ try {
         Captura los grupos de equipos (mismo tipo + mismos sistemas + mismo estatus de SQL = un grupo). Al terminar, "Enviar al cotizador" agrega los renglones ya calculados a los Conceptos de esta cotización.
       </p>
 
+      <div style="margin-bottom:14px;">
+        <button type="button" class="btn btn-ghost btn-sm" id="btnTogglePreciosCompac">⚙️ Editar precios</button>
+        <div id="compac-precios-panel" class="hidden" style="margin-top:10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px 14px; display:flex; flex-direction:column; gap:14px;">
+          <div>
+            <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.03em;">Precios por tipo de equipo</div>
+            <div id="compac-precios-equipos" style="display:flex; flex-direction:column; gap:8px;"></div>
+          </div>
+          <div class="form-group" style="margin-bottom:0; max-width:180px;">
+            <label style="font-size:0.7rem;">Precio SQL (solo Servidor)</label>
+            <input type="number" min="0" step="0.01" id="compac-precio-sql-modal">
+          </div>
+          <div>
+            <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.03em;">Sistemas que disparan "Componentes"</div>
+            <div id="compac-precios-sistemas" style="display:flex; flex-direction:column; gap:6px;"></div>
+          </div>
+          <div>
+            <button class="btn btn-success btn-sm" id="btnGuardarPreciosCompac">💾 Guardar precios</button>
+            <span style="font-size:0.68rem; color:var(--text-muted); margin-left:8px;">Se guarda igual que en Configuración → Calculadora Compac (para agregar/quitar sistemas o tipos de equipo, usa esa pantalla).</span>
+          </div>
+        </div>
+      </div>
+
       <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; margin-bottom:14px; padding-bottom:14px; border-bottom:1px dashed var(--border-color);">
         <div class="form-group" style="max-width:150px; margin-bottom:0;">
           <label style="font-size:0.7rem;">Servidores esperados (opcional)</label>
@@ -14089,6 +14111,68 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   });
   document.getElementById("compac-parque-servidores")?.addEventListener("input", renderPreviewCompac);
   document.getElementById("compac-parque-terminales")?.addEventListener("input", renderPreviewCompac);
+
+  // Panel "⚙️ Editar precios" dentro del propio modal — evita tener que salir a Configuración
+  // para ajustar precios sobre la marcha. Guarda con la misma guardarConfigCompac() de siempre.
+  function renderPreciosPanelCompac() {
+    const eqEl = document.getElementById("compac-precios-equipos");
+    if (eqEl) {
+      eqEl.innerHTML = (configCompac.catalogoEquipos || []).map((e: any, idx: number) => `
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <span style="min-width:90px; font-size:0.82rem; font-weight:600;">${escapeHtml(e.nombre)}</span>
+          <div class="form-group" style="margin-bottom:0; max-width:130px;">
+            <label style="font-size:0.66rem;">1er sistema</label>
+            <input type="number" min="0" step="0.01" class="compac-precio-equipo-primer" data-idx="${idx}" value="${e.precioPrimerSistema ?? 0}">
+          </div>
+          <div class="form-group" style="margin-bottom:0; max-width:130px;">
+            <label style="font-size:0.66rem;">Adicional</label>
+            <input type="number" min="0" step="0.01" class="compac-precio-equipo-adicional" data-idx="${idx}" value="${e.precioAdicional ?? 0}">
+          </div>
+        </div>`).join("") || '<span style="font-size:0.75rem; color:var(--text-muted);">Sin tipos de equipo — agrégalos en Configuración.</span>';
+    }
+    const sqlEl = document.getElementById("compac-precio-sql-modal") as HTMLInputElement | null;
+    if (sqlEl) sqlEl.value = String(configCompac.precioSQL ?? 800);
+    const sisEl = document.getElementById("compac-precios-sistemas");
+    if (sisEl) {
+      sisEl.innerHTML = (configCompac.catalogoSistemas || []).filter((s: any) => s.nombre !== "Componentes").map((s: any) => `
+        <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;">
+          <input type="checkbox" class="compac-precio-sistema-req" data-nombre="${escapeHtml(s.nombre)}" ${s.requiereComponentes ? "checked" : ""}> ${escapeHtml(s.nombre)}
+        </label>`).join("") || '<span style="font-size:0.75rem; color:var(--text-muted);">Sin sistemas — agrégalos en Configuración.</span>';
+    }
+  }
+
+  document.getElementById("btnTogglePreciosCompac")?.addEventListener("click", () => {
+    const panel = document.getElementById("compac-precios-panel");
+    if (!panel) return;
+    const abrir = panel.classList.contains("hidden");
+    if (abrir) renderPreciosPanelCompac();
+    panel.classList.toggle("hidden");
+  });
+
+  document.getElementById("btnGuardarPreciosCompac")?.addEventListener("click", async () => {
+    document.querySelectorAll(".compac-precio-equipo-primer").forEach(inp => {
+      const idx = parseInt((inp as HTMLElement).dataset.idx || "0");
+      if (configCompac.catalogoEquipos[idx]) configCompac.catalogoEquipos[idx].precioPrimerSistema = parseFloat((inp as HTMLInputElement).value) || 0;
+    });
+    document.querySelectorAll(".compac-precio-equipo-adicional").forEach(inp => {
+      const idx = parseInt((inp as HTMLElement).dataset.idx || "0");
+      if (configCompac.catalogoEquipos[idx]) configCompac.catalogoEquipos[idx].precioAdicional = parseFloat((inp as HTMLInputElement).value) || 0;
+    });
+    const sqlEl = document.getElementById("compac-precio-sql-modal") as HTMLInputElement | null;
+    configCompac.precioSQL = parseFloat(sqlEl?.value || "0") || 0;
+    document.querySelectorAll(".compac-precio-sistema-req").forEach(chk => {
+      const nombre = (chk as HTMLElement).dataset.nombre;
+      const s = (configCompac.catalogoSistemas || []).find((x: any) => x.nombre === nombre);
+      if (s) s.requiereComponentes = (chk as HTMLInputElement).checked;
+    });
+
+    guardarLocal("crm_config_compac", configCompac);
+    const ok = firebaseEnabled && !crmLocalOnly ? await guardarConfigCompac(configCompac) : true;
+    if (ok) toast("💾 Precios de la Calculadora Compac guardados");
+    else toast("⚠️ Error al guardar (se guardó localmente)", "error");
+
+    renderGruposCompac(); // refresca los grupos ya capturados y el preview con los precios nuevos
+  });
 
   document.getElementById("btnEnviarCompacACotizador")?.addEventListener("click", () => {
     const nuevosConceptos: any[] = [];
