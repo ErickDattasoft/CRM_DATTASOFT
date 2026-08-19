@@ -574,6 +574,23 @@ export async function guardarConfigCotizaciones(configCotizaciones) {
   }
 }
 
+// Guarda solo las llaves que se le pasen (rutas parciales), igual que guardarConfigTickets —
+// evita el riesgo de setDoc de objeto completo que sí tiene guardarConfigCotizaciones.
+export async function guardarConfigCompac(configCompac) {
+  try {
+    const docRef = doc(db, "agenda", "datos");
+    const data = {};
+    for (const [key, value] of Object.entries(configCompac)) {
+      data[`configCompac.${key}`] = limpiar(value);
+    }
+    await updateDoc(docRef, data);
+    return true;
+  } catch (error) {
+    avisarErrorGuardado("configuración de la calculadora Compac", error);
+    return false;
+  }
+}
+
 // ================================================================
 // BASE DE CONOCIMIENTO (KB)
 // ================================================================

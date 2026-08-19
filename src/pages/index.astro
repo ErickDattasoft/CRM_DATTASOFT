@@ -3099,6 +3099,7 @@ try {
               </table>
             </div>
             <button type="button" class="btn btn-ghost btn-sm" id="btnAgregarConceptoCot" style="margin-top:10px;">➕ Agregar concepto</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btnAbrirCalculadoraCompac" style="margin-top:10px;">🧮 Calculadora Compac</button>
             <div style="display:flex; justify-content:flex-end; margin-top:16px;">
               <div style="min-width:240px; font-size:0.9rem;">
                 <div style="display:flex; justify-content:space-between; padding:4px 0; color:var(--text-light);"><span>Subtotal</span><span id="cot-subtotal">$0.00</span></div>
@@ -3380,6 +3381,7 @@ try {
           <button type="button" class="cfg-quicknav-btn" data-cfg-target="cfg-card-tipo">📋 Tipos</button>
           <button type="button" class="cfg-quicknav-btn" data-cfg-target="cfg-card-sla">⏱️ SLA</button>
           <button type="button" class="cfg-quicknav-btn" data-cfg-target="cfg-card-cotizaciones">🧾 Cotizaciones</button>
+          <button type="button" class="cfg-quicknav-btn" data-cfg-target="cfg-card-compac">🧮 Calculadora Compac</button>
           <button type="button" class="cfg-quicknav-btn" data-cfg-target="cfg-card-apariencia">🎨 Apariencia</button>
           <button type="button" class="cfg-quicknav-btn" data-cfg-target="cfg-usuarios-panel">👥 Usuarios</button>
           <button type="button" class="cfg-quicknav-btn" data-cfg-target="cfg-n8n-panel">🤖 n8n</button>
@@ -3623,6 +3625,30 @@ try {
           <button class="btn btn-ghost btn-xs" style="margin-top:10px;" id="btnAddConceptoCatalogo">➕ Agregar</button>
           <div style="margin-top:16px;">
             <button class="btn btn-success btn-sm" id="btnGuardarConfigCotizaciones">💾 Guardar Cotizaciones</button>
+          </div>
+        </div>
+
+        <!-- Calculadora Compac -->
+        <div class="card" id="cfg-card-compac" style="margin-top:20px;">
+          <div class="card-title">🧮 Calculadora Compac</div>
+          <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">Catálogos y precios que usa la calculadora de licenciamiento Compac dentro de Cotizaciones (botón "🧮 Calculadora Compac" al armar los conceptos).</p>
+
+          <div class="card-title" style="font-size:0.85rem;">🧩 Catálogo de Sistemas</div>
+          <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:12px; line-height:1.5;">Marca "Req. Componentes" en los sistemas que deben auto-agregar "Componentes" al elegirse. La fila "Componentes" no se puede borrar ni renombrar — la calculadora depende de ese nombre exacto.</p>
+          <div class="config-list" id="cfg-list-sistemas-compac"></div>
+          <button class="btn btn-ghost btn-xs" style="margin-top:10px;" id="btnAddSistemaCompac">➕ Agregar sistema</button>
+
+          <div class="card-title" style="font-size:0.85rem; margin-top:22px;">🖥️ Tipos de Equipo y Precios</div>
+          <div class="config-list" id="cfg-list-equipos-compac"></div>
+          <button class="btn btn-ghost btn-xs" style="margin-top:10px;" id="btnAddEquipoCompac">➕ Agregar tipo de equipo</button>
+
+          <div class="form-group" style="margin-top:22px; max-width:220px;">
+            <label>Precio SQL (solo Servidor)</label>
+            <input type="number" min="0" step="0.01" id="cfg-compac-precio-sql">
+          </div>
+
+          <div style="margin-top:16px;">
+            <button class="btn btn-success btn-sm" id="btnGuardarConfigCompac">💾 Guardar Calculadora Compac</button>
           </div>
         </div>
 
@@ -4746,6 +4772,61 @@ try {
   </div>
 </div>
 
+<!-- ===== MODAL: Calculadora Compac ===== -->
+<div id="modal-calculadora-compac" class="modal-center" style="display:none;">
+  <div class="modal-box" style="width:960px; max-width:97%;">
+    <div class="modal-header">
+      <h2>🧮 Calculadora Compac</h2>
+      <button class="modal-close" id="btnCerrarCalculadoraCompac">×</button>
+    </div>
+    <div style="padding:14px 18px;">
+      <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">
+        Captura los grupos de equipos (mismo tipo + mismos sistemas + mismo estatus de SQL = un grupo). Al terminar, "Enviar al cotizador" agrega los renglones ya calculados a los Conceptos de esta cotización.
+      </p>
+
+      <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; margin-bottom:14px; padding-bottom:14px; border-bottom:1px dashed var(--border-color);">
+        <div class="form-group" style="max-width:150px; margin-bottom:0;">
+          <label style="font-size:0.7rem;">Servidores esperados (opcional)</label>
+          <input type="number" min="0" id="compac-parque-servidores">
+        </div>
+        <div class="form-group" style="max-width:150px; margin-bottom:0;">
+          <label style="font-size:0.7rem;">Terminales esperados (opcional)</label>
+          <input type="number" min="0" id="compac-parque-terminales">
+        </div>
+        <div id="compac-parque-warning" class="hidden" style="font-size:0.78rem; color:#fbbf24; flex:1; min-width:200px;"></div>
+      </div>
+
+      <div id="compac-grupos-list" style="display:flex; flex-direction:column; gap:12px;"></div>
+      <button type="button" class="btn btn-ghost btn-sm" style="margin-top:12px;" id="btnAddGrupoCompac">➕ Agregar grupo de equipos</button>
+
+      <div class="table-wrap" style="margin-top:18px; max-height:260px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th style="text-align:center; width:70px;">Cant.</th>
+              <th>Sistemas</th>
+              <th style="text-align:right; width:110px;">Precio unit.</th>
+              <th style="text-align:right; width:110px;">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody id="compac-preview-body"></tbody>
+        </table>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:14px;">
+        <div style="font-size:0.78rem; color:var(--text-muted);" id="compac-resumen-conteos"></div>
+        <div style="font-size:1.15rem; font-weight:800; color:var(--brand-secondary);">Total: <span id="compac-total">$0.00</span></div>
+      </div>
+
+      <div class="form-actions" style="margin-top:16px;">
+        <button class="btn btn-primary" id="btnEnviarCompacACotizador">➡️ Enviar al cotizador</button>
+        <button class="btn btn-secondary" id="btnCancelarCalculadoraCompac">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL: Tickets Públicos ===== -->
 <div id="modal-tickets-pub" class="modal-center" style="display:none;">
   <div class="modal-box" style="width:760px; max-width:96%;">
@@ -5293,7 +5374,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarPapeleraEmpresas, guardarPapeleraContactos, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket } from "../data/firebase.js";
+import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarPapeleraEmpresas, guardarPapeleraContactos, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, guardarConfigCompac, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket } from "../data/firebase.js";
 import { parseEmailList, hoyLocalStr, parseFechaLocal, escapeHtml, slugBadge, esConsultoria, formatearDuracion, colorPuntoEstado, formatMoney } from "../data/utils.js";
 
 // ── Modal confirmación (reemplaza confirm() — funciona en móvil) ──
@@ -5854,6 +5935,25 @@ verificarSesion();
 
   let cotizaciones = [];
   let configCotizaciones = { terminos: "", catalogo: [] };
+  // Catálogos y precios de la Calculadora Compac (Cotizaciones) — semillas solo para el primer
+  // arranque, antes de que exista el documento en Firestore; editables luego en Configuración.
+  let configCompac = {
+    catalogoSistemas: [
+      { nombre: "Contabilidad", requiereComponentes: true },
+      { nombre: "Bancos", requiereComponentes: true },
+      { nombre: "Nóminas", requiereComponentes: true },
+      { nombre: "Comercial Premium", requiereComponentes: true },
+      { nombre: "XML en línea", requiereComponentes: true },
+      { nombre: "Factura Electrónica", requiereComponentes: false },
+      { nombre: "Comercial Pro", requiereComponentes: false },
+      { nombre: "Componentes", requiereComponentes: false },
+    ],
+    catalogoEquipos: [
+      { nombre: "Servidor", precioPrimerSistema: 800, precioAdicional: 400 },
+      { nombre: "Terminal", precioPrimerSistema: 200, precioAdicional: 100 },
+    ],
+    precioSQL: 800,
+  };
 
   let drawerEmpresaActual = null;
   let drawerTabActual = "historial";
@@ -5995,6 +6095,7 @@ verificarSesion();
     contactos = safeParseLocal("crm_contactos", unificarContactosIniciales());
     cotizaciones = safeParseLocal("crm_cotizaciones", []);
     configCotizaciones = safeParseLocal("crm_config_cotizaciones", { terminos: "", catalogo: [] });
+    configCompac = safeParseLocal("crm_config_compac", configCompac);
     // Si los datos cargados vienen del import Excel (filas), normalizarlos a la forma esperada
     if (Array.isArray(clientes) && clientes.length > 0) {
       const sample = clientes[0] || {};
@@ -6473,6 +6574,7 @@ verificarSesion();
     if (datos.contactos !== undefined && (datos.contactos.length > 0 || contactos.length === 0)) contactos = datos.contactos || [];
     if (datos.cotizaciones !== undefined && (datos.cotizaciones.length > 0 || cotizaciones.length === 0)) cotizaciones = datos.cotizaciones || [];
     if (datos.configCotizaciones && !preservarConfig) configCotizaciones = { terminos: "", catalogo: [], ...datos.configCotizaciones };
+    if (datos.configCompac && !preservarConfig) configCompac = { catalogoSistemas: [], catalogoEquipos: [], precioSQL: 800, ...datos.configCompac };
     // Si el usuario está en la sección de configuración y aún no ha guardado, preservar
     // los cambios en memoria para no pisar ediciones en progreso (prioridades, estados, etc.)
     if (datos.configTickets && !preservarConfig) { configTickets = { ...configTickets, ...datos.configTickets }; migrarContactosSoporte(); migrarDefaultsConfigTickets(); }
@@ -12196,6 +12298,7 @@ verificarSesion();
     }
     renderConfigSLA();
     renderConfigCotizaciones();
+    renderConfigCompac();
     renderConfigContactosSoporte("Versiones");
     renderConfigContactosSoporte("Licencias");
     renderWspModoUI();
@@ -12559,6 +12662,113 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     if (ok) toast("🧾 Configuración de Cotizaciones guardada");
     else toast("⚠️ Error al guardar (se guardó localmente)", "error");
     renderCatalogoConceptos();
+  });
+
+  // Configuración de la Calculadora Compac: catálogo de sistemas (con Req. Componentes),
+  // catálogo de tipos de equipo (con sus 2 precios) y el precio fijo de SQL. Mismo patrón
+  // .config-item-cat que el catálogo de conceptos de Cotizaciones (arriba) — nunca .config-item,
+  // porque cada fila trae más de un campo.
+  function renderConfigCompac() {
+    const precioSqlEl = document.getElementById("cfg-compac-precio-sql") as HTMLInputElement | null;
+    if (precioSqlEl) precioSqlEl.value = String(configCompac.precioSQL ?? 800);
+    renderListaSistemasCompac();
+    renderListaEquiposCompac();
+  }
+
+  function renderListaSistemasCompac() {
+    const listEl = document.getElementById("cfg-list-sistemas-compac");
+    if (!listEl) return;
+    listEl.innerHTML = "";
+    (configCompac.catalogoSistemas || []).forEach((item: any, idx: number) => {
+      // "Componentes" es el nombre literal del que depende el auto-agregado en calcularGrupoCompac —
+      // se protege de borrado/renombrado para que un cambio accidental no rompa la calculadora.
+      const esProtegido = item.nombre === "Componentes";
+      const div = document.createElement("div");
+      div.className = "config-item-cat";
+      div.innerHTML = `
+        <input class="cat-field-nombre" placeholder="Nombre del sistema" value="${escapeHtml(item.nombre || "")}" data-cat-idx="${idx}" data-cat-field="nombre" ${esProtegido ? "disabled title=\"No se puede renombrar: la calculadora depende de este nombre\"" : ""}>
+        <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; white-space:nowrap; flex:1;">
+          <input type="checkbox" data-cat-idx="${idx}" data-cat-field="requiereComponentes" ${item.requiereComponentes ? "checked" : ""}> Req. Componentes
+        </label>
+        <button class="btn btn-danger btn-xs btn-del-sistema-compac" data-cat-idx="${idx}" ${esProtegido ? "disabled title=\"No se puede borrar\" style=\"opacity:.35; cursor:not-allowed;\"" : ""}>🗑️</button>
+      `;
+      listEl.appendChild(div);
+    });
+  }
+
+  function renderListaEquiposCompac() {
+    const listEl = document.getElementById("cfg-list-equipos-compac");
+    if (!listEl) return;
+    listEl.innerHTML = "";
+    (configCompac.catalogoEquipos || []).forEach((item: any, idx: number) => {
+      const div = document.createElement("div");
+      div.className = "config-item-cat";
+      div.innerHTML = `
+        <input class="cat-field-nombre" placeholder="Tipo de equipo" value="${escapeHtml(item.nombre || "")}" data-cat-idx="${idx}" data-cat-field="nombre">
+        <input class="cat-field-precio" type="number" min="0" step="0.01" placeholder="1er sistema" value="${item.precioPrimerSistema ?? 0}" data-cat-idx="${idx}" data-cat-field="precioPrimerSistema">
+        <input class="cat-field-precio" type="number" min="0" step="0.01" placeholder="Adicional" value="${item.precioAdicional ?? 0}" data-cat-idx="${idx}" data-cat-field="precioAdicional">
+        <button class="btn btn-danger btn-xs btn-del-equipo-compac" data-cat-idx="${idx}">🗑️</button>
+      `;
+      listEl.appendChild(div);
+    });
+  }
+
+  document.getElementById("btnAddSistemaCompac")?.addEventListener("click", () => {
+    configCompac.catalogoSistemas = configCompac.catalogoSistemas || [];
+    configCompac.catalogoSistemas.push({ nombre: "", requiereComponentes: false });
+    renderListaSistemasCompac();
+  });
+  document.getElementById("cfg-list-sistemas-compac")?.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest(".btn-del-sistema-compac") as HTMLButtonElement | null;
+    if (!btn || btn.disabled) return;
+    const idx = parseInt(btn.dataset.catIdx || "");
+    configCompac.catalogoSistemas.splice(idx, 1);
+    renderListaSistemasCompac();
+  });
+
+  document.getElementById("btnAddEquipoCompac")?.addEventListener("click", () => {
+    configCompac.catalogoEquipos = configCompac.catalogoEquipos || [];
+    configCompac.catalogoEquipos.push({ nombre: "", precioPrimerSistema: 0, precioAdicional: 0 });
+    renderListaEquiposCompac();
+  });
+  document.getElementById("cfg-list-equipos-compac")?.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest(".btn-del-equipo-compac") as HTMLButtonElement | null;
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.catIdx || "");
+    configCompac.catalogoEquipos.splice(idx, 1);
+    renderListaEquiposCompac();
+  });
+
+  document.getElementById("btnGuardarConfigCompac")?.addEventListener("click", async () => {
+    const catalogoSistemas: any[] = [];
+    document.querySelectorAll("#cfg-list-sistemas-compac .config-item-cat").forEach(div => {
+      const nombre = (div.querySelector('[data-cat-field="nombre"]') as HTMLInputElement)?.value.trim() || "";
+      const requiereComponentes = (div.querySelector('[data-cat-field="requiereComponentes"]') as HTMLInputElement)?.checked || false;
+      if (nombre) catalogoSistemas.push({ nombre, requiereComponentes });
+    });
+    // Salvaguarda extra: si por lo que sea "Componentes" no quedó en la lista (ej. se intentó
+    // borrar manipulando el DOM), se vuelve a agregar — la calculadora no funciona sin ella.
+    if (!catalogoSistemas.some(s => s.nombre === "Componentes")) {
+      catalogoSistemas.push({ nombre: "Componentes", requiereComponentes: false });
+    }
+
+    const catalogoEquipos: any[] = [];
+    document.querySelectorAll("#cfg-list-equipos-compac .config-item-cat").forEach(div => {
+      const nombre = (div.querySelector('[data-cat-field="nombre"]') as HTMLInputElement)?.value.trim() || "";
+      const precioPrimerSistema = parseFloat((div.querySelector('[data-cat-field="precioPrimerSistema"]') as HTMLInputElement)?.value || "0") || 0;
+      const precioAdicional = parseFloat((div.querySelector('[data-cat-field="precioAdicional"]') as HTMLInputElement)?.value || "0") || 0;
+      if (nombre) catalogoEquipos.push({ nombre, precioPrimerSistema, precioAdicional });
+    });
+
+    const precioSqlEl = document.getElementById("cfg-compac-precio-sql") as HTMLInputElement | null;
+    const precioSQL = parseFloat(precioSqlEl?.value || "0") || 0;
+
+    configCompac = { catalogoSistemas, catalogoEquipos, precioSQL };
+    guardarLocal("crm_config_compac", configCompac);
+    const ok = firebaseEnabled && !crmLocalOnly ? await guardarConfigCompac(configCompac) : true;
+    if (ok) toast("🧮 Configuración de la Calculadora Compac guardada");
+    else toast("⚠️ Error al guardar (se guardó localmente)", "error");
+    renderConfigCompac();
   });
 
   async function renderSolicitudesAccesoPanel() {
@@ -13705,6 +13915,201 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     });
     return { subtotalGeneral, totalIVA, total: subtotalGeneral + totalIVA };
   }
+
+  // Calcula el precio de UN grupo de equipos de la Calculadora Compac. Pura: no toca el DOM ni
+  // estado global — se usa igual para el preview en vivo del modal y para la conversión final
+  // a conceptos de la cotización. Implementa los 7 pasos del spec de precios Compac.
+  function calcularGrupoCompac(cfgCompac, grupo) {
+    const catSistemas = cfgCompac.catalogoSistemas || [];
+    const catEquipos = cfgCompac.catalogoEquipos || [];
+    const equipoCfg = catEquipos.find(e => e.nombre === grupo.tipo) || { precioPrimerSistema: 0, precioAdicional: 0 };
+
+    const sistemasBase = [...(grupo.sistemas || [])];
+    const requiereComponentes = sistemasBase.some(nombreSis => {
+      const s = catSistemas.find(x => x.nombre === nombreSis);
+      return !!s?.requiereComponentes;
+    });
+    const yaTieneComponentes = sistemasBase.includes("Componentes");
+    const componentesEsAuto = requiereComponentes && !yaTieneComponentes;
+    const sistemasFinal = componentesEsAuto ? [...sistemasBase, "Componentes"] : sistemasBase;
+
+    const numSistemas = sistemasFinal.length;
+    const precioSistemasPorUnidad = numSistemas > 0
+      ? (Number(equipoCfg.precioPrimerSistema) || 0) + (numSistemas - 1) * (Number(equipoCfg.precioAdicional) || 0)
+      : 0;
+
+    const incluyeSql = grupo.tipo === "Servidor" && !!grupo.incluye_sql;
+    const precioSqlPorUnidad = incluyeSql ? (Number(cfgCompac.precioSQL) || 0) : 0;
+
+    const precioUnitario = precioSistemasPorUnidad + precioSqlPorUnidad;
+    const cantidad = Number(grupo.cantidad) || 0;
+    const subtotal = precioUnitario * cantidad;
+
+    return { sistemasFinal, componentesEsAuto, numSistemas, precioSistemasPorUnidad, precioSqlPorUnidad, precioUnitario, subtotal, incluyeSql, cantidad };
+  }
+
+  // ============================================================
+  // CALCULADORA COMPAC (modal dentro del formulario de Cotización)
+  // ============================================================
+  let gruposCompacActual: any[] = [];
+
+  function grupoCompacVacio() {
+    return { tipo: (configCompac.catalogoEquipos?.[0]?.nombre || ""), cantidad: 1, sistemas: [], incluye_sql: false };
+  }
+
+  function renderGruposCompac() {
+    const listEl = document.getElementById("compac-grupos-list");
+    if (!listEl) return;
+    listEl.innerHTML = "";
+    gruposCompacActual.forEach((grupo, idx) => {
+      const div = document.createElement("div");
+      div.style.cssText = "background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px 14px; display:flex; flex-direction:column; gap:10px;";
+      const opcionesTipo = (configCompac.catalogoEquipos || []).map((e: any) => `<option value="${escapeHtml(e.nombre)}" ${grupo.tipo === e.nombre ? "selected" : ""}>${escapeHtml(e.nombre)}</option>`).join("");
+      const esServidor = grupo.tipo === "Servidor";
+      const checkboxesSistemas = (configCompac.catalogoSistemas || []).filter((s: any) => s.nombre !== "Componentes").map((s: any) => `
+        <label style="display:flex; align-items:center; gap:5px; font-size:0.78rem; cursor:pointer; white-space:nowrap;">
+          <input type="checkbox" class="compac-grupo-sistema" data-idx="${idx}" data-sistema="${escapeHtml(s.nombre)}" ${grupo.sistemas.includes(s.nombre) ? "checked" : ""}> ${escapeHtml(s.nombre)}
+        </label>`).join("");
+      div.innerHTML = `
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+          <div class="form-group" style="margin-bottom:0; max-width:170px;">
+            <label style="font-size:0.7rem;">Tipo de equipo</label>
+            <select class="compac-grupo-tipo" data-idx="${idx}">${opcionesTipo}</select>
+          </div>
+          <div class="form-group" style="margin-bottom:0; max-width:100px;">
+            <label style="font-size:0.7rem;">Cantidad</label>
+            <input type="number" min="1" class="compac-grupo-cantidad" data-idx="${idx}" value="${grupo.cantidad}">
+          </div>
+          <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:${esServidor ? "pointer" : "not-allowed"}; opacity:${esServidor ? "1" : ".4"}; margin-top:14px;">
+            <input type="checkbox" class="compac-grupo-sql" data-idx="${idx}" ${grupo.incluye_sql ? "checked" : ""} ${esServidor ? "" : "disabled"}> Incluye SQL
+          </label>
+          <button type="button" class="btn btn-danger btn-xs compac-grupo-del" data-idx="${idx}" style="margin-left:auto; margin-top:14px;">🗑️ Quitar grupo</button>
+        </div>
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">${checkboxesSistemas || '<span style="font-size:0.75rem; color:var(--text-muted);">No hay sistemas en el catálogo — agrégalos en Configuración.</span>'}</div>
+      `;
+      listEl.appendChild(div);
+    });
+    wireGrupoCompacRowEvents();
+    renderPreviewCompac();
+  }
+
+  function wireGrupoCompacRowEvents() {
+    document.querySelectorAll(".compac-grupo-tipo").forEach(sel => sel.addEventListener("change", (e) => {
+      const idx = parseInt((e.target as HTMLElement).dataset.idx || "0");
+      const nuevoTipo = (e.target as HTMLSelectElement).value;
+      gruposCompacActual[idx].tipo = nuevoTipo;
+      if (nuevoTipo !== "Servidor") gruposCompacActual[idx].incluye_sql = false;
+      renderGruposCompac();
+    }));
+    document.querySelectorAll(".compac-grupo-cantidad").forEach(inp => inp.addEventListener("input", (e) => {
+      const idx = parseInt((e.target as HTMLElement).dataset.idx || "0");
+      gruposCompacActual[idx].cantidad = parseInt((e.target as HTMLInputElement).value) || 0;
+      renderPreviewCompac();
+    }));
+    document.querySelectorAll(".compac-grupo-sql").forEach(chk => chk.addEventListener("change", (e) => {
+      const idx = parseInt((e.target as HTMLElement).dataset.idx || "0");
+      gruposCompacActual[idx].incluye_sql = (e.target as HTMLInputElement).checked;
+      renderPreviewCompac();
+    }));
+    document.querySelectorAll(".compac-grupo-sistema").forEach(chk => chk.addEventListener("change", (e) => {
+      const idx = parseInt((e.target as HTMLElement).dataset.idx || "0");
+      const sistema = (e.target as HTMLElement).dataset.sistema || "";
+      const marcado = (e.target as HTMLInputElement).checked;
+      const arr = gruposCompacActual[idx].sistemas;
+      if (marcado && !arr.includes(sistema)) arr.push(sistema);
+      else if (!marcado) gruposCompacActual[idx].sistemas = arr.filter((s: string) => s !== sistema);
+      renderPreviewCompac();
+    }));
+    document.querySelectorAll(".compac-grupo-del").forEach(btn => btn.addEventListener("click", (e) => {
+      const idx = parseInt((e.target as HTMLElement).closest("button")?.dataset.idx || "0");
+      gruposCompacActual.splice(idx, 1);
+      renderGruposCompac();
+    }));
+  }
+
+  function renderPreviewCompac() {
+    const body = document.getElementById("compac-preview-body");
+    if (!body) return;
+    body.innerHTML = "";
+    let total = 0;
+    let servidores = 0, terminales = 0, conComponentes = 0;
+    gruposCompacActual.forEach(grupo => {
+      const r = calcularGrupoCompac(configCompac, grupo);
+      total += r.subtotal;
+      if (grupo.tipo === "Servidor") servidores += r.cantidad;
+      else if (grupo.tipo === "Terminal") terminales += r.cantidad;
+      if (r.componentesEsAuto) conComponentes += r.cantidad;
+      const listaSistemasTxt = r.sistemasFinal.map((s: string) => (r.componentesEsAuto && s === "Componentes") ? `${s} (auto)` : s).join(", ") || "—";
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(grupo.tipo || "—")}</td>
+        <td style="text-align:center;">${r.cantidad}</td>
+        <td style="font-size:0.8rem;">${escapeHtml(listaSistemasTxt)}${r.incluyeSql ? " + SQL" : ""}</td>
+        <td style="text-align:right;">${formatMoney(r.precioUnitario)}</td>
+        <td style="text-align:right; font-weight:600;">${formatMoney(r.subtotal)}</td>
+      `;
+      body.appendChild(tr);
+    });
+    const totalEl = document.getElementById("compac-total");
+    if (totalEl) totalEl.textContent = formatMoney(total);
+    const resumenEl = document.getElementById("compac-resumen-conteos");
+    if (resumenEl) resumenEl.textContent = `🖥️ Servidores: ${servidores} · 💻 Terminales: ${terminales} · 🧩 Con Componentes: ${conComponentes}`;
+
+    const warnEl = document.getElementById("compac-parque-warning");
+    const espServ = parseInt((document.getElementById("compac-parque-servidores") as HTMLInputElement)?.value || "0") || 0;
+    const espTerm = parseInt((document.getElementById("compac-parque-terminales") as HTMLInputElement)?.value || "0") || 0;
+    const avisos: string[] = [];
+    if (espServ && espServ !== servidores) avisos.push(`Servidores: capturaste ${servidores}, esperabas ${espServ}`);
+    if (espTerm && espTerm !== terminales) avisos.push(`Terminales: capturaste ${terminales}, esperabas ${espTerm}`);
+    if (warnEl) {
+      if (avisos.length) { warnEl.textContent = `⚠️ ${avisos.join(" · ")}`; warnEl.classList.remove("hidden"); }
+      else { warnEl.classList.add("hidden"); }
+    }
+  }
+
+  document.getElementById("btnAbrirCalculadoraCompac")?.addEventListener("click", () => {
+    gruposCompacActual = [grupoCompacVacio()];
+    const espServEl = document.getElementById("compac-parque-servidores") as HTMLInputElement | null;
+    const espTermEl = document.getElementById("compac-parque-terminales") as HTMLInputElement | null;
+    if (espServEl) espServEl.value = "";
+    if (espTermEl) espTermEl.value = "";
+    renderGruposCompac();
+    const m = document.getElementById("modal-calculadora-compac");
+    if (m) m.style.display = "flex";
+  });
+  document.getElementById("btnCerrarCalculadoraCompac")?.addEventListener("click", () => {
+    const m = document.getElementById("modal-calculadora-compac"); if (m) m.style.display = "none";
+  });
+  document.getElementById("btnCancelarCalculadoraCompac")?.addEventListener("click", () => {
+    const m = document.getElementById("modal-calculadora-compac"); if (m) m.style.display = "none";
+  });
+  document.getElementById("btnAddGrupoCompac")?.addEventListener("click", () => {
+    gruposCompacActual.push(grupoCompacVacio());
+    renderGruposCompac();
+  });
+  document.getElementById("compac-parque-servidores")?.addEventListener("input", renderPreviewCompac);
+  document.getElementById("compac-parque-terminales")?.addEventListener("input", renderPreviewCompac);
+
+  document.getElementById("btnEnviarCompacACotizador")?.addEventListener("click", () => {
+    const nuevosConceptos: any[] = [];
+    gruposCompacActual.forEach(grupo => {
+      if ((Number(grupo.cantidad) || 0) <= 0 || !(grupo.sistemas || []).length) return;
+      const r = calcularGrupoCompac(configCompac, grupo);
+      const descSistemas = r.sistemasFinal.join(", ");
+      nuevosConceptos.push({ descripcion: `${grupo.tipo} — ${descSistemas}`, cantidad: r.cantidad, precioUnitario: r.precioSistemasPorUnidad, descuento: 0, tieneIVA: true });
+      // Renglón aparte para SQL (no sumado al de sistemas) — decisión confirmada con el usuario,
+      // para que el cliente vea el cargo de SQL desglosado en el PDF de la cotización.
+      if (r.incluyeSql) {
+        nuevosConceptos.push({ descripcion: `${grupo.tipo} — SQL`, cantidad: r.cantidad, precioUnitario: r.precioSqlPorUnidad, descuento: 0, tieneIVA: true });
+      }
+    });
+    if (!nuevosConceptos.length) { toast("⚠️ Agrega al menos un grupo con cantidad y sistemas", "error"); return; }
+    conceptosCotActual.push(...nuevosConceptos);
+    renderConceptosCotizacion();
+    const m = document.getElementById("modal-calculadora-compac");
+    if (m) m.style.display = "none";
+    toast(`🧮 ${nuevosConceptos.length} renglón(es) enviados a Conceptos`);
+  });
 
   // "Vencida" se calcula al vuelo para listar/filtrar — nunca se persiste en Firestore, para no
   // generar escrituras automáticas silenciosas cada vez que alguien abre el CRM.
@@ -15237,14 +15642,14 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   // Cerrar modales con Escape
   document.addEventListener("keydown", e => {
     if (e.key !== "Escape") return;
-    ["modal-acerca-de", "modal-papelera", "modal-papelera-empresas", "modal-papelera-contactos", "modal-exportar-excel", "kb-export-modal", "modal-inscritos", "modal-nueva-tarea"].forEach(id => {
+    ["modal-acerca-de", "modal-papelera", "modal-papelera-empresas", "modal-papelera-contactos", "modal-exportar-excel", "modal-calculadora-compac", "kb-export-modal", "modal-inscritos", "modal-nueva-tarea"].forEach(id => {
       const m = document.getElementById(id);
       if (m && m.style.display !== "none") m.style.display = "none";
     });
   });
 
   // Cerrar modales al click fuera
-  ["modal-acerca-de", "modal-papelera", "modal-papelera-empresas", "modal-papelera-contactos", "modal-exportar-excel"].forEach(id => {
+  ["modal-acerca-de", "modal-papelera", "modal-papelera-empresas", "modal-papelera-contactos", "modal-exportar-excel", "modal-calculadora-compac"].forEach(id => {
     const m = document.getElementById(id);
     m?.addEventListener("click", e => { if (e.target === m) m.style.display = "none"; });
   });
