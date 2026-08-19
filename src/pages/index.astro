@@ -4782,7 +4782,7 @@ try {
     </div>
     <div style="padding:14px 18px;">
       <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">
-        Captura los grupos de equipos (mismo tipo + mismos sistemas + mismo estatus de SQL = un grupo). Al terminar, "Enviar al cotizador" agrega los renglones ya calculados a los Conceptos de esta cotización.
+        Configura un grupo de equipos y dale "➕ Agregar" — se va sumando al desglose de abajo. Repite para cada combinación distinta (ej. primero Servidor, luego Terminales). Al terminar, "Enviar al cotizador" manda todo el desglose como renglones a los Conceptos de esta cotización.
       </p>
 
       <div style="margin-bottom:14px;">
@@ -4819,8 +4819,24 @@ try {
         <div id="compac-parque-warning" class="hidden" style="font-size:0.78rem; color:#fbbf24; flex:1; min-width:200px;"></div>
       </div>
 
-      <div id="compac-grupos-list" style="display:flex; flex-direction:column; gap:12px;"></div>
-      <button type="button" class="btn btn-ghost btn-sm" style="margin-top:12px;" id="btnAddGrupoCompac">➕ Agregar grupo de equipos</button>
+      <div style="background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:14px;">
+        <div style="font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.03em; margin-bottom:10px;">Grupo de equipos a agregar</div>
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:12px;">
+          <div class="form-group" style="margin-bottom:0; max-width:170px;">
+            <label style="font-size:0.7rem;">Tipo de equipo</label>
+            <select id="compac-nuevo-tipo"></select>
+          </div>
+          <div class="form-group" style="margin-bottom:0; max-width:100px;">
+            <label style="font-size:0.7rem;">Cantidad</label>
+            <input type="number" min="1" id="compac-nuevo-cantidad" value="1">
+          </div>
+          <label id="compac-nuevo-sql-wrap" style="display:flex; align-items:center; gap:6px; font-size:0.8rem; margin-top:14px;">
+            <input type="checkbox" id="compac-nuevo-sql"> Incluye SQL
+          </label>
+        </div>
+        <div id="compac-nuevo-sistemas" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;"></div>
+        <button type="button" class="btn btn-primary btn-sm" id="btnAgregarGrupoCompac">➕ Agregar</button>
+      </div>
 
       <div class="table-wrap" style="margin-top:18px; max-height:260px;">
         <table>
@@ -4831,6 +4847,7 @@ try {
               <th>Sistemas</th>
               <th style="text-align:right; width:110px;">Precio unit.</th>
               <th style="text-align:right; width:110px;">Subtotal</th>
+              <th style="width:36px;"></th>
             </tr>
           </thead>
           <tbody id="compac-preview-body"></tbody>
@@ -13976,79 +13993,52 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   // ============================================================
   let gruposCompacActual: any[] = [];
 
-  function grupoCompacVacio() {
-    return { tipo: (configCompac.catalogoEquipos?.[0]?.nombre || ""), cantidad: 1, sistemas: [], incluye_sql: false };
-  }
-
-  function renderGruposCompac() {
-    const listEl = document.getElementById("compac-grupos-list");
-    if (!listEl) return;
-    listEl.innerHTML = "";
-    gruposCompacActual.forEach((grupo, idx) => {
-      const div = document.createElement("div");
-      div.style.cssText = "background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px 14px; display:flex; flex-direction:column; gap:10px;";
-      const opcionesTipo = (configCompac.catalogoEquipos || []).map((e: any) => `<option value="${escapeHtml(e.nombre)}" ${grupo.tipo === e.nombre ? "selected" : ""}>${escapeHtml(e.nombre)}</option>`).join("");
-      const esServidor = grupo.tipo === "Servidor";
-      const checkboxesSistemas = (configCompac.catalogoSistemas || []).filter((s: any) => s.nombre !== "Componentes").map((s: any) => `
+  // Formulario de captura de UN grupo a la vez: se llena, se le da "➕ Agregar" y se suma al
+  // desglose de abajo — luego el formulario se limpia para capturar el siguiente grupo (ej.
+  // primero Servidor con sus sistemas, "Agregar", luego Terminal con los suyos, "Agregar"...).
+  function renderFormNuevoGrupoCompac() {
+    const tipoSel = document.getElementById("compac-nuevo-tipo") as HTMLSelectElement | null;
+    if (tipoSel) {
+      tipoSel.innerHTML = (configCompac.catalogoEquipos || []).map((e: any) => `<option value="${escapeHtml(e.nombre)}">${escapeHtml(e.nombre)}</option>`).join("");
+    }
+    const cantEl = document.getElementById("compac-nuevo-cantidad") as HTMLInputElement | null;
+    if (cantEl) cantEl.value = "1";
+    const sqlChk = document.getElementById("compac-nuevo-sql") as HTMLInputElement | null;
+    if (sqlChk) sqlChk.checked = false;
+    const sisEl = document.getElementById("compac-nuevo-sistemas");
+    if (sisEl) {
+      sisEl.innerHTML = (configCompac.catalogoSistemas || []).filter((s: any) => s.nombre !== "Componentes").map((s: any) => `
         <label style="display:flex; align-items:center; gap:5px; font-size:0.78rem; cursor:pointer; white-space:nowrap;">
-          <input type="checkbox" class="compac-grupo-sistema" data-idx="${idx}" data-sistema="${escapeHtml(s.nombre)}" ${grupo.sistemas.includes(s.nombre) ? "checked" : ""}> ${escapeHtml(s.nombre)}
-        </label>`).join("");
-      div.innerHTML = `
-        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-          <div class="form-group" style="margin-bottom:0; max-width:170px;">
-            <label style="font-size:0.7rem;">Tipo de equipo</label>
-            <select class="compac-grupo-tipo" data-idx="${idx}">${opcionesTipo}</select>
-          </div>
-          <div class="form-group" style="margin-bottom:0; max-width:100px;">
-            <label style="font-size:0.7rem;">Cantidad</label>
-            <input type="number" min="1" class="compac-grupo-cantidad" data-idx="${idx}" value="${grupo.cantidad}">
-          </div>
-          <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:${esServidor ? "pointer" : "not-allowed"}; opacity:${esServidor ? "1" : ".4"}; margin-top:14px;">
-            <input type="checkbox" class="compac-grupo-sql" data-idx="${idx}" ${grupo.incluye_sql ? "checked" : ""} ${esServidor ? "" : "disabled"}> Incluye SQL
-          </label>
-          <button type="button" class="btn btn-danger btn-xs compac-grupo-del" data-idx="${idx}" style="margin-left:auto; margin-top:14px;">🗑️ Quitar grupo</button>
-        </div>
-        <div style="display:flex; gap:12px; flex-wrap:wrap;">${checkboxesSistemas || '<span style="font-size:0.75rem; color:var(--text-muted);">No hay sistemas en el catálogo — agrégalos en Configuración.</span>'}</div>
-      `;
-      listEl.appendChild(div);
-    });
-    wireGrupoCompacRowEvents();
-    renderPreviewCompac();
+          <input type="checkbox" class="compac-nuevo-sistema" value="${escapeHtml(s.nombre)}"> ${escapeHtml(s.nombre)}
+        </label>`).join("") || '<span style="font-size:0.75rem; color:var(--text-muted);">No hay sistemas en el catálogo — agrégalos con "⚙️ Editar precios" o en Configuración.</span>';
+    }
+    actualizarSqlDisponibleCompac();
   }
 
-  function wireGrupoCompacRowEvents() {
-    document.querySelectorAll(".compac-grupo-tipo").forEach(sel => sel.addEventListener("change", (e) => {
-      const idx = parseInt((e.target as HTMLElement).dataset.idx || "0");
-      const nuevoTipo = (e.target as HTMLSelectElement).value;
-      gruposCompacActual[idx].tipo = nuevoTipo;
-      if (nuevoTipo !== "Servidor") gruposCompacActual[idx].incluye_sql = false;
-      renderGruposCompac();
-    }));
-    document.querySelectorAll(".compac-grupo-cantidad").forEach(inp => inp.addEventListener("input", (e) => {
-      const idx = parseInt((e.target as HTMLElement).dataset.idx || "0");
-      gruposCompacActual[idx].cantidad = parseInt((e.target as HTMLInputElement).value) || 0;
-      renderPreviewCompac();
-    }));
-    document.querySelectorAll(".compac-grupo-sql").forEach(chk => chk.addEventListener("change", (e) => {
-      const idx = parseInt((e.target as HTMLElement).dataset.idx || "0");
-      gruposCompacActual[idx].incluye_sql = (e.target as HTMLInputElement).checked;
-      renderPreviewCompac();
-    }));
-    document.querySelectorAll(".compac-grupo-sistema").forEach(chk => chk.addEventListener("change", (e) => {
-      const idx = parseInt((e.target as HTMLElement).dataset.idx || "0");
-      const sistema = (e.target as HTMLElement).dataset.sistema || "";
-      const marcado = (e.target as HTMLInputElement).checked;
-      const arr = gruposCompacActual[idx].sistemas;
-      if (marcado && !arr.includes(sistema)) arr.push(sistema);
-      else if (!marcado) gruposCompacActual[idx].sistemas = arr.filter((s: string) => s !== sistema);
-      renderPreviewCompac();
-    }));
-    document.querySelectorAll(".compac-grupo-del").forEach(btn => btn.addEventListener("click", (e) => {
-      const idx = parseInt((e.target as HTMLElement).closest("button")?.dataset.idx || "0");
-      gruposCompacActual.splice(idx, 1);
-      renderGruposCompac();
-    }));
+  // El checkbox de SQL solo tiene sentido para Servidor — se deshabilita y desmarca para
+  // cualquier otro tipo de equipo, tanto al abrir el formulario como al cambiar el tipo.
+  function actualizarSqlDisponibleCompac() {
+    const tipoSel = document.getElementById("compac-nuevo-tipo") as HTMLSelectElement | null;
+    const sqlChk = document.getElementById("compac-nuevo-sql") as HTMLInputElement | null;
+    const sqlWrap = document.getElementById("compac-nuevo-sql-wrap");
+    const esServidor = tipoSel?.value === "Servidor";
+    if (sqlChk) { sqlChk.disabled = !esServidor; if (!esServidor) sqlChk.checked = false; }
+    if (sqlWrap) sqlWrap.style.opacity = esServidor ? "1" : ".4";
   }
+  document.getElementById("compac-nuevo-tipo")?.addEventListener("change", actualizarSqlDisponibleCompac);
+
+  document.getElementById("btnAgregarGrupoCompac")?.addEventListener("click", () => {
+    const tipo = (document.getElementById("compac-nuevo-tipo") as HTMLSelectElement)?.value || "";
+    const cantidad = parseInt((document.getElementById("compac-nuevo-cantidad") as HTMLInputElement)?.value || "0") || 0;
+    const incluye_sql = (document.getElementById("compac-nuevo-sql") as HTMLInputElement)?.checked || false;
+    const sistemas = Array.from(document.querySelectorAll(".compac-nuevo-sistema:checked")).map(chk => (chk as HTMLInputElement).value);
+    if (!tipo || cantidad <= 0) { toast("⚠️ Indica el tipo de equipo y una cantidad válida", "error"); return; }
+    if (!sistemas.length) { toast("⚠️ Marca al menos un sistema para este grupo", "error"); return; }
+    gruposCompacActual.push({ tipo, cantidad, sistemas, incluye_sql });
+    renderPreviewCompac();
+    renderFormNuevoGrupoCompac();
+    toast(`➕ Grupo agregado al desglose`);
+  });
 
   function renderPreviewCompac() {
     const body = document.getElementById("compac-preview-body");
@@ -14056,7 +14046,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     body.innerHTML = "";
     let total = 0;
     let servidores = 0, terminales = 0, conComponentes = 0;
-    gruposCompacActual.forEach(grupo => {
+    gruposCompacActual.forEach((grupo, idx) => {
       const r = calcularGrupoCompac(configCompac, grupo);
       total += r.subtotal;
       if (grupo.tipo === "Servidor") servidores += r.cantidad;
@@ -14070,9 +14060,15 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         <td style="font-size:0.8rem;">${escapeHtml(listaSistemasTxt)}${r.incluyeSql ? " + SQL" : ""}</td>
         <td style="text-align:right;">${formatMoney(r.precioUnitario)}</td>
         <td style="text-align:right; font-weight:600;">${formatMoney(r.subtotal)}</td>
+        <td style="text-align:center;"><button type="button" class="btn btn-danger btn-xs compac-grupo-del" data-idx="${idx}" title="Quitar del desglose">🗑️</button></td>
       `;
       body.appendChild(tr);
     });
+    document.querySelectorAll(".compac-grupo-del").forEach(btn => btn.addEventListener("click", (e) => {
+      const idx = parseInt((e.target as HTMLElement).closest("button")?.dataset.idx || "0");
+      gruposCompacActual.splice(idx, 1);
+      renderPreviewCompac();
+    }));
     const totalEl = document.getElementById("compac-total");
     if (totalEl) totalEl.textContent = formatMoney(total);
     const resumenEl = document.getElementById("compac-resumen-conteos");
@@ -14091,12 +14087,13 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   }
 
   function abrirModalCalculadoraCompac() {
-    gruposCompacActual = [grupoCompacVacio()];
+    gruposCompacActual = [];
     const espServEl = document.getElementById("compac-parque-servidores") as HTMLInputElement | null;
     const espTermEl = document.getElementById("compac-parque-terminales") as HTMLInputElement | null;
     if (espServEl) espServEl.value = "";
     if (espTermEl) espTermEl.value = "";
-    renderGruposCompac();
+    renderFormNuevoGrupoCompac();
+    renderPreviewCompac();
     const m = document.getElementById("modal-calculadora-compac");
     if (m) m.style.display = "flex";
   }
@@ -14113,10 +14110,6 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   });
   document.getElementById("btnCancelarCalculadoraCompac")?.addEventListener("click", () => {
     const m = document.getElementById("modal-calculadora-compac"); if (m) m.style.display = "none";
-  });
-  document.getElementById("btnAddGrupoCompac")?.addEventListener("click", () => {
-    gruposCompacActual.push(grupoCompacVacio());
-    renderGruposCompac();
   });
   document.getElementById("compac-parque-servidores")?.addEventListener("input", renderPreviewCompac);
   document.getElementById("compac-parque-terminales")?.addEventListener("input", renderPreviewCompac);
@@ -14180,7 +14173,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     if (ok) toast("💾 Precios de la Calculadora Compac guardados");
     else toast("⚠️ Error al guardar (se guardó localmente)", "error");
 
-    renderGruposCompac(); // refresca los grupos ya capturados y el preview con los precios nuevos
+    renderPreviewCompac(); // recalcula el desglose ya agregado con los precios nuevos (sin tocar el formulario de captura en progreso)
   });
 
   document.getElementById("btnEnviarCompacACotizador")?.addEventListener("click", () => {
