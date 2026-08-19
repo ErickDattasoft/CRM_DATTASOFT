@@ -3635,7 +3635,7 @@ try {
           <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">Catálogos y precios que usa la calculadora de licenciamiento Compac dentro de Cotizaciones (botón "🧮 Calculadora Compac" al armar los conceptos).</p>
 
           <div class="card-title" style="font-size:0.85rem;">🧩 Catálogo de Sistemas</div>
-          <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:12px; line-height:1.5;">Marca "Req. Componentes" en los sistemas que deben auto-agregar "Componentes" al elegirse. La fila "Componentes" no se puede borrar ni renombrar — la calculadora depende de ese nombre exacto.</p>
+          <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:12px; line-height:1.5;">Sistemas que se pueden marcar al armar un grupo de equipos en la calculadora — cada uno es independiente, incluyendo "Componentes".</p>
           <div class="config-list" id="cfg-list-sistemas-compac"></div>
           <button class="btn btn-ghost btn-xs" style="margin-top:10px;" id="btnAddSistemaCompac">➕ Agregar sistema</button>
 
@@ -4795,10 +4795,6 @@ try {
           <div class="form-group" style="margin-bottom:0; max-width:180px;">
             <label style="font-size:0.7rem;">Precio SQL (solo Servidor)</label>
             <input type="number" min="0" step="0.01" id="compac-precio-sql-modal">
-          </div>
-          <div>
-            <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.03em;">Sistemas que disparan "Componentes"</div>
-            <div id="compac-precios-sistemas" style="display:flex; flex-direction:column; gap:6px;"></div>
           </div>
           <div>
             <button class="btn btn-success btn-sm" id="btnGuardarPreciosCompac">💾 Guardar precios</button>
@@ -5978,16 +5974,18 @@ verificarSesion();
   // Catálogos y precios de la Calculadora Compac (Cotizaciones) — semillas solo para el primer
   // arranque, antes de que exista el documento en Firestore; editables luego en Configuración.
   let configCompac = {
+    // Cada sistema es independiente, se marca a mano en la calculadora (incluyendo "Componentes",
+    // que es solo otro sistema más de la lista, no algo que se agregue solo).
     catalogoSistemas: [
-      { nombre: "Contabilidad", requiereComponentes: true },
-      { nombre: "Bancos", requiereComponentes: true },
-      { nombre: "Nóminas", requiereComponentes: true },
-      { nombre: "Comercial Premium", requiereComponentes: true },
-      { nombre: "XML en línea", requiereComponentes: true },
-      { nombre: "Factura Electrónica", requiereComponentes: false },
-      { nombre: "Comercial Pro", requiereComponentes: false },
-      { nombre: "Respaldos", requiereComponentes: false },
-      { nombre: "Componentes", requiereComponentes: false },
+      { nombre: "Componentes" },
+      { nombre: "Contabilidad" },
+      { nombre: "Bancos" },
+      { nombre: "Nóminas" },
+      { nombre: "Comercial Premium" },
+      { nombre: "XML en línea" },
+      { nombre: "Factura Electrónica" },
+      { nombre: "Comercial Pro" },
+      { nombre: "Respaldos" },
     ],
     catalogoEquipos: [
       { nombre: "Servidor", precioPrimerSistema: 800, precioAdicional: 400 },
@@ -12705,10 +12703,10 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     renderCatalogoConceptos();
   });
 
-  // Configuración de la Calculadora Compac: catálogo de sistemas (con Req. Componentes),
-  // catálogo de tipos de equipo (con sus 2 precios) y el precio fijo de SQL. Mismo patrón
-  // .config-item-cat que el catálogo de conceptos de Cotizaciones (arriba) — nunca .config-item,
-  // porque cada fila trae más de un campo.
+  // Configuración de la Calculadora Compac: catálogo de sistemas (cada uno independiente, se
+  // marca a mano en la calculadora), catálogo de tipos de equipo (con sus 2 precios) y el precio
+  // fijo de SQL. Mismo patrón .config-item-cat que el catálogo de conceptos de Cotizaciones
+  // (arriba) — nunca .config-item, porque las filas de equipos traen más de un campo.
   function renderConfigCompac() {
     const precioSqlEl = document.getElementById("cfg-compac-precio-sql") as HTMLInputElement | null;
     if (precioSqlEl) precioSqlEl.value = String(configCompac.precioSQL ?? 800);
@@ -12720,21 +12718,28 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const listEl = document.getElementById("cfg-list-sistemas-compac");
     if (!listEl) return;
     listEl.innerHTML = "";
+    const total = (configCompac.catalogoSistemas || []).length;
     (configCompac.catalogoSistemas || []).forEach((item: any, idx: number) => {
-      // "Componentes" es el nombre literal del que depende el auto-agregado en calcularGrupoCompac —
-      // se protege de borrado/renombrado para que un cambio accidental no rompa la calculadora.
-      const esProtegido = item.nombre === "Componentes";
       const div = document.createElement("div");
       div.className = "config-item-cat";
       div.innerHTML = `
-        <input class="cat-field-nombre" placeholder="Nombre del sistema" value="${escapeHtml(item.nombre || "")}" data-cat-idx="${idx}" data-cat-field="nombre" ${esProtegido ? "disabled title=\"No se puede renombrar: la calculadora depende de este nombre\"" : ""}>
-        <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; white-space:nowrap; flex:1;">
-          <input type="checkbox" data-cat-idx="${idx}" data-cat-field="requiereComponentes" ${item.requiereComponentes ? "checked" : ""}> Req. Componentes
-        </label>
-        <button class="btn btn-danger btn-xs btn-del-sistema-compac" data-cat-idx="${idx}" ${esProtegido ? "disabled title=\"No se puede borrar\" style=\"opacity:.35; cursor:not-allowed;\"" : ""}>🗑️</button>
+        <div class="cfg-item-order">
+          <button type="button" class="btn-sistema-compac-order" data-dir="up" data-idx="${idx}" title="Subir" ${idx === 0 ? "disabled" : ""}>▲</button>
+          <button type="button" class="btn-sistema-compac-order" data-dir="down" data-idx="${idx}" title="Bajar" ${idx === total - 1 ? "disabled" : ""}>▼</button>
+        </div>
+        <input class="cat-field-nombre" placeholder="Nombre del sistema" value="${escapeHtml(item.nombre || "")}" data-cat-idx="${idx}" data-cat-field="nombre" style="flex:1;">
+        <button class="btn btn-danger btn-xs btn-del-sistema-compac" data-cat-idx="${idx}">🗑️</button>
       `;
       listEl.appendChild(div);
     });
+    listEl.querySelectorAll(".btn-sistema-compac-order").forEach(btn => btn.addEventListener("click", () => {
+      const idx = parseInt((btn as HTMLElement).dataset.idx || "0");
+      const destino = (btn as HTMLElement).dataset.dir === "up" ? idx - 1 : idx + 1;
+      const arr = configCompac.catalogoSistemas;
+      if (!arr || destino < 0 || destino >= arr.length) return;
+      [arr[idx], arr[destino]] = [arr[destino], arr[idx]];
+      renderListaSistemasCompac();
+    }));
   }
 
   function renderListaEquiposCompac() {
@@ -12756,12 +12761,12 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
   document.getElementById("btnAddSistemaCompac")?.addEventListener("click", () => {
     configCompac.catalogoSistemas = configCompac.catalogoSistemas || [];
-    configCompac.catalogoSistemas.push({ nombre: "", requiereComponentes: false });
+    configCompac.catalogoSistemas.push({ nombre: "" });
     renderListaSistemasCompac();
   });
   document.getElementById("cfg-list-sistemas-compac")?.addEventListener("click", (e) => {
     const btn = (e.target as HTMLElement).closest(".btn-del-sistema-compac") as HTMLButtonElement | null;
-    if (!btn || btn.disabled) return;
+    if (!btn) return;
     const idx = parseInt(btn.dataset.catIdx || "");
     configCompac.catalogoSistemas.splice(idx, 1);
     renderListaSistemasCompac();
@@ -12784,14 +12789,8 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const catalogoSistemas: any[] = [];
     document.querySelectorAll("#cfg-list-sistemas-compac .config-item-cat").forEach(div => {
       const nombre = (div.querySelector('[data-cat-field="nombre"]') as HTMLInputElement)?.value.trim() || "";
-      const requiereComponentes = (div.querySelector('[data-cat-field="requiereComponentes"]') as HTMLInputElement)?.checked || false;
-      if (nombre) catalogoSistemas.push({ nombre, requiereComponentes });
+      if (nombre) catalogoSistemas.push({ nombre });
     });
-    // Salvaguarda extra: si por lo que sea "Componentes" no quedó en la lista (ej. se intentó
-    // borrar manipulando el DOM), se vuelve a agregar — la calculadora no funciona sin ella.
-    if (!catalogoSistemas.some(s => s.nombre === "Componentes")) {
-      catalogoSistemas.push({ nombre: "Componentes", requiereComponentes: false });
-    }
 
     const catalogoEquipos: any[] = [];
     document.querySelectorAll("#cfg-list-equipos-compac .config-item-cat").forEach(div => {
@@ -13959,20 +13958,13 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
   // Calcula el precio de UN grupo de equipos de la Calculadora Compac. Pura: no toca el DOM ni
   // estado global — se usa igual para el preview en vivo del modal y para la conversión final
-  // a conceptos de la cotización. Implementa los 7 pasos del spec de precios Compac.
+  // a conceptos de la cotización. "Componentes" es un sistema más de la lista, se marca a mano
+  // como cualquier otro — no hay agregado automático.
   function calcularGrupoCompac(cfgCompac, grupo) {
-    const catSistemas = cfgCompac.catalogoSistemas || [];
     const catEquipos = cfgCompac.catalogoEquipos || [];
     const equipoCfg = catEquipos.find(e => e.nombre === grupo.tipo) || { precioPrimerSistema: 0, precioAdicional: 0 };
 
-    const sistemasBase = [...(grupo.sistemas || [])];
-    const requiereComponentes = sistemasBase.some(nombreSis => {
-      const s = catSistemas.find(x => x.nombre === nombreSis);
-      return !!s?.requiereComponentes;
-    });
-    const yaTieneComponentes = sistemasBase.includes("Componentes");
-    const componentesEsAuto = requiereComponentes && !yaTieneComponentes;
-    const sistemasFinal = componentesEsAuto ? [...sistemasBase, "Componentes"] : sistemasBase;
+    const sistemasFinal = [...(grupo.sistemas || [])];
 
     const numSistemas = sistemasFinal.length;
     const precioSistemasPorUnidad = numSistemas > 0
@@ -13986,7 +13978,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const cantidad = Number(grupo.cantidad) || 0;
     const subtotal = precioUnitario * cantidad;
 
-    return { sistemasFinal, componentesEsAuto, numSistemas, precioSistemasPorUnidad, precioSqlPorUnidad, precioUnitario, subtotal, incluyeSql, cantidad };
+    return { sistemasFinal, numSistemas, precioSistemasPorUnidad, precioSqlPorUnidad, precioUnitario, subtotal, incluyeSql, cantidad };
   }
 
   // ============================================================
@@ -14008,18 +14000,10 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     if (sqlChk) sqlChk.checked = false;
     const sisEl = document.getElementById("compac-nuevo-sistemas");
     if (sisEl) {
-      const opciones = (configCompac.catalogoSistemas || []).filter((s: any) => s.nombre !== "Componentes").map((s: any) => `
+      sisEl.innerHTML = (configCompac.catalogoSistemas || []).map((s: any) => `
         <label style="display:flex; align-items:center; gap:5px; font-size:0.78rem; cursor:pointer; white-space:nowrap;">
           <input type="checkbox" class="compac-nuevo-sistema" value="${escapeHtml(s.nombre)}"> ${escapeHtml(s.nombre)}
-        </label>`).join("");
-      // "Componentes" no se marca a mano — se agrega solo cuando el grupo trae algún sistema que
-      // lo dispara. Se muestra igual, deshabilitado, para que quede claro que existe y no falta.
-      const componentesTag = (configCompac.catalogoSistemas || []).some((s: any) => s.nombre === "Componentes")
-        ? `<label style="display:flex; align-items:center; gap:5px; font-size:0.78rem; white-space:nowrap; opacity:.5;" title="Se agrega automáticamente, no se marca a mano">
-             <input type="checkbox" disabled> Componentes (automático)
-           </label>`
-        : "";
-      sisEl.innerHTML = (opciones + componentesTag) || '<span style="font-size:0.75rem; color:var(--text-muted);">No hay sistemas en el catálogo — agrégalos con "⚙️ Editar precios" o en Configuración.</span>';
+        </label>`).join("") || '<span style="font-size:0.75rem; color:var(--text-muted);">No hay sistemas en el catálogo — agrégalos con "⚙️ Editar precios" o en Configuración.</span>';
     }
     actualizarSqlDisponibleCompac();
   }
@@ -14060,8 +14044,8 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       total += r.subtotal;
       if (grupo.tipo === "Servidor") servidores += r.cantidad;
       else if (grupo.tipo === "Terminal") terminales += r.cantidad;
-      if (r.componentesEsAuto) conComponentes += r.cantidad;
-      const listaSistemasTxt = r.sistemasFinal.map((s: string) => (r.componentesEsAuto && s === "Componentes") ? `${s} (auto)` : s).join(", ") || "—";
+      if (r.sistemasFinal.includes("Componentes")) conComponentes += r.cantidad;
+      const listaSistemasTxt = r.sistemasFinal.join(", ") || "—";
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${escapeHtml(grupo.tipo || "—")}</td>
@@ -14143,13 +14127,6 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     }
     const sqlEl = document.getElementById("compac-precio-sql-modal") as HTMLInputElement | null;
     if (sqlEl) sqlEl.value = String(configCompac.precioSQL ?? 800);
-    const sisEl = document.getElementById("compac-precios-sistemas");
-    if (sisEl) {
-      sisEl.innerHTML = (configCompac.catalogoSistemas || []).filter((s: any) => s.nombre !== "Componentes").map((s: any) => `
-        <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; cursor:pointer;">
-          <input type="checkbox" class="compac-precio-sistema-req" data-nombre="${escapeHtml(s.nombre)}" ${s.requiereComponentes ? "checked" : ""}> ${escapeHtml(s.nombre)}
-        </label>`).join("") || '<span style="font-size:0.75rem; color:var(--text-muted);">Sin sistemas — agrégalos en Configuración.</span>';
-    }
   }
 
   document.getElementById("btnTogglePreciosCompac")?.addEventListener("click", () => {
@@ -14171,11 +14148,6 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     });
     const sqlEl = document.getElementById("compac-precio-sql-modal") as HTMLInputElement | null;
     configCompac.precioSQL = parseFloat(sqlEl?.value || "0") || 0;
-    document.querySelectorAll(".compac-precio-sistema-req").forEach(chk => {
-      const nombre = (chk as HTMLElement).dataset.nombre;
-      const s = (configCompac.catalogoSistemas || []).find((x: any) => x.nombre === nombre);
-      if (s) s.requiereComponentes = (chk as HTMLInputElement).checked;
-    });
 
     guardarLocal("crm_config_compac", configCompac);
     const ok = firebaseEnabled && !crmLocalOnly ? await guardarConfigCompac(configCompac) : true;
