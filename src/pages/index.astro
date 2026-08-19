@@ -5986,6 +5986,7 @@ verificarSesion();
       { nombre: "XML en línea", requiereComponentes: true },
       { nombre: "Factura Electrónica", requiereComponentes: false },
       { nombre: "Comercial Pro", requiereComponentes: false },
+      { nombre: "Respaldos", requiereComponentes: false },
       { nombre: "Componentes", requiereComponentes: false },
     ],
     catalogoEquipos: [
@@ -14007,10 +14008,18 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     if (sqlChk) sqlChk.checked = false;
     const sisEl = document.getElementById("compac-nuevo-sistemas");
     if (sisEl) {
-      sisEl.innerHTML = (configCompac.catalogoSistemas || []).filter((s: any) => s.nombre !== "Componentes").map((s: any) => `
+      const opciones = (configCompac.catalogoSistemas || []).filter((s: any) => s.nombre !== "Componentes").map((s: any) => `
         <label style="display:flex; align-items:center; gap:5px; font-size:0.78rem; cursor:pointer; white-space:nowrap;">
           <input type="checkbox" class="compac-nuevo-sistema" value="${escapeHtml(s.nombre)}"> ${escapeHtml(s.nombre)}
-        </label>`).join("") || '<span style="font-size:0.75rem; color:var(--text-muted);">No hay sistemas en el catálogo — agrégalos con "⚙️ Editar precios" o en Configuración.</span>';
+        </label>`).join("");
+      // "Componentes" no se marca a mano — se agrega solo cuando el grupo trae algún sistema que
+      // lo dispara. Se muestra igual, deshabilitado, para que quede claro que existe y no falta.
+      const componentesTag = (configCompac.catalogoSistemas || []).some((s: any) => s.nombre === "Componentes")
+        ? `<label style="display:flex; align-items:center; gap:5px; font-size:0.78rem; white-space:nowrap; opacity:.5;" title="Se agrega automáticamente, no se marca a mano">
+             <input type="checkbox" disabled> Componentes (automático)
+           </label>`
+        : "";
+      sisEl.innerHTML = (opciones + componentesTag) || '<span style="font-size:0.75rem; color:var(--text-muted);">No hay sistemas en el catálogo — agrégalos con "⚙️ Editar precios" o en Configuración.</span>';
     }
     actualizarSqlDisponibleCompac();
   }
