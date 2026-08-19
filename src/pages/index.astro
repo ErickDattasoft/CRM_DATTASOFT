@@ -3019,6 +3019,7 @@ try {
             </select>
           </div>
           <div class="controls-right">
+            <button class="btn btn-ghost btn-sm" id="btnAbrirCalculadoraCompacToolbar" title="Arma una cotización nueva con la Calculadora Compac">🧮 Calculadora Compac</button>
             <button class="btn btn-primary btn-sm" id="btnNuevaCotizacion">➕ Nueva Cotización</button>
           </div>
         </div>
@@ -14089,7 +14090,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     }
   }
 
-  document.getElementById("btnAbrirCalculadoraCompac")?.addEventListener("click", () => {
+  function abrirModalCalculadoraCompac() {
     gruposCompacActual = [grupoCompacVacio()];
     const espServEl = document.getElementById("compac-parque-servidores") as HTMLInputElement | null;
     const espTermEl = document.getElementById("compac-parque-terminales") as HTMLInputElement | null;
@@ -14098,6 +14099,14 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     renderGruposCompac();
     const m = document.getElementById("modal-calculadora-compac");
     if (m) m.style.display = "flex";
+  }
+  document.getElementById("btnAbrirCalculadoraCompac")?.addEventListener("click", abrirModalCalculadoraCompac);
+  // Acceso rápido desde la barra de Cotizaciones (sin haber abierto un formulario todavía): arma
+  // una cotización nueva primero — la calculadora necesita conceptosCotActual ya inicializado
+  // para poder mandarle renglones — y encima abre la calculadora directo.
+  document.getElementById("btnAbrirCalculadoraCompacToolbar")?.addEventListener("click", () => {
+    abrirNuevaCotizacion();
+    abrirModalCalculadoraCompac();
   });
   document.getElementById("btnCerrarCalculadoraCompac")?.addEventListener("click", () => {
     const m = document.getElementById("modal-calculadora-compac"); if (m) m.style.display = "none";
