@@ -14026,7 +14026,9 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const incluye_sql = (document.getElementById("compac-nuevo-sql") as HTMLInputElement)?.checked || false;
     const sistemas = Array.from(document.querySelectorAll(".compac-nuevo-sistema:checked")).map(chk => (chk as HTMLInputElement).value);
     if (!tipo || cantidad <= 0) { toast("⚠️ Indica el tipo de equipo y una cantidad válida", "error"); return; }
-    if (!sistemas.length) { toast("⚠️ Marca al menos un sistema para este grupo", "error"); return; }
+    // Un grupo de solo SQL (sin ningún otro sistema) es válido — ej. un Servidor donde solo se
+    // instala SQL. Solo se exige marcar algo si tampoco se marcó SQL.
+    if (!sistemas.length && !incluye_sql) { toast("⚠️ Marca al menos un sistema o \"Incluye SQL\" para este grupo", "error"); return; }
     gruposCompacActual.push({ tipo, cantidad, sistemas, incluye_sql });
     renderPreviewCompac();
     renderFormNuevoGrupoCompac();
@@ -14045,12 +14047,14 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       if (grupo.tipo === "Servidor") servidores += r.cantidad;
       else if (grupo.tipo === "Terminal") terminales += r.cantidad;
       if (r.sistemasFinal.includes("Componentes")) conComponentes += r.cantidad;
-      const listaSistemasTxt = r.sistemasFinal.join(", ") || "—";
+      const partesDesglose = [...r.sistemasFinal];
+      if (r.incluyeSql) partesDesglose.push("SQL");
+      const listaSistemasTxt = partesDesglose.join(", ") || "—";
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${escapeHtml(grupo.tipo || "—")}</td>
         <td style="text-align:center;">${r.cantidad}</td>
-        <td style="font-size:0.8rem;">${escapeHtml(listaSistemasTxt)}${r.incluyeSql ? " + SQL" : ""}</td>
+        <td style="font-size:0.8rem;">${escapeHtml(listaSistemasTxt)}</td>
         <td style="text-align:right;">${formatMoney(r.precioUnitario)}</td>
         <td style="text-align:right; font-weight:600;">${formatMoney(r.subtotal)}</td>
         <td style="text-align:center;"><button type="button" class="btn btn-danger btn-xs compac-grupo-del" data-idx="${idx}" title="Quitar del desglose">🗑️</button></td>
@@ -14160,17 +14164,21 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   document.getElementById("btnEnviarCompacACotizador")?.addEventListener("click", () => {
     const nuevosConceptos: any[] = [];
     gruposCompacActual.forEach(grupo => {
-      if ((Number(grupo.cantidad) || 0) <= 0 || !(grupo.sistemas || []).length) return;
+      const tieneSistemas = (grupo.sistemas || []).length > 0;
+      if ((Number(grupo.cantidad) || 0) <= 0 || (!tieneSistemas && !grupo.incluye_sql)) return;
       const r = calcularGrupoCompac(configCompac, grupo);
-      const descSistemas = r.sistemasFinal.join(", ");
-      nuevosConceptos.push({ descripcion: `${grupo.tipo} — ${descSistemas}`, cantidad: r.cantidad, precioUnitario: r.precioSistemasPorUnidad, descuento: 0, tieneIVA: true });
+      // Grupo de solo SQL (sin sistemas): no se manda el renglón de "sistemas" vacío, solo el de SQL.
+      if (tieneSistemas) {
+        const descSistemas = r.sistemasFinal.join(", ");
+        nuevosConceptos.push({ descripcion: `${grupo.tipo} — ${descSistemas}`, cantidad: r.cantidad, precioUnitario: r.precioSistemasPorUnidad, descuento: 0, tieneIVA: true });
+      }
       // Renglón aparte para SQL (no sumado al de sistemas) — decisión confirmada con el usuario,
       // para que el cliente vea el cargo de SQL desglosado en el PDF de la cotización.
       if (r.incluyeSql) {
         nuevosConceptos.push({ descripcion: `${grupo.tipo} — SQL`, cantidad: r.cantidad, precioUnitario: r.precioSqlPorUnidad, descuento: 0, tieneIVA: true });
       }
     });
-    if (!nuevosConceptos.length) { toast("⚠️ Agrega al menos un grupo con cantidad y sistemas", "error"); return; }
+    if (!nuevosConceptos.length) { toast("⚠️ Agrega al menos un grupo con cantidad y sistemas o SQL", "error"); return; }
     conceptosCotActual.push(...nuevosConceptos);
     renderConceptosCotizacion();
     const m = document.getElementById("modal-calculadora-compac");
