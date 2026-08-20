@@ -5910,6 +5910,10 @@ verificarSesion();
   let primeraCargaFB = true;
   let adjuntosTicketActual = []; // lista completa (existentes + nuevos - quitados) del ticket en edición
   let adjuntosPendientesEliminar = []; // ids de tickets_adjuntos a borrar solo si el guardado tiene éxito (ver btnGuardarTicket)
+  // Subidas en curso de imágenes pegadas en la descripción (una promesa por cada <img> que aún no
+  // termina de subirse a tickets_adjuntos) — se espera a que todas terminen antes de guardar el
+  // ticket, para no persistir una referencia data-adj-id que todavía no existe en Firestore.
+  let subidasImagenPegadaEnCurso: Promise<void>[] = [];
   let filtroAgendaActivo = false; // tab "📅 Agenda": solo tickets con fecha programada, orden asc
   let plantillaMensaje = "Hola [contacto] de [empresa].\n\nTe saludamos de parte del equipo de DATTASOFT By INFOXPERT. Te escribimos para comentarte que ya se encuentran disponibles las últimas versiones oficiales y estables para tus sistemas CONTPAQi.\n\nRevisando tu perfil, notamos que tienes la oportunidad de actualizar los siguientes módulos:\n\n[sistemas_pendientes]\n\nMantenerlos al día te garantiza la mayor estabilidad, seguridad y el cumplimiento de los cambios fiscales más recientes.\n\nSi deseas agendar la actualización, contáctanos:\n[contacto_soporte]\n\nEstamos para atenderles con gusto.\n\nSaludos cordiales,\nEquipo DATTASOFT BY INFOXPERT";
   let plantillaLicencias = "Hola [contacto] de [empresa].\n\nTe saludamos de parte del equipo de DATTASOFT By INFOXPERT. Te escribimos para recordarte el estado de las licencias de tus sistemas CONTPAQi:\n\n[licencias_pendientes]\n\nSi ya venció o está por vencer, contáctanos para renovarla y evitar interrupciones en el servicio:\n[contacto_soporte]\n\nEstamos para atenderles con gusto.\n\nSaludos cordiales,\nEquipo DATTASOFT BY INFOXPERT";
@@ -6090,8 +6094,59 @@ verificarSesion();
     s = s.replace(/<iframe[\s\S]*?<\/iframe>/gi, "");
     s = s.replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
     s = s.replace(/\s(href|src)\s*=\s*("javascript:[^"]*"|'javascript:[^']*'|javascript:[^\s>]+)/gi, "");
-    s = s.replace(/<(?!\/?(b|strong|i|em|u|ul|ol|li|br|div|p|span|font)\b)[^>]*>/gi, "");
+    s = s.replace(/<(?!\/?(b|strong|i|em|u|ul|ol|li|br|div|p|span|font|img)\b)[^>]*>/gi, "");
     return s;
+  }
+
+  // Quita el src (la imagen en bruto) de cada <img data-adj-id="..."> antes de guardar el ticket
+  // — lo único que se persiste en Firestore es la referencia chiquita al documento en
+  // tickets_adjuntos, nunca la imagen misma (ver contexto del incidente de "documento demasiado
+  // lleno" que ya se tuvo con adjuntos embebidos).
+  function desinflarImagenesDescripcion(html: string): string {
+    if (!html || !html.includes("data-adj-id")) return html || "";
+    const div = document.createElement("div");
+    div.innerHTML = html;
+    div.querySelectorAll("img[data-adj-id]").forEach(img => img.removeAttribute("src"));
+    return div.innerHTML;
+  }
+
+  // Resuelve en vivo (sin bloquear nada) cada <img data-adj-id> dentro de un contenedor ya
+  // pintado en el DOM — cada imagen "aparece" en cuanto termina de cargar su adjunto.
+  function resolverImagenesEnVivo(container: HTMLElement) {
+    container.querySelectorAll("img[data-adj-id]").forEach(async (img) => {
+      const id = img.getAttribute("data-adj-id");
+      if (!id) return;
+      const adj = await cargarAdjuntoTicket(id);
+      if (adj?.data) (img as HTMLImageElement).src = adj.data;
+      else img.replaceWith(document.createTextNode("⚠️ Imagen no disponible"));
+    });
+  }
+
+  // Punto único para pintar la descripción del ticket en el modal de detalle — usado tanto al
+  // abrir el detalle como al "incluir tiempo trabajado", para que ambos resuelvan imágenes igual.
+  function pintarDescripcionDetalle(html: string) {
+    const el = document.getElementById("det-tk-descripcion");
+    if (!el) return;
+    el.innerHTML = sanitizeDescripcionHtml(html);
+    resolverImagenesEnVivo(el);
+  }
+
+  // Resuelve las imágenes de una descripción completamente (a diferencia de la anterior, espera
+  // a que todas terminen) y devuelve el HTML final con los <img> ya con su src real — para
+  // Imprimir y el correo de notificación, que necesitan el HTML listo de una sola vez.
+  async function resolverImagenesDescripcion(html: string): Promise<string> {
+    if (!html || !html.includes("data-adj-id")) return html || "";
+    const div = document.createElement("div");
+    div.innerHTML = html;
+    const imgs = Array.from(div.querySelectorAll("img[data-adj-id]"));
+    await Promise.all(imgs.map(async (img) => {
+      const id = img.getAttribute("data-adj-id");
+      if (!id) return;
+      const adj = await cargarAdjuntoTicket(id);
+      if (adj?.data) { (img as HTMLImageElement).src = adj.data; img.removeAttribute("data-adj-id"); }
+      else img.replaceWith(document.createTextNode("[imagen no disponible]"));
+    }));
+    return div.innerHTML;
   }
 
   // Documento público reducido (agenda/publico) para que las páginas sin login
@@ -9947,15 +10002,23 @@ verificarSesion();
 
   // Convierte el HTML del editor de descripción a HTML de correo preservando saltos de línea:
   // .replace(/<[^>]*>/g,"") a secas borraba <div>/<p>/<br> sin dejar separador, pegando todo el texto.
+  // Las <img> (ya resueltas por resolverImagenesDescripcion, con src real embebido) se sacan antes
+  // de ese barrido con tokens de marcador y se reinsertan al final, para que no se pierdan.
   function descripcionTicketAHtml(html) {
-    const texto = (html || "")
+    const imgs: string[] = [];
+    const conTokens = (html || "").replace(/<img\b[^>]*>/gi, (m) => {
+      imgs.push(m);
+      return ` IMG${imgs.length - 1} `;
+    });
+    const texto = conTokens
       .replace(/<br\s*\/?>/gi, "\n")
       .replace(/<\/(p|div|li|h[1-6]|tr)>/gi, "\n")
       .replace(/<[^>]+>/g, "")
       .replace(/&nbsp;/gi, " ")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
-    return texto.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
+    const escapado = texto.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
+    return escapado.replace(/ IMG(\d+) /g, (_, i) => imgs[Number(i)] || "");
   }
 
   async function enviarNotificacionTicket(t, esReenvio = false) {
@@ -9975,6 +10038,7 @@ verificarSesion();
       <p style="background:#e0e7ff; color:#4338ca; padding:8px 12px; border-radius:6px; font-family:sans-serif; font-size:13px;">
         📨 Este correo es un reenvío — favor de revisar la descripción del ticket por si hay cambios o información nueva.
       </p>` : "";
+    const descripcionResuelta = await resolverImagenesDescripcion(t.descripcion);
     const htmlTicket = `
       ${avisoSinContacto}
       ${avisoReenvio}
@@ -9990,7 +10054,7 @@ verificarSesion();
         <tr><td style="padding:6px 12px; font-weight:bold; background:#f3f4f6;">Agente</td><td style="padding:6px 12px;">${t.agente || ""}</td></tr>
       </table>
       <h3 style="margin-top:16px; font-family:sans-serif;">Descripción</h3>
-      <div style="background:#f9fafb; padding:12px; border-radius:6px; font-family:sans-serif;">${descripcionTicketAHtml(t.descripcion)}</div>
+      <div style="background:#f9fafb; padding:12px; border-radius:6px; font-family:sans-serif;">${descripcionTicketAHtml(descripcionResuelta)}</div>
       <hr style="margin-top:24px; border:none; border-top:1px solid #e5e7eb;">
       <p style="font-size:12px; color:#6b7280; font-family:sans-serif;">DATTASOFT BY INFOXPERT — Sistema de Tickets</p>
     `;
@@ -11533,6 +11597,72 @@ verificarSesion();
     document.getElementById("form-tk-descripcion")?.focus();
   });
 
+  // Devuelve el tamaño real en bytes de un Data URL base64 (sin el prefijo "data:...;base64,").
+  function tamanoBytesDataUrl(dataUrl: string): number {
+    const i = dataUrl.indexOf(",");
+    const b64 = i >= 0 ? dataUrl.slice(i + 1) : dataUrl;
+    return Math.ceil(b64.length * 3 / 4);
+  }
+
+  // Pegar una imagen (captura de pantalla) directo en la descripción del ticket, como en un
+  // correo. Se inserta de inmediato con el data: URL local (sin parpadeo) y en paralelo se sube
+  // a tickets_adjuntos — igual que el resto de adjuntos — para que lo único que se guarde en el
+  // ticket sea una referencia chiquita (ver desinflarImagenesDescripcion).
+  async function manejarPegadoImagenDescripcion(file: File) {
+    let dataUrl: string;
+    try {
+      dataUrl = await comprimirImagen(file, 1400, 0.72);
+      if (tamanoBytesDataUrl(dataUrl) > 900_000) {
+        dataUrl = await comprimirImagen(file, 1000, 0.55);
+        if (tamanoBytesDataUrl(dataUrl) > 900_000) {
+          toast("⚠️ La imagen es demasiado grande incluso comprimida — prueba recortarla o pegar una captura más pequeña", "error");
+          return;
+        }
+      }
+    } catch {
+      toast("⚠️ No se pudo procesar la imagen pegada", "error");
+      return;
+    }
+
+    const desc = document.getElementById("form-tk-descripcion");
+    if (!desc) return;
+    const tempId = `tmp${Date.now()}${Math.random().toString(36).slice(2)}`;
+    desc.focus();
+    document.execCommand("insertHTML", false,
+      `<img src="${dataUrl}" data-adj-temp="${tempId}" style="max-width:100%;border-radius:4px;" alt="Imagen pegada">`);
+
+    const subida = (async () => {
+      const res = await guardarAdjuntoTicket(`pegada-${Date.now()}.jpg`, "image/jpeg", dataUrl, tamanoBytesDataUrl(dataUrl));
+      const img = desc.querySelector(`img[data-adj-temp="${tempId}"]`);
+      if (!res.ok) {
+        toast(`⚠️ No se pudo subir la imagen pegada: ${res.error}`, "error");
+        return;
+      }
+      if (!img) {
+        // El usuario ya la borró del editor mientras subía — mismo patrón que _cancelado en
+        // procesarAdjuntos: nadie la referencia, se borra directo.
+        eliminarAdjuntoTicket(res.id).catch(() => {});
+        return;
+      }
+      img.setAttribute("data-adj-id", res.id);
+      img.removeAttribute("data-adj-temp");
+    })();
+    subidasImagenPegadaEnCurso.push(subida);
+    subida.finally(() => {
+      subidasImagenPegadaEnCurso = subidasImagenPegadaEnCurso.filter(p => p !== subida);
+    });
+  }
+
+  document.getElementById("form-tk-descripcion")?.addEventListener("paste", (e) => {
+    const items = Array.from(e.clipboardData?.items || []);
+    const imgItem = items.find(it => it.type && it.type.startsWith("image/"));
+    if (!imgItem) return; // deja pasar texto/HTML normal, sin tocar nada
+    e.preventDefault();
+    const file = imgItem.getAsFile();
+    if (!file) return;
+    manejarPegadoImagenDescripcion(file);
+  });
+
   // Envía a n8n el payload de programar/cancelar/reprogramar el recordatorio de un ticket
   // (formato propio, distinto del genérico dispararN8n — ver sección 10 del pedido original).
   async function enviarRecordatorioN8n(accion, t) {
@@ -11584,7 +11714,10 @@ verificarSesion();
     const prioridad = document.getElementById("form-tk-prioridad").value;
     const grupo = document.getElementById("form-tk-grupo").value;
     const agente = document.getElementById("form-tk-agente").value;
-    const descripcion = document.getElementById("form-tk-descripcion").innerHTML.trim();
+    // Espera a que terminen de subirse las imágenes pegadas en la descripción (si las hay) antes
+    // de leerla, para no guardar una referencia a un adjunto que todavía no existe en Firestore.
+    if (subidasImagenPegadaEnCurso.length) await Promise.all(subidasImagenPegadaEnCurso);
+    const descripcion = desinflarImagenesDescripcion(document.getElementById("form-tk-descripcion").innerHTML.trim());
     const cc = document.getElementById("form-tk-cc").value.trim();
     const cco = document.getElementById("form-tk-cco").value.trim();
     const solicitado = document.getElementById("form-tk-solicitado")?.value.trim() || "";
@@ -11966,7 +12099,7 @@ verificarSesion();
       const bloque = `<p data-tiempo-trabajado="1">${escapeHtml(linea)}</p>`;
       const marcador = /<p data-tiempo-trabajado="1">.*?<\/p>/;
       tk.descripcion = marcador.test(tk.descripcion || "") ? tk.descripcion.replace(marcador, bloque) : (tk.descripcion || "") + bloque;
-      document.getElementById("det-tk-descripcion").innerHTML = sanitizeDescripcionHtml(tk.descripcion);
+      pintarDescripcionDetalle(tk.descripcion);
       await persistirTickets();
       toast("💾 Tiempo incluido en la descripción");
     });
@@ -11991,7 +12124,7 @@ verificarSesion();
     document.getElementById("det-tk-sistema").textContent = (t.sistema && t.sistema !== "No aplica") ? t.sistema : "No aplica";
     (document.getElementById("det-tk-solicitado") as HTMLInputElement).value = t.solicitado || "";
     (document.getElementById("det-tk-canalizado") as HTMLInputElement).value = t.canalizado || "";
-    document.getElementById("det-tk-descripcion").innerHTML = sanitizeDescripcionHtml(t.descripcion);
+    pintarDescripcionDetalle(t.descripcion);
     const detNI = document.getElementById("det-tk-notas-internas") as HTMLTextAreaElement;
     if (detNI) detNI.value = t.notasInternas || "";
     renderAdjuntosDetalle(t);
@@ -12038,12 +12171,15 @@ verificarSesion();
   // Abre una ventana con una versión imprimible del ticket y llama a window.print() — el propio
   // diálogo de impresión del navegador ya ofrece "Guardar como PDF" como destino, sin necesidad
   // de generar el PDF nosotros mismos.
-  function imprimirTicket(t, incluirLogo = true) {
+  async function imprimirTicket(t, incluirLogo = true) {
+    // window.open() debe ser la primera instrucción síncrona de la función — si se abre después
+    // de un await, el bloqueador de ventanas emergentes del navegador la tapa.
     const win = window.open("", "_blank", "width=800,height=900");
     if (!win) {
       toast("⚠️ El navegador bloqueó la ventana de impresión — permite pop-ups para este sitio", "warning");
       return;
     }
+    const descripcionResuelta = await resolverImagenesDescripcion(t.descripcion);
     const logoBase64 = incluirLogo ? (localStorage.getItem("crm_logo") || "") : "";
     const html = `<!DOCTYPE html>
 <html lang="es">
@@ -12081,7 +12217,7 @@ verificarSesion();
     <tr><td class="k">Fecha de creación</td><td>${t.fechaCreacion ? new Date(t.fechaCreacion).toLocaleString("es-MX") : "—"}</td></tr>
   </table>
   <h2>Descripción</h2>
-  <div class="desc">${descripcionTicketAHtml(t.descripcion)}</div>
+  <div class="desc">${descripcionTicketAHtml(descripcionResuelta)}</div>
   <footer>DATTASOFT BY INFOXPERT — Sistema de Tickets · Impreso el ${new Date().toLocaleString("es-MX")}</footer>
 </body>
 </html>`;
@@ -12098,11 +12234,11 @@ verificarSesion();
     });
   }
 
-  document.getElementById("btnImprimirTicket")?.addEventListener("click", () => {
+  document.getElementById("btnImprimirTicket")?.addEventListener("click", async () => {
     if (ticketDetalleNumero === null) return;
     const t = ticketPorNumero(ticketDetalleNumero);
     if (!t) { toast("⚠️ Este ticket ya no existe (fue eliminado)", "error"); return; }
-    imprimirTicket(t, chkImprimirLogo ? chkImprimirLogo.checked : true);
+    await imprimirTicket(t, chkImprimirLogo ? chkImprimirLogo.checked : true);
     logBitacora(`Ticket #${t.numero} impreso / exportado a PDF`, "🖨️");
   });
 
@@ -17167,22 +17303,23 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   // ── LOGO EMPRESA ─────────────────────────────────────────────────────
   logoCargar();
 
-  async function comprimirLogo(file: File): Promise<string> {
+  // Compresión de imágenes por canvas — reutilizada por el logo de empresa (300px/0.75) y por las
+  // imágenes pegadas en la descripción de tickets (con sus propios maxDim/calidad, más grandes).
+  async function comprimirImagen(file: File, maxDim: number, calidad: number): Promise<string> {
     return new Promise((resolve, reject) => {
       const img = new Image();
       const url = URL.createObjectURL(file);
       img.onload = () => {
-        const MAX = 300;
         let w = img.naturalWidth, h = img.naturalHeight;
-        if (w > MAX || h > MAX) {
-          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-          else { w = Math.round(w * MAX / h); h = MAX; }
+        if (w > maxDim || h > maxDim) {
+          if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
         }
         const canvas = document.createElement("canvas");
         canvas.width = w; canvas.height = h;
         canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
         URL.revokeObjectURL(url);
-        resolve(canvas.toDataURL("image/jpeg", 0.75));
+        resolve(canvas.toDataURL("image/jpeg", calidad));
       };
       img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Error al leer imagen")); };
       img.src = url;
@@ -17193,7 +17330,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
     try {
-      const base64 = await comprimirLogo(file);
+      const base64 = await comprimirImagen(file, 300, 0.75);
       if (firebaseEnabled) {
         toast("⏳ Guardando logo...", "info");
         const ok = await guardarLogo(base64);
