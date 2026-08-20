@@ -3300,9 +3300,11 @@ try {
               <button type="button" data-cmd="insertOrderedList" title="Lista numerada">1. Lista</button>
               <button type="button" data-cmd="fontSize" data-val="5" title="Texto grande">A+</button>
               <button type="button" data-cmd="fontSize" data-val="2" title="Texto pequeño">A-</button>
+              <button type="button" id="btnInsertarImagenTk" title="Insertar imagen desde archivo">🖼️ Imagen</button>
               <button type="button" id="btnAgregarPlantillaTk" title="Agrega un encabezado (Fecha/Síntoma/Problema/Solución/Tiempo trabajado) al inicio, para llenarlo a mano" style="margin-left:auto;">📋 Encabezado</button>
               <button type="button" id="btnAgregarFirmaTk" title="Agregar tu firma configurada (Mi firma, en el menú)">🖊️ Firma</button>
             </div>
+            <input type="file" id="form-tk-descripcion-img-input" accept="image/*" multiple style="display:none">
             <div class="rte-editor" contenteditable="true" id="form-tk-descripcion" data-placeholder="Describe el problema en detalle..."></div>
           </div>
           <!-- Notas Internas -->
@@ -11591,6 +11593,10 @@ verificarSesion();
       }
       return;
     }
+    if (btn.id === "btnInsertarImagenTk") {
+      (document.getElementById("form-tk-descripcion-img-input") as HTMLInputElement | null)?.click();
+      return;
+    }
     const cmd = btn.dataset.cmd;
     const val = btn.dataset.val || null;
     document.execCommand(cmd, false, val);
@@ -11661,6 +11667,15 @@ verificarSesion();
     const file = imgItem.getAsFile();
     if (!file) return;
     manejarPegadoImagenDescripcion(file);
+  });
+
+  // Botón "🖼️ Imagen" del toolbar de descripción — mismo procesamiento que pegar (comprimir +
+  // insertar + subir), solo que el archivo viene del selector en vez del portapapeles.
+  document.getElementById("form-tk-descripcion-img-input")?.addEventListener("change", (e) => {
+    const input = e.target as HTMLInputElement;
+    const files = Array.from(input.files || []);
+    files.forEach(file => manejarPegadoImagenDescripcion(file));
+    input.value = "";
   });
 
   // Envía a n8n el payload de programar/cancelar/reprogramar el recordatorio de un ticket
