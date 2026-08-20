@@ -1187,6 +1187,19 @@ try {
       box-shadow: 0 0 0 3px var(--brand-primary-glow);
       background: var(--bg-input-focus);
     }
+    .rte-editor img { cursor: pointer; -webkit-user-drag: none; }
+    .rte-editor img.img-seleccionada { outline: 2px solid var(--brand-primary, #6366f1); outline-offset: 1px; }
+    .img-resize-handle {
+      position: fixed;
+      width: 14px;
+      height: 14px;
+      background: var(--brand-primary, #6366f1);
+      border: 2px solid #fff;
+      border-radius: 50%;
+      cursor: nwse-resize;
+      z-index: 9999;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
 
     /* ===== CONFIG LIST ===== */
     .config-list {
@@ -11513,6 +11526,7 @@ verificarSesion();
     if (inputOtroReset) inputOtroReset.style.display = "none";
     const ccPicker = document.getElementById("form-tk-cc-picker") as HTMLSelectElement | null;
     if (ccPicker) { ccPicker.innerHTML = '<option value="">Selecciona un contacto primero</option>'; ccPicker.disabled = true; }
+    quitarHandleImagenTk();
     const rte = document.getElementById("form-tk-descripcion");
     if (rte) rte.innerHTML = "";
     adjuntosTicketActual = [];
@@ -11635,7 +11649,7 @@ verificarSesion();
     const tempId = `tmp${Date.now()}${Math.random().toString(36).slice(2)}`;
     desc.focus();
     document.execCommand("insertHTML", false,
-      `<img src="${dataUrl}" data-adj-temp="${tempId}" style="max-width:100%;border-radius:4px;" alt="Imagen pegada">`);
+      `<img src="${dataUrl}" data-adj-temp="${tempId}" draggable="false" style="max-width:100%;border-radius:4px;" alt="Imagen pegada">`);
 
     const subida = (async () => {
       const res = await guardarAdjuntoTicket(`pegada-${Date.now()}.jpg`, "image/jpeg", dataUrl, tamanoBytesDataUrl(dataUrl));
@@ -11676,6 +11690,75 @@ verificarSesion();
     const files = Array.from(input.files || []);
     files.forEach(file => manejarPegadoImagenDescripcion(file));
     input.value = "";
+  });
+
+  // Redimensionar imágenes en la descripción: clic sobre una imagen la selecciona (aparece un
+  // manejador circular flotante en su esquina inferior derecha); arrastrarlo cambia el ancho
+  // (alto en "auto" para mantener proporción). El manejador vive fuera del editor
+  // (position:fixed, referenciado al viewport) porque el editor puede hacer scroll interno — por
+  // eso se limpia explícitamente al cerrar/reabrir el formulario (ver cerrarFormTicket).
+  let imgSeleccionadaDescTk: HTMLImageElement | null = null;
+  let handleResizeImgTk: HTMLDivElement | null = null;
+
+  function quitarHandleImagenTk() {
+    imgSeleccionadaDescTk?.classList.remove("img-seleccionada");
+    imgSeleccionadaDescTk = null;
+    handleResizeImgTk?.remove();
+    handleResizeImgTk = null;
+  }
+
+  function posicionarHandleImagenTk() {
+    if (!imgSeleccionadaDescTk || !handleResizeImgTk) return;
+    const r = imgSeleccionadaDescTk.getBoundingClientRect();
+    handleResizeImgTk.style.left = `${r.right - 7}px`;
+    handleResizeImgTk.style.top = `${r.bottom - 7}px`;
+  }
+
+  function seleccionarImagenTk(img: HTMLImageElement) {
+    quitarHandleImagenTk();
+    imgSeleccionadaDescTk = img;
+    img.classList.add("img-seleccionada");
+    const handle = document.createElement("div");
+    handle.className = "img-resize-handle";
+    document.body.appendChild(handle);
+    handleResizeImgTk = handle;
+    posicionarHandleImagenTk();
+    handle.addEventListener("mousedown", (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const target = imgSeleccionadaDescTk;
+      if (!target) return;
+      const startX = e.clientX;
+      const startWidth = target.getBoundingClientRect().width;
+      const onMove = (ev: MouseEvent) => {
+        const nuevoAncho = Math.max(40, Math.round(startWidth + (ev.clientX - startX)));
+        target.style.width = `${nuevoAncho}px`;
+        target.style.maxWidth = "100%";
+        target.style.height = "auto";
+        posicionarHandleImagenTk();
+      };
+      const onUp = () => {
+        document.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseup", onUp);
+      };
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+    });
+  }
+
+  document.getElementById("form-tk-descripcion")?.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === "IMG") seleccionarImagenTk(target as HTMLImageElement);
+    else quitarHandleImagenTk();
+  });
+  document.getElementById("form-tk-descripcion")?.addEventListener("scroll", posicionarHandleImagenTk);
+  window.addEventListener("resize", quitarHandleImagenTk);
+  document.addEventListener("click", (e) => {
+    if (!handleResizeImgTk) return;
+    const target = e.target as HTMLElement;
+    const editor = document.getElementById("form-tk-descripcion");
+    if (target === handleResizeImgTk || target.tagName === "IMG" || editor?.contains(target)) return;
+    quitarHandleImagenTk();
   });
 
   // Envía a n8n el payload de programar/cancelar/reprogramar el recordatorio de un ticket
@@ -11932,7 +12015,9 @@ verificarSesion();
     document.getElementById("form-tk-correo-contacto").value = t.contactoCorreo || "";
     document.getElementById("form-tk-empresa").value = t.empresa || "";
     document.getElementById("form-tk-asunto").value = t.asunto;
-    document.getElementById("form-tk-descripcion").innerHTML = sanitizeDescripcionHtml(t.descripcion);
+    const rteEdit = document.getElementById("form-tk-descripcion");
+    rteEdit.innerHTML = sanitizeDescripcionHtml(t.descripcion);
+    resolverImagenesEnVivo(rteEdit);
     document.getElementById("form-tk-cc").value = t.cc || "";
     document.getElementById("form-tk-cco").value = t.cco || "";
     const fSol = document.getElementById("form-tk-solicitado"); if (fSol) fSol.value = t.solicitado || "";
