@@ -1200,6 +1200,38 @@ try {
       z-index: 9999;
       box-shadow: 0 1px 4px rgba(0,0,0,0.4);
     }
+    .img-align-toolbar {
+      position: fixed;
+      display: flex;
+      gap: 2px;
+      background: var(--bg-card, #1f2937);
+      border: 1px solid var(--border-color, #374151);
+      border-radius: 6px;
+      padding: 3px;
+      z-index: 9999;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+    }
+    .img-align-toolbar button {
+      width: 26px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      color: var(--text-muted, #9ca3af);
+    }
+    .img-align-toolbar button:hover {
+      background: rgba(99, 102, 241, 0.15);
+      color: var(--text-main, #fff);
+    }
+    .img-align-toolbar button.activo {
+      background: var(--brand-primary, #6366f1);
+      color: #fff;
+    }
 
     /* ===== CONFIG LIST ===== */
     .config-list {
@@ -11692,37 +11724,73 @@ verificarSesion();
     input.value = "";
   });
 
-  // Redimensionar imágenes en la descripción: clic sobre una imagen la selecciona (aparece un
-  // manejador circular flotante en su esquina inferior derecha); arrastrarlo cambia el ancho
-  // (alto en "auto" para mantener proporción). El manejador vive fuera del editor
-  // (position:fixed, referenciado al viewport) porque el editor puede hacer scroll interno — por
-  // eso se limpia explícitamente al cerrar/reabrir el formulario (ver cerrarFormTicket).
+  // Redimensionar y ajustar imágenes en la descripción: clic sobre una imagen la selecciona
+  // (aparece un manejador circular para arrastrar y cambiar el ancho, y una mini barra arriba
+  // con 3 opciones de ajuste de texto — sin ajuste / izquierda / derecha, vía float). Ambos
+  // controles viven fuera del editor (position:fixed, referenciados al viewport) porque el
+  // editor puede hacer scroll interno — por eso se limpian explícitamente al cerrar/reabrir el
+  // formulario (ver cerrarFormTicket).
   let imgSeleccionadaDescTk: HTMLImageElement | null = null;
   let handleResizeImgTk: HTMLDivElement | null = null;
+  let toolbarAlineacionImgTk: HTMLDivElement | null = null;
 
   function quitarHandleImagenTk() {
     imgSeleccionadaDescTk?.classList.remove("img-seleccionada");
     imgSeleccionadaDescTk = null;
     handleResizeImgTk?.remove();
     handleResizeImgTk = null;
+    toolbarAlineacionImgTk?.remove();
+    toolbarAlineacionImgTk = null;
   }
 
-  function posicionarHandleImagenTk() {
-    if (!imgSeleccionadaDescTk || !handleResizeImgTk) return;
+  function posicionarControlesImagenTk() {
+    if (!imgSeleccionadaDescTk) return;
     const r = imgSeleccionadaDescTk.getBoundingClientRect();
-    handleResizeImgTk.style.left = `${r.right - 7}px`;
-    handleResizeImgTk.style.top = `${r.bottom - 7}px`;
+    if (handleResizeImgTk) {
+      handleResizeImgTk.style.left = `${r.right - 7}px`;
+      handleResizeImgTk.style.top = `${r.bottom - 7}px`;
+    }
+    if (toolbarAlineacionImgTk) {
+      toolbarAlineacionImgTk.style.left = `${r.left}px`;
+      toolbarAlineacionImgTk.style.top = `${Math.max(4, r.top - 32)}px`;
+    }
+  }
+
+  function actualizarToolbarActivoImgTk() {
+    if (!toolbarAlineacionImgTk || !imgSeleccionadaDescTk) return;
+    const flotante = imgSeleccionadaDescTk.style.float || "none";
+    toolbarAlineacionImgTk.querySelectorAll("button").forEach(b => {
+      b.classList.toggle("activo", (b as HTMLElement).dataset.align === flotante);
+    });
+  }
+
+  function aplicarAjusteImagenTk(alineacion: "none" | "left" | "right") {
+    const img = imgSeleccionadaDescTk;
+    if (!img) return;
+    if (alineacion === "none") {
+      img.style.float = "none";
+      img.style.margin = "";
+      img.style.maxWidth = "100%";
+    } else {
+      if (!img.style.width) img.style.width = "300px";
+      img.style.maxWidth = "60%";
+      img.style.float = alineacion;
+      img.style.margin = alineacion === "left" ? "4px 14px 8px 0" : "4px 0 8px 14px";
+    }
+    actualizarToolbarActivoImgTk();
+    posicionarControlesImagenTk();
   }
 
   function seleccionarImagenTk(img: HTMLImageElement) {
     quitarHandleImagenTk();
     imgSeleccionadaDescTk = img;
     img.classList.add("img-seleccionada");
+
     const handle = document.createElement("div");
     handle.className = "img-resize-handle";
+    handle.title = "Arrastra para cambiar el tamaño";
     document.body.appendChild(handle);
     handleResizeImgTk = handle;
-    posicionarHandleImagenTk();
     handle.addEventListener("mousedown", (e: MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
@@ -11733,9 +11801,8 @@ verificarSesion();
       const onMove = (ev: MouseEvent) => {
         const nuevoAncho = Math.max(40, Math.round(startWidth + (ev.clientX - startX)));
         target.style.width = `${nuevoAncho}px`;
-        target.style.maxWidth = "100%";
         target.style.height = "auto";
-        posicionarHandleImagenTk();
+        posicionarControlesImagenTk();
       };
       const onUp = () => {
         document.removeEventListener("mousemove", onMove);
@@ -11744,6 +11811,25 @@ verificarSesion();
       document.addEventListener("mousemove", onMove);
       document.addEventListener("mouseup", onUp);
     });
+
+    const toolbar = document.createElement("div");
+    toolbar.className = "img-align-toolbar";
+    toolbar.innerHTML = `
+      <button type="button" data-align="none" title="Sin ajuste (imagen en su propio bloque)">▢</button>
+      <button type="button" data-align="left" title="Alinear a la izquierda (el texto la rodea por la derecha)">◧</button>
+      <button type="button" data-align="right" title="Alinear a la derecha (el texto la rodea por la izquierda)">◨</button>
+    `;
+    toolbar.addEventListener("mousedown", (e) => e.preventDefault());
+    toolbar.addEventListener("click", (e) => {
+      const btn = (e.target as HTMLElement).closest("button");
+      if (!btn) return;
+      aplicarAjusteImagenTk(btn.dataset.align as "none" | "left" | "right");
+    });
+    document.body.appendChild(toolbar);
+    toolbarAlineacionImgTk = toolbar;
+
+    posicionarControlesImagenTk();
+    actualizarToolbarActivoImgTk();
   }
 
   document.getElementById("form-tk-descripcion")?.addEventListener("click", (e) => {
@@ -11751,13 +11837,13 @@ verificarSesion();
     if (target.tagName === "IMG") seleccionarImagenTk(target as HTMLImageElement);
     else quitarHandleImagenTk();
   });
-  document.getElementById("form-tk-descripcion")?.addEventListener("scroll", posicionarHandleImagenTk);
+  document.getElementById("form-tk-descripcion")?.addEventListener("scroll", posicionarControlesImagenTk);
   window.addEventListener("resize", quitarHandleImagenTk);
   document.addEventListener("click", (e) => {
-    if (!handleResizeImgTk) return;
+    if (!handleResizeImgTk && !toolbarAlineacionImgTk) return;
     const target = e.target as HTMLElement;
     const editor = document.getElementById("form-tk-descripcion");
-    if (target === handleResizeImgTk || target.tagName === "IMG" || editor?.contains(target)) return;
+    if (target === handleResizeImgTk || toolbarAlineacionImgTk?.contains(target) || target.tagName === "IMG" || editor?.contains(target)) return;
     quitarHandleImagenTk();
   });
 
