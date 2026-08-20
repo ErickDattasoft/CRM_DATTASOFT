@@ -11681,7 +11681,7 @@ verificarSesion();
     const tempId = `tmp${Date.now()}${Math.random().toString(36).slice(2)}`;
     desc.focus();
     document.execCommand("insertHTML", false,
-      `<img src="${dataUrl}" data-adj-temp="${tempId}" draggable="false" style="max-width:100%;border-radius:4px;" alt="Imagen pegada">`);
+      `<img src="${dataUrl}" data-adj-temp="${tempId}" draggable="false" style="max-width:100%;border-radius:4px;display:block;margin:8px 0;" alt="Imagen pegada">`);
 
     const subida = (async () => {
       const res = await guardarAdjuntoTicket(`pegada-${Date.now()}.jpg`, "image/jpeg", dataUrl, tamanoBytesDataUrl(dataUrl));
@@ -11769,7 +11769,8 @@ verificarSesion();
     if (!img) return;
     if (alineacion === "none") {
       img.style.float = "none";
-      img.style.margin = "";
+      img.style.display = "block";
+      img.style.margin = "8px 0";
       img.style.maxWidth = "100%";
     } else {
       if (!img.style.width) img.style.width = "300px";
