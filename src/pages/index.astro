@@ -11818,11 +11818,17 @@ verificarSesion();
       <button type="button" data-align="none" title="Sin ajuste (imagen en su propio bloque)">▢</button>
       <button type="button" data-align="left" title="Alinear a la izquierda (el texto la rodea por la derecha)">◧</button>
       <button type="button" data-align="right" title="Alinear a la derecha (el texto la rodea por la izquierda)">◨</button>
+      <button type="button" data-align="del" title="Eliminar imagen" style="color:#f87171;">✕</button>
     `;
     toolbar.addEventListener("mousedown", (e) => e.preventDefault());
     toolbar.addEventListener("click", (e) => {
       const btn = (e.target as HTMLElement).closest("button");
       if (!btn) return;
+      if (btn.dataset.align === "del") {
+        imgSeleccionadaDescTk?.remove();
+        quitarHandleImagenTk();
+        return;
+      }
       aplicarAjusteImagenTk(btn.dataset.align as "none" | "left" | "right");
     });
     document.body.appendChild(toolbar);
@@ -11837,7 +11843,9 @@ verificarSesion();
     if (target.tagName === "IMG") seleccionarImagenTk(target as HTMLImageElement);
     else quitarHandleImagenTk();
   });
-  document.getElementById("form-tk-descripcion")?.addEventListener("scroll", posicionarControlesImagenTk);
+  // capture:true para que también reposicione cuando lo que hace scroll es la página completa
+  // (no solo el editor), que es justo el caso que dejaba el manejador flotando en el lugar viejo.
+  window.addEventListener("scroll", posicionarControlesImagenTk, true);
   window.addEventListener("resize", quitarHandleImagenTk);
   document.addEventListener("click", (e) => {
     if (!handleResizeImgTk && !toolbarAlineacionImgTk) return;
