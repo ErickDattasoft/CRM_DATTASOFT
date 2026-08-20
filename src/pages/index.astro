@@ -11681,7 +11681,7 @@ verificarSesion();
     const tempId = `tmp${Date.now()}${Math.random().toString(36).slice(2)}`;
     desc.focus();
     document.execCommand("insertHTML", false,
-      `<img src="${dataUrl}" data-adj-temp="${tempId}" draggable="false" style="max-width:100%;border-radius:4px;display:block;margin:8px 0;" alt="Imagen pegada">`);
+      `<img src="${dataUrl}" data-adj-temp="${tempId}" draggable="false" style="max-width:100%;max-height:320px;border-radius:4px;display:block;margin:8px 0;" alt="Imagen pegada">`);
 
     const subida = (async () => {
       const res = await guardarAdjuntoTicket(`pegada-${Date.now()}.jpg`, "image/jpeg", dataUrl, tamanoBytesDataUrl(dataUrl));
@@ -11743,16 +11743,32 @@ verificarSesion();
     toolbarAlineacionImgTk = null;
   }
 
+  // Ambos controles (manejador de tamaño y barrita de alineación) se limitan a quedarse dentro
+  // del recuadro visible del editor (no del viewport completo) — si no, una imagen alta que se
+  // sale por arriba al hacer scroll dejaba los controles flotando sobre otros campos del
+  // formulario, lejos de la imagen. Si la imagen queda totalmente fuera del recuadro, se
+  // deselecciona en vez de mostrar controles "perdidos".
   function posicionarControlesImagenTk() {
     if (!imgSeleccionadaDescTk) return;
+    const editor = document.getElementById("form-tk-descripcion");
+    if (!editor) return;
+    const er = editor.getBoundingClientRect();
     const r = imgSeleccionadaDescTk.getBoundingClientRect();
+    if (r.bottom < er.top || r.top > er.bottom || r.right < er.left || r.left > er.right) {
+      quitarHandleImagenTk();
+      return;
+    }
     if (handleResizeImgTk) {
-      handleResizeImgTk.style.left = `${r.right - 7}px`;
-      handleResizeImgTk.style.top = `${r.bottom - 7}px`;
+      const hx = Math.min(Math.max(r.right - 7, er.left), er.right - 14);
+      const hy = Math.min(Math.max(r.bottom - 7, er.top), er.bottom - 14);
+      handleResizeImgTk.style.left = `${hx}px`;
+      handleResizeImgTk.style.top = `${hy}px`;
     }
     if (toolbarAlineacionImgTk) {
-      toolbarAlineacionImgTk.style.left = `${r.left}px`;
-      toolbarAlineacionImgTk.style.top = `${Math.max(4, r.top - 32)}px`;
+      const tx = Math.min(Math.max(r.left, er.left), Math.max(er.left, er.right - 110));
+      const ty = Math.min(Math.max(r.top - 32, er.top + 2), er.bottom - 28);
+      toolbarAlineacionImgTk.style.left = `${tx}px`;
+      toolbarAlineacionImgTk.style.top = `${ty}px`;
     }
   }
 
@@ -11803,6 +11819,9 @@ verificarSesion();
         const nuevoAncho = Math.max(40, Math.round(startWidth + (ev.clientX - startX)));
         target.style.width = `${nuevoAncho}px`;
         target.style.height = "auto";
+        // Se quita el alto máximo por defecto (pensado solo para que una imagen recién pegada no
+        // domine el editor) en cuanto el usuario decide su propio tamaño a mano.
+        target.style.maxHeight = "";
         posicionarControlesImagenTk();
       };
       const onUp = () => {
