@@ -3432,6 +3432,7 @@ try {
           <button type="button" class="cfg-quicknav-btn" data-cfg-target="cfg-card-compac">🧮 Calculadora Compac</button>
           <button type="button" class="cfg-quicknav-btn" data-cfg-target="cfg-card-apariencia">🎨 Apariencia</button>
           <button type="button" class="cfg-quicknav-btn" data-cfg-target="cfg-usuarios-panel">👥 Usuarios</button>
+          <button type="button" class="cfg-quicknav-btn" data-cfg-target="cfg-mantenimiento-panel">🧹 Mantenimiento</button>
           <button type="button" class="cfg-quicknav-btn" data-cfg-target="cfg-n8n-panel">🤖 n8n</button>
         </div>
         <!-- Card: Logo empresa -->
@@ -3757,6 +3758,21 @@ try {
             borrar ningún archivo — es seguro correrlo varias veces (los tickets sin adjuntos viejos no se tocan).
           </p>
           <button class="btn btn-ghost btn-sm" id="btnMigrarAdjuntosViejos" title="Un solo uso, o cuando el guardado de tickets vuelva a fallar por tamaño del documento">🧹 Migrar adjuntos antiguos</button>
+
+          <p style="font-size:0.8rem; color:var(--text-muted); margin:18px 0 10px; line-height:1.5;">
+            Archiva en una carpeta de tu computadora las imágenes/adjuntos de tickets <strong>Cerrados</strong> hace
+            más de N días (nombrados con ticket + empresa + fecha) y, solo si el archivado fue exitoso, los elimina
+            de Firestore para liberar espacio. Salta cualquier adjunto marcado como 📌 permanente (ver detalle del
+            ticket). Requiere Chrome/Edge para elegir carpeta destino; en otros navegadores descarga uno por uno.
+          </p>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <label style="font-size:0.8rem; display:flex; align-items:center; gap:6px;">
+              Cerrados hace más de
+              <input type="number" id="input-dias-limpieza-adjuntos" value="30" min="0" style="width:64px;">
+              días
+            </label>
+            <button class="btn btn-ghost btn-sm" id="btnEliminarAdjuntosNoPermanentes" title="Archiva a disco y luego elimina de Firestore los adjuntos no permanentes de tickets cerrados hace más del número de días indicado">🗄️ Archivar y eliminar adjuntos no permanentes</button>
+          </div>
         </div>
 
         <div class="card" id="cfg-n8n-panel" style="margin-top:20px;">
@@ -6933,6 +6949,7 @@ verificarSesion();
           ocultarEstado();
           initStickyHeaders();
           checkLicenciasPorVencer();
+          checkEspacioAdjuntos();
           aplicarPermisosNavegacion();
           sincronizarConfigPublica();
           actualizarBadgeCuentaSegura();
@@ -7857,6 +7874,58 @@ verificarSesion();
           a.click();
         });
       }
+
+      // 📌 Permanente: protege el adjunto contra el botón de borrado (hay que desmarcarlo
+      // primero) — para las fotos de tickets que sí se quieren conservar sin límite de tiempo.
+      const btnPerm = document.createElement("button");
+      btnPerm.type = "button";
+      btnPerm.title = f.permanente
+        ? "Marcado como permanente — clic para desmarcar y poder eliminarlo"
+        : "Marcar como permanente (evita que se pueda borrar por accidente)";
+      btnPerm.textContent = f.permanente ? "📌" : "📍";
+      btnPerm.style.opacity = f.permanente ? "1" : "0.4";
+      btnPerm.addEventListener("click", async (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const tActual = ticketPorNumero(t.numero);
+        const item = tActual?.adjuntos?.find(a => a === f);
+        if (!item) return;
+        item.permanente = !item.permanente;
+        await persistirTickets();
+        renderAdjuntosDetalle(tActual);
+      });
+      chip.appendChild(btnPerm);
+
+      // 🗑️ Elimina el archivo real de tickets_adjuntos (si aplica) y lo quita del ticket.
+      // Deshabilitado mientras el adjunto esté marcado como permanente.
+      const btnDel = document.createElement("button");
+      btnDel.type = "button";
+      btnDel.textContent = "🗑️";
+      btnDel.disabled = !!f.permanente;
+      btnDel.title = f.permanente ? "Desmarca 📌 permanente antes de poder eliminarlo" : "Eliminar este adjunto";
+      btnDel.style.cursor = f.permanente ? "not-allowed" : "pointer";
+      btnDel.style.opacity = f.permanente ? "0.3" : "1";
+      btnDel.addEventListener("click", async (e) => {
+        e.preventDefault(); e.stopPropagation();
+        if (f.permanente) return;
+        const ok = await confirmar(`¿Eliminar "${f.nombre}"? Esto no se puede deshacer.`, "🗑️");
+        if (!ok) return;
+        const tActual = ticketPorNumero(t.numero);
+        if (!tActual) { toast("⚠️ Este ticket ya no existe", "error"); return; }
+        const item = tActual.adjuntos?.find(a => a === f);
+        if (!item) return;
+        if (item.adjId) {
+          const okDel = await eliminarAdjuntoTicket(item.adjId);
+          if (!okDel) { toast("⚠️ No se pudo eliminar el archivo — intenta de nuevo", "error"); return; }
+        }
+        tActual.adjuntos = tActual.adjuntos.filter(a => a !== item);
+        registrarActividadTicket(tActual, `Adjunto eliminado manualmente: ${item.nombre}`);
+        logBitacora(`Ticket #${tActual.numero}: adjunto eliminado manualmente (${item.nombre})`, "🗑️");
+        await persistirTickets();
+        toast(`🗑️ "${item.nombre}" eliminado`);
+        renderAdjuntosDetalle(tActual);
+      });
+      chip.appendChild(btnDel);
+
       cont.appendChild(chip);
     });
   }
@@ -13764,6 +13833,128 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     renderTickets();
   });
 
+  // Quita caracteres inválidos para nombre de archivo en Windows/Mac sin tocar la extensión.
+  function sanitizarNombreArchivo(s: string) {
+    return (s || "").toString().trim().replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, " ");
+  }
+
+  // data:mime;base64,xxxx → Uint8Array, para escritura binaria directa a disco.
+  function dataUrlABytes(dataUrl: string) {
+    const coma = dataUrl.indexOf(",");
+    const b64 = coma >= 0 ? dataUrl.slice(coma + 1) : dataUrl;
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
+
+  document.getElementById("btnEliminarAdjuntosNoPermanentes")?.addEventListener("click", async () => {
+    if (!firebaseEnabled) { toast("⚠️ No aplica en Modo Local", "warning"); return; }
+
+    const dias = parseInt((document.getElementById("input-dias-limpieza-adjuntos") as HTMLInputElement)?.value) || 0;
+    const hoy = new Date();
+
+    const candidatos = []; // { t, a }
+    tickets.forEach(t => {
+      if (t.estado !== "Cerrado" || !t.fechaResuelto) return;
+      const diasCerrado = Math.floor((hoy.getTime() - new Date(t.fechaResuelto).getTime()) / 86400000);
+      if (diasCerrado < dias) return;
+      (t.adjuntos || []).forEach(a => { if (!a.permanente) candidatos.push({ t, a }); });
+    });
+
+    if (!candidatos.length) { toast(`✅ No hay adjuntos no permanentes en tickets cerrados hace ${dias}+ días`); return; }
+
+    const bytesAprox = candidatos.reduce((sum, { a }) => {
+      if (typeof a.size === "number") return sum + a.size;
+      if (typeof a.data === "string") return sum + Math.round(a.data.length * 0.75);
+      return sum;
+    }, 0);
+    const mbAprox = (bytesAprox / (1024 * 1024)).toFixed(1);
+
+    if (!await confirmar(`Se archivarán en tu computadora y luego se eliminarán de Firestore ${candidatos.length} adjunto(s) de tickets cerrados hace ${dias}+ días (no marcados como permanentes) — ~${mbAprox}MB. A continuación elige la carpeta destino.`, "🗄️")) return;
+
+    // File System Access API: escritura directa a una carpeta (solo Chrome/Edge). Mismo
+    // mecanismo que ya usa la exportación de la Base de Conocimiento (kbDescargarDocs).
+    const soportaFS = typeof (window as any).showDirectoryPicker === "function";
+    let dirHandle = null;
+    if (soportaFS) {
+      try {
+        dirHandle = await (window as any).showDirectoryPicker({ mode: "readwrite" });
+      } catch {
+        toast("Cancelado — no se seleccionó carpeta", "warning");
+        return;
+      }
+    } else if (!await confirmar("Tu navegador no soporta guardar directo a una carpeta (solo Chrome/Edge). Se descargará cada archivo por separado con el diálogo normal del navegador. ¿Continuar?", "⚠️")) {
+      return;
+    }
+
+    mostrarEstado(`🗄️ Archivando 0/${candidatos.length}...`);
+    const nombresUsados = new Set<string>();
+    let archivados = 0, fallidos = 0;
+    for (const { t, a } of candidatos) {
+      try {
+        // El contenido se pide bajo demanda si vive en tickets_adjuntos (no se precarga con el ticket).
+        let dataUrl = a.data;
+        if (!dataUrl && a.adjId) {
+          const adj = await cargarAdjuntoTicket(a.adjId);
+          dataUrl = adj?.data;
+        }
+        if (!dataUrl) { fallidos++; mostrarEstado(`🗄️ Archivando ${archivados + fallidos}/${candidatos.length}...`); continue; }
+
+        const fechaCierre = (t.fechaResuelto || "").slice(0, 10);
+        const empresa = sanitizarNombreArchivo(t.empresa || "sin-empresa");
+        let fname = sanitizarNombreArchivo(`${t.numero}_${empresa}_${fechaCierre}_${a.nombre || "adjunto"}`);
+        if (nombresUsados.has(fname)) {
+          // Mismo ticket con dos adjuntos de nombre idéntico (ej. dos "captura.jpg") — no pisar uno con otro.
+          const punto = fname.lastIndexOf(".");
+          const base = punto > 0 ? fname.slice(0, punto) : fname;
+          const ext = punto > 0 ? fname.slice(punto) : "";
+          let i = 2;
+          while (nombresUsados.has(`${base}_${i}${ext}`)) i++;
+          fname = `${base}_${i}${ext}`;
+        }
+        nombresUsados.add(fname);
+
+        if (dirHandle) {
+          const fh = await dirHandle.getFileHandle(fname, { create: true });
+          const wr = await fh.createWritable();
+          await wr.write(dataUrlABytes(dataUrl));
+          await wr.close();
+        } else {
+          const link = document.createElement("a");
+          link.href = dataUrl;
+          link.download = fname;
+          link.click();
+          await new Promise(r => setTimeout(r, 300)); // margen entre descargas para que el navegador no las bloquee
+        }
+
+        // Solo se borra de Firestore lo que ya quedó archivado en disco.
+        if (a.adjId) {
+          const okDel = await eliminarAdjuntoTicket(a.adjId);
+          if (!okDel) { fallidos++; mostrarEstado(`🗄️ Archivando ${archivados + fallidos}/${candidatos.length}...`); continue; }
+        }
+        t.adjuntos = t.adjuntos.filter(x => x !== a);
+        registrarActividadTicket(t, `Adjunto archivado localmente y eliminado: ${a.nombre}`);
+        archivados++;
+      } catch {
+        fallidos++;
+      }
+      mostrarEstado(`🗄️ Archivando ${archivados + fallidos}/${candidatos.length}...`);
+    }
+
+    const okGuardado = await guardarTickets(tickets);
+    ocultarEstado();
+
+    if (okGuardado) {
+      guardarLocal("crm_tickets", tickets);
+      toast(`🗄️ ${archivados} adjunto(s) archivado(s) y eliminado(s) de Firestore${fallidos ? `, ${fallidos} fallaron` : ""} — ~${mbAprox}MB liberados`);
+      logBitacora(`Archivado + limpieza masiva de adjuntos: ${archivados} movidos a disco local de tickets cerrados hace ${dias}+ días${fallidos ? ` (${fallidos} fallidos)` : ""}`, "🗄️");
+    } else {
+      toast(`⚠️ Se procesaron ${archivados} adjunto(s) pero el guardado final falló — revisa la consola.`, "error");
+    }
+    renderTickets();
+  });
+
   // ============================================================
   // IMPORT JSON
   // ============================================================
@@ -16054,6 +16245,31 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       setTimeout(() => toast(`🔴 Licencias VENCIDAS: ${vencidas.join(" · ")}`, "error"), 1500);
     if (proximas.length > 0)
       setTimeout(() => toast(`⚠️ Por vencer ≤30d: ${proximas.join(" · ")}`, "warning"), 2800);
+  }
+
+  // Aviso de espacio de adjuntos: este proyecto usa Firestore en el plan gratis Spark (sin Cloud
+  // Storage, ver comentario junto a guardarAdjuntoTicket en firebase.js), así que las imágenes de
+  // tickets comparten la misma cuota gratis de 1 GiB con el resto del CRM. No hay API del cliente
+  // para consultar el uso real de esa cuota, así que esto es una ESTIMACIÓN: suma el tamaño de
+  // archivo ya guardado en cada adjunto (t.adjuntos[].size) con el ~33% de overhead que deja la
+  // codificación a base64 al guardarse en tickets_adjuntos.
+  function checkEspacioAdjuntos() {
+    const LIMITE_GRATIS_BYTES = 1024 * 1024 * 1024; // 1 GiB — cuota Firestore plan Spark
+    const UMBRAL_AVISO = 0.8; // avisar al llegar al 80% para dar margen de reacción
+    let bytesEstimados = 0;
+    tickets.forEach(t => {
+      (t.adjuntos || []).forEach(a => {
+        if (typeof a.size === "number") bytesEstimados += a.size * 1.33;
+        else if (typeof a.data === "string") bytesEstimados += a.data.length * 0.75; // adjuntos viejos embebidos, ya en base64
+      });
+    });
+    const pct = bytesEstimados / LIMITE_GRATIS_BYTES;
+    if (pct < UMBRAL_AVISO) return;
+    const mb = Math.round(bytesEstimados / (1024 * 1024));
+    setTimeout(() => toast(
+      `🟠 Los adjuntos de tickets ya usan ~${mb}MB de la cuota gratis de Firestore (~${Math.round(pct * 100)}% de 1GB). Elimina imágenes de tickets cerrados que no necesites (📌 marca como permanentes las que sí quieras conservar).`,
+      "warning"
+    ), 4200);
   }
 
   // Cargar tickets públicos al iniciar
