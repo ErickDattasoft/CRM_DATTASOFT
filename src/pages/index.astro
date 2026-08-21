@@ -3760,6 +3760,14 @@ try {
           <button class="btn btn-ghost btn-sm" id="btnMigrarAdjuntosViejos" title="Un solo uso, o cuando el guardado de tickets vuelva a fallar por tamaño del documento">🧹 Migrar adjuntos antiguos</button>
 
           <p style="font-size:0.8rem; color:var(--text-muted); margin:18px 0 10px; line-height:1.5;">
+            Descarga a tu computadora, en un solo ZIP, <strong>todos</strong> los adjuntos que ya viven en su propia
+            colección (tickets_adjuntos) — migrados o subidos normalmente, sin importar el estado del ticket ni si
+            están marcados como permanentes. Cada archivo dentro del ZIP se nombra <code>ticket_empresa_fecha_nombre</code>
+            para que sea identificable sin abrir el CRM. No borra nada — es solo un respaldo.
+          </p>
+          <button class="btn btn-ghost btn-sm" id="btnDescargarAdjuntosMigrados" title="Descarga en un ZIP todos los adjuntos ya migrados a tickets_adjuntos, con ticket/empresa/fecha en el nombre">📦 Descargar migrados (ZIP)</button>
+
+          <p style="font-size:0.8rem; color:var(--text-muted); margin:18px 0 10px; line-height:1.5;">
             Archiva en una carpeta de tu computadora las imágenes/adjuntos de tickets <strong>Cerrados</strong> hace
             más de N días (nombrados con ticket + empresa + fecha) y, solo si el archivado fue exitoso, los elimina
             de Firestore para liberar espacio. Salta cualquier adjunto marcado como 📌 permanente (ver detalle del
@@ -5473,8 +5481,9 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarPapeleraEmpresas, guardarPapeleraContactos, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, guardarConfigCompac, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket } from "../data/firebase.js";
+import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarPapeleraEmpresas, guardarPapeleraContactos, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, guardarConfigCompac, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket, actualizarMetaAdjuntoTicket } from "../data/firebase.js";
 import { parseEmailList, hoyLocalStr, parseFechaLocal, escapeHtml, slugBadge, esConsultoria, formatearDuracion, colorPuntoEstado, formatMoney } from "../data/utils.js";
+import JSZip from "jszip";
 
 // ── Modal confirmación (reemplaza confirm() — funciona en móvil) ──
 function confirmar(msg: string, icon = "⚠️"): Promise<boolean> {
@@ -7949,6 +7958,16 @@ verificarSesion();
       png: ["image/png"], jpg: ["image/jpeg", "image/jpg"], jpeg: ["image/jpeg", "image/jpg"],
       pdf: ["application/pdf"], xml: ["text/xml", "application/xml", ""],
     };
+    // Metadatos informativos para el documento en tickets_adjuntos (ver comentario en
+    // guardarAdjuntoTicket) — si se está editando un ticket ya existente se usa su folio/fecha
+    // real; si es un ticket nuevo (sin folio todavía), numeroTicket se completa después desde
+    // guardarTicketDesdeFormulario() vía actualizarMetaAdjuntoTicket().
+    const ticketContexto = editTkIdx.value ? ticketPorNumero(parseInt(editTkIdx.value)) : null;
+    const metaAdjunto = {
+      numeroTicket: ticketContexto?.numero ?? null,
+      empresa: (document.getElementById("form-tk-empresa") as HTMLInputElement)?.value.trim() || "",
+      fechaTicket: ticketContexto?.fechaCreacion || new Date().toISOString()
+    };
     for (const f of files) {
       const ext = (f.name.split(".").pop() || "").toLowerCase();
       const mimesValidos = permitidos[ext];
@@ -7987,7 +8006,7 @@ verificarSesion();
         reader.readAsDataURL(f);
       });
       if (item._cancelado) continue; // se quitó mientras se leía el archivo, nunca llegó a guardarse nada
-      const res = await guardarAdjuntoTicket(f.name, f.type, dataUrl, f.size);
+      const res = await guardarAdjuntoTicket(f.name, f.type, dataUrl, f.size, metaAdjunto);
       if (item._cancelado) {
         // El usuario lo quitó mientras se guardaba — nada lo referencia todavía, se borra directo.
         if (res.ok) eliminarAdjuntoTicket(res.id).catch(() => {});
@@ -11752,8 +11771,14 @@ verificarSesion();
     document.execCommand("insertHTML", false,
       `<img src="${dataUrl}" data-adj-temp="${tempId}" draggable="false" style="max-width:100%;max-height:320px;border-radius:4px;display:block;margin:8px 0;" alt="Imagen pegada">`);
 
+    const ticketContextoPegado = editTkIdx.value ? ticketPorNumero(parseInt(editTkIdx.value)) : null;
+    const metaAdjuntoPegado = {
+      numeroTicket: ticketContextoPegado?.numero ?? null,
+      empresa: (document.getElementById("form-tk-empresa") as HTMLInputElement)?.value.trim() || "",
+      fechaTicket: ticketContextoPegado?.fechaCreacion || new Date().toISOString()
+    };
     const subida = (async () => {
-      const res = await guardarAdjuntoTicket(`pegada-${Date.now()}.jpg`, "image/jpeg", dataUrl, tamanoBytesDataUrl(dataUrl));
+      const res = await guardarAdjuntoTicket(`pegada-${Date.now()}.jpg`, "image/jpeg", dataUrl, tamanoBytesDataUrl(dataUrl), metaAdjuntoPegado);
       const img = desc.querySelector(`img[data-adj-temp="${tempId}"]`);
       if (!res.ok) {
         toast(`⚠️ No se pudo subir la imagen pegada: ${res.error}`, "error");
@@ -12057,6 +12082,14 @@ verificarSesion();
         const nombres = adjuntosTicketActual.map(a => a.nombre).join(", ");
         registrarActividadTicket(nuevoTicket, `${adjuntosTicketActual.length} adjunto(s) agregado(s): ${nombres}`);
         logBitacora(`Ticket #${num}: ${adjuntosTicketActual.length} adjunto(s) agregado(s) (${nombres})`, "📎");
+        // Los adjuntos ya se habían subido a tickets_adjuntos antes de que este ticket tuviera
+        // folio (ver procesarAdjuntos) — se completa aquí el numeroTicket real, best-effort, para
+        // que el documento sea identificable directo desde la consola de Firebase.
+        if (firebaseEnabled) {
+          adjuntosTicketActual.forEach(a => {
+            if (a.adjId) actualizarMetaAdjuntoTicket(a.adjId, { numeroTicket: num, fechaTicket: nowISO }).catch(() => {});
+          });
+        }
       }
       dispararN8n("ticket_creado_equipo", datosEventoTicket(nuevoTicket));
 
@@ -13793,9 +13826,9 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       return Math.round(b64.length * 3 / 4);
     };
 
-    const candidatos = [];
+    const candidatos = []; // { t, a }
     [...tickets, ...papelera].forEach(t => {
-      (t.adjuntos || []).forEach(a => { if (a.data && !a.adjId) candidatos.push(a); });
+      (t.adjuntos || []).forEach(a => { if (a.data && !a.adjId) candidatos.push({ t, a }); });
     });
 
     if (!candidatos.length) { toast("✅ No hay adjuntos antiguos que migrar"); return; }
@@ -13803,9 +13836,11 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
     mostrarEstado(`🧹 Migrando 0/${candidatos.length}...`);
     let ok = 0, fallidos = 0;
-    for (const a of candidatos) {
+    for (const { t, a } of candidatos) {
       const size = calcularSizeBase64(a.data);
-      const res = await guardarAdjuntoTicket(a.nombre, a.tipo, a.data, size);
+      const res = await guardarAdjuntoTicket(a.nombre, a.tipo, a.data, size, {
+        numeroTicket: t.numero, empresa: t.empresa || "", fechaTicket: t.fechaResuelto || t.fechaCreacion || ""
+      });
       if (res.ok) {
         // Se reemplaza en el mismo objeto (referencia compartida entre tickets/papelera y el
         // arreglo `candidatos`) — por eso no hace falta buscar de nuevo dónde vive cada adjunto.
@@ -13847,6 +13882,62 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     return bytes;
   }
+
+  // Nombre identificable (ticket + empresa + fecha + nombre original) para un adjunto exportado
+  // fuera del CRM, con dedupe si el mismo ticket trae dos adjuntos con el nombre original idéntico.
+  function nombreArchivoAdjunto(t: any, a: any, nombresUsados: Set<string>) {
+    const fecha = (t.fechaResuelto || t.fechaCreacion || "").slice(0, 10);
+    const empresa = sanitizarNombreArchivo(t.empresa || "sin-empresa");
+    let fname = sanitizarNombreArchivo(`${t.numero}_${empresa}_${fecha}_${a.nombre || "adjunto"}`);
+    if (nombresUsados.has(fname)) {
+      const punto = fname.lastIndexOf(".");
+      const base = punto > 0 ? fname.slice(0, punto) : fname;
+      const ext = punto > 0 ? fname.slice(punto) : "";
+      let i = 2;
+      while (nombresUsados.has(`${base}_${i}${ext}`)) i++;
+      fname = `${base}_${i}${ext}`;
+    }
+    nombresUsados.add(fname);
+    return fname;
+  }
+
+  document.getElementById("btnDescargarAdjuntosMigrados")?.addEventListener("click", async () => {
+    if (!firebaseEnabled) { toast("⚠️ No aplica en Modo Local", "warning"); return; }
+
+    const candidatos = []; // { t, a } — todo adjunto ya migrado (adjId), sin filtrar por estado/permanente.
+    [...tickets, ...papelera].forEach(t => {
+      (t.adjuntos || []).forEach(a => { if (a.adjId) candidatos.push({ t, a }); });
+    });
+
+    if (!candidatos.length) { toast("✅ No hay adjuntos migrados que descargar"); return; }
+    if (!await confirmar(`¿Descargar ${candidatos.length} adjunto(s) en un solo ZIP? Es solo un respaldo — no borra ni modifica nada.`, "📦")) return;
+
+    mostrarEstado(`📦 Empaquetando 0/${candidatos.length}...`);
+    const zip = new JSZip();
+    const nombresUsados = new Set<string>();
+    let empaquetados = 0, fallidos = 0;
+    for (const { t, a } of candidatos) {
+      const adj = await cargarAdjuntoTicket(a.adjId);
+      if (!adj?.data) { fallidos++; mostrarEstado(`📦 Empaquetando ${empaquetados + fallidos}/${candidatos.length}...`); continue; }
+      zip.file(nombreArchivoAdjunto(t, a, nombresUsados), dataUrlABytes(adj.data));
+      empaquetados++;
+      mostrarEstado(`📦 Empaquetando ${empaquetados + fallidos}/${candidatos.length}...`);
+    }
+
+    if (!empaquetados) { ocultarEstado(); toast("⚠️ No se pudo descargar ningún adjunto — revisa la consola", "error"); return; }
+
+    mostrarEstado("📦 Generando ZIP...");
+    const blob = await zip.generateAsync({ type: "blob" });
+    ocultarEstado();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `adjuntos-tickets-${new Date().toISOString().slice(0, 10)}.zip`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    toast(`📦 ZIP descargado: ${empaquetados} adjunto(s)${fallidos ? `, ${fallidos} fallaron` : ""}`);
+  });
 
   document.getElementById("btnEliminarAdjuntosNoPermanentes")?.addEventListener("click", async () => {
     if (!firebaseEnabled) { toast("⚠️ No aplica en Modo Local", "warning"); return; }
@@ -13901,19 +13992,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         }
         if (!dataUrl) { fallidos++; mostrarEstado(`🗄️ Archivando ${archivados + fallidos}/${candidatos.length}...`); continue; }
 
-        const fechaCierre = (t.fechaResuelto || "").slice(0, 10);
-        const empresa = sanitizarNombreArchivo(t.empresa || "sin-empresa");
-        let fname = sanitizarNombreArchivo(`${t.numero}_${empresa}_${fechaCierre}_${a.nombre || "adjunto"}`);
-        if (nombresUsados.has(fname)) {
-          // Mismo ticket con dos adjuntos de nombre idéntico (ej. dos "captura.jpg") — no pisar uno con otro.
-          const punto = fname.lastIndexOf(".");
-          const base = punto > 0 ? fname.slice(0, punto) : fname;
-          const ext = punto > 0 ? fname.slice(punto) : "";
-          let i = 2;
-          while (nombresUsados.has(`${base}_${i}${ext}`)) i++;
-          fname = `${base}_${i}${ext}`;
-        }
-        nombresUsados.add(fname);
+        const fname = nombreArchivoAdjunto(t, a, nombresUsados);
 
         if (dirHandle) {
           const fh = await dirHandle.getFileHandle(fname, { create: true });
@@ -15666,7 +15745,9 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           if (!firebaseEnabled || !a?.data) { adjuntosConvertidos.push(a); continue; }
           const coma = a.data.indexOf(",");
           const size = Math.round((coma >= 0 ? a.data.slice(coma + 1) : a.data).length * 3 / 4);
-          const res = await guardarAdjuntoTicket(a.nombre, a.tipo, a.data, size);
+          const res = await guardarAdjuntoTicket(a.nombre, a.tipo, a.data, size, {
+            numeroTicket: num, empresa: tp.empresa || "", fechaTicket: new Date().toISOString()
+          });
           adjuntosConvertidos.push(res.ok ? { nombre: a.nombre, tipo: a.tipo, size, adjId: res.id } : a);
         }
 

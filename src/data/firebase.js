@@ -257,16 +257,38 @@ export async function guardarTickets(tickets) {
  * Firestore por documento — de ahí el límite de ~700KB que valida procesarAdjuntos en
  * index.astro antes de llamar aquí (el ideal sería Cloud Storage, pero requiere plan de pago
  * Blaze que no está disponible para este proyecto).
+ *
+ * `meta` (numeroTicket/empresa/fechaTicket) es puramente informativo: el vínculo real
+ * ticket→adjunto vive en t.adjuntos[].adjId, no aquí. Se guarda igual para que el documento sea
+ * identificable si alguien lo ve directo en la consola de Firebase, sin tener que cruzarlo contra
+ * todos los tickets. Si algún dato del ticket todavía no existe al momento de subir el archivo
+ * (ej. numeroTicket de un ticket nuevo que aún no se guarda), se completa después con
+ * actualizarMetaAdjuntoTicket().
  */
-export async function guardarAdjuntoTicket(nombre, tipo, dataUrl, size) {
+export async function guardarAdjuntoTicket(nombre, tipo, dataUrl, size, meta = {}) {
   try {
     const ref = await addDoc(collection(db, "tickets_adjuntos"), {
-      nombre, tipo, size, data: dataUrl, fecha: serverTimestamp()
+      nombre, tipo, size, data: dataUrl, fecha: serverTimestamp(), ...limpiar(meta)
     });
     return { ok: true, id: ref.id };
   } catch (error) {
     console.error("Error al guardar adjunto de ticket:", error);
     return { ok: false, error: error?.code || error?.message || String(error) };
+  }
+}
+
+/**
+ * Completa numeroTicket/empresa/fechaTicket en un adjunto ya guardado — ver comentario de
+ * guardarAdjuntoTicket. Uso típico: se subió el archivo mientras se creaba un ticket nuevo (aún
+ * sin folio asignado) y, ya con el ticket guardado, se rellena el dato que faltaba.
+ */
+export async function actualizarMetaAdjuntoTicket(id, meta) {
+  try {
+    await updateDoc(doc(db, "tickets_adjuntos", id), limpiar(meta));
+    return true;
+  } catch (error) {
+    console.error("Error al actualizar metadatos de adjunto:", error);
+    return false;
   }
 }
 
