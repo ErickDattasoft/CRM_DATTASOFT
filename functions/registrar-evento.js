@@ -268,7 +268,8 @@ export const onRequestPost = async (context) => {
     accessToken = await obtenerAccessTokenGoogle(env.FIREBASE_CLIENT_EMAIL, env.FIREBASE_PRIVATE_KEY);
   } catch (err) {
     console.error("[registrar-evento] Error de auth con Firebase:", err);
-    return jsonResponse({ ok: false, error: "Error de autenticación con Firebase" }, 500);
+    // Debug temporal — el mensaje de error no incluye la clave privada, solo la razón técnica.
+    return jsonResponse({ ok: false, error: "Error de autenticación con Firebase", debug: String(err?.message || err) }, 500);
   }
 
   const base = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents`;
