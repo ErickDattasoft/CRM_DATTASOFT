@@ -253,7 +253,10 @@ export const onRequestPost = async (context) => {
   });
   const tsData = await tsResp.json().catch(() => null);
   if (!tsData || !tsData.success) {
-    return jsonResponse({ ok: false, error: "No se pudo verificar que eres una persona real" }, 403);
+    console.error("[registrar-evento] siteverify rechazado:", JSON.stringify(tsData));
+    // El detalle (error-codes de Cloudflare) se manda al cliente solo temporalmente, mientras se
+    // depura el primer despliegue — no es información sensible (no expone el secreto).
+    return jsonResponse({ ok: false, error: "No se pudo verificar que eres una persona real", debug: tsData }, 403);
   }
 
   if (!env.FIREBASE_PROJECT_ID || !env.FIREBASE_CLIENT_EMAIL || !env.FIREBASE_PRIVATE_KEY) {

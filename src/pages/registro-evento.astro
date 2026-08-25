@@ -513,7 +513,8 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
           const data = await resp.json().catch(() => null);
 
           if (!resp.ok || !data || !data.ok) {
-            throw new Error(data?.error || "No se pudo completar el registro");
+            const detalle = data?.debug ? ` (${JSON.stringify(data.debug)})` : "";
+            throw new Error((data?.error || "No se pudo completar el registro") + detalle);
           }
 
           if (data.bloqueadoPorSistema) {
