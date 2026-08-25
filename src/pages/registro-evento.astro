@@ -175,6 +175,31 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
     }
     @media(max-width: 500px) { .form-row { grid-template-columns: 1fr; } .form-card { padding: 24px 20px; } }
 
+    .form-section-label {
+      font-size: 0.7rem;
+      font-weight: 800;
+      color: #818cf8;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 26px 0 14px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .form-section-label:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
+    .form-hint {
+      font-size: 0.72rem;
+      color: #64748b;
+      margin: -10px 0 18px;
+    }
+    .form-highlight-box {
+      background: rgba(99,102,241,0.08);
+      border: 1px solid rgba(99,102,241,0.25);
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin-bottom: 18px;
+    }
+    .form-highlight-box .form-group { margin-bottom: 0; }
+
     .btn-submit {
       width: 100%;
       padding: 16px;
@@ -276,6 +301,7 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
     const db  = getFirestore(app);
     const params  = new URLSearchParams(location.search);
     const eventoId = params.get("id");
+    let turnstileWidgetId = null; // asignado al renderizar el widget (ver más abajo)
 
     // Página pública sin login — cualquier visitante puede escribir cualquier cosa en el
     // formulario. Sin esto, un nombre/empresa tipo <img src=x onerror=...> se insertaba tal
@@ -370,6 +396,7 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
         <div class="form-card-title">📝 Completa tu registro</div>
         <div class="form-card-subtitle">Llena el formulario y te esperamos en el evento.</div>
         <form id="form-registro">
+          <div class="form-section-label">👤 Tus datos</div>
           <div class="form-row">
             <div class="form-group">
               <label>Nombre completo <span class="required">*</span></label>
@@ -390,18 +417,21 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
               <input id="r-telefono" type="tel" placeholder="55 1234 5678" autocomplete="tel">
             </div>
           </div>
-          <div class="form-group" style="margin-top:-10px;">
-            <span style="font-size:0.75rem;color:#64748b;">Ingresa al menos uno de los dos <span class="required">*</span></span>
-          </div>
+          <div class="form-hint">Ingresa al menos uno de los dos (correo o teléfono) <span class="required">*</span></div>
+
           ${evento.sistema ? `
-          <div class="form-group">
-            <label>¿Actualmente utilizas ${escapeHtml(evento.sistema)}? <span class="required">*</span></label>
-            <select id="r-usa-sistema" required>
-              <option value="">— Selecciona —</option>
-              <option value="Sí">Sí, lo utilizo</option>
-              <option value="No">No lo utilizo</option>
-            </select>
+          <div class="form-highlight-box">
+            <div class="form-group">
+              <label>¿Actualmente utilizas ${escapeHtml(evento.sistema)}? <span class="required">*</span></label>
+              <select id="r-usa-sistema" required>
+                <option value="">— Selecciona —</option>
+                <option value="Sí">Sí, lo utilizo</option>
+                <option value="No">No lo utilizo</option>
+              </select>
+            </div>
           </div>` : ""}
+
+          <div class="form-section-label">🔔 Preferencias</div>
           <div class="form-group">
             <label>¿Cómo te enteraste del evento?</label>
             <select id="r-fuente">
@@ -416,14 +446,33 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
               <option>Otro</option>
             </select>
           </div>
-          <div class="form-group" style="display:flex; align-items:flex-start; gap:10px;">
+          <div class="form-group" style="display:flex; align-items:flex-start; gap:10px; margin-bottom:0;">
             <input type="checkbox" id="r-canal-wsp" style="width:auto; margin-top:3px; accent-color:#6366f1;">
             <label for="r-canal-wsp" style="text-transform:none; font-weight:500; color:#94a3b8; font-size:0.85rem; margin-bottom:0;">Quiero unirme al canal de WhatsApp para recibir avisos y novedades.</label>
           </div>
-          <div class="cf-turnstile" data-sitekey="${turnstileSitekey}" data-action="registro_evento" style="margin:14px 0;"></div>
+
+          <div id="turnstile-widget" style="margin:22px 0 6px;"></div>
           <button type="submit" class="btn-submit" id="btn-submit">✅ Confirmar mi Registro</button>
         </form>
       `;
+
+      // El div de arriba se insertó DESPUÉS de que el script de Turnstile ya corrió su detección
+      // automática de .cf-turnstile en la página (se ejecuta una sola vez, al cargar) — por eso
+      // se renderiza a mano en vez de usar el atributo declarativo class="cf-turnstile".
+      await new Promise(resolve => {
+        let intentos = 0;
+        const esperar = setInterval(() => {
+          intentos++;
+          if (window.turnstile) {
+            clearInterval(esperar);
+            turnstileWidgetId = window.turnstile.render("#turnstile-widget", { sitekey: turnstileSitekey, action: "registro_evento" });
+            resolve(null);
+          } else if (intentos > 50) { // ~5s de margen — el script pudo tardar/fallar en cargar
+            clearInterval(esperar);
+            resolve(null);
+          }
+        }, 100);
+      });
 
       document.getElementById("form-registro").addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -440,9 +489,7 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
         const usaSistema = evento.sistema ? document.getElementById("r-usa-sistema")?.value : "";
         if (evento.sistema && !usaSistema) { alert(`Indica si utilizas ${evento.sistema}.`); return; }
 
-        const turnstileToken = (window.turnstile && typeof window.turnstile.getResponse === "function")
-          ? window.turnstile.getResponse()
-          : (document.querySelector('[name="cf-turnstile-response"]')?.value || "");
+        const turnstileToken = window.turnstile?.getResponse(turnstileWidgetId) || "";
         if (!turnstileToken) { alert("Espera un momento a que termine la verificación anti-bots y vuelve a intentar."); return; }
 
         const empresaReg = document.getElementById("r-empresa").value.trim();
@@ -505,7 +552,7 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
         } catch(err) {
           btn.disabled = false;
           btn.textContent = "✅ Confirmar mi Registro";
-          window.turnstile?.reset();
+          window.turnstile?.reset(turnstileWidgetId);
           const errDiv = document.createElement("div");
           errDiv.style.cssText = "margin-top:12px;padding:12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;color:#f87171;font-size:0.85rem;text-align:center;";
           errDiv.textContent = `❌ ${err.message || "Ocurrió un error. Por favor intenta de nuevo."}`;
