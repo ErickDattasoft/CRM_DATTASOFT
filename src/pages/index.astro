@@ -426,6 +426,14 @@ try {
     }
     .stat-card:active { transform: scale(0.97); }
 
+    /* Tarjetas de evento (selector visual en vez de <select>) — reutiliza .stat-card */
+    .ev-tarjeta { padding: 16px 18px; gap: 6px; }
+    .ev-tarjeta::before { background: linear-gradient(90deg, #6366f1, #a78bfa); opacity: 0; transition: opacity 0.2s; }
+    .ev-tarjeta.activa::before { opacity: 1; }
+    .ev-tarjeta.activa { border-color: rgba(99,102,241,0.5); background: rgba(99,102,241,0.06); }
+    .ev-tarjeta-nombre { font-family: var(--font-heading); font-weight: 800; font-size: 0.95rem; color: var(--text-bright); }
+    .ev-tarjeta-meta { font-size: 0.75rem; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 8px; }
+
     /* ===== LIGHT MODE ===== */
     body.light-mode {
       --bg-app: #e2e6ec;
@@ -3849,10 +3857,18 @@ try {
       <!-- ============================== -->
       <div class="section" id="section-eventos">
         <!-- Selector de evento activo -->
+        <!-- El <select> real sigue existiendo (oculto) como fuente de verdad del evento activo —
+             las tarjetas de abajo solo lo actualizan y disparan su evento "change", así se reusa
+             toda la lógica de selección que ya existía en vez de duplicarla. -->
+        <select id="selectEventoActivo" style="display:none;">
+          <option value="">— Selecciona un evento —</option>
+        </select>
         <div class="controls-bar" style="flex-wrap:wrap; gap:10px;">
           <div class="controls-left" style="flex-wrap:wrap; gap:8px;">
-            <select id="selectEventoActivo" style="min-width:200px; font-size:0.85rem; font-weight:600;">
-              <option value="">— Selecciona un evento —</option>
+            <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">Ordenar:</span>
+            <select id="selectOrdenEventos" style="min-width:130px; font-size:0.8rem;">
+              <option value="fecha">📅 Por fecha</option>
+              <option value="sistema">💼 Por sistema</option>
             </select>
             <button class="btn btn-primary btn-sm" id="btnNuevoEvento">➕ Nuevo Evento</button>
             <button class="btn btn-ghost btn-sm" id="btnLinkRegistroEvento" style="display:none; background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:#34d399;" title="Copiar link de registro público">🔗 Link Registro</button>
@@ -3860,6 +3876,9 @@ try {
             <button class="btn btn-danger btn-sm" id="btnEliminarEvento" style="display:none;">🗑️ Eliminar Evento</button>
           </div>
         </div>
+
+        <!-- Tarjetas de evento (selector visual) -->
+        <div id="eventos-tarjetas" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:12px; margin-top:4px; margin-bottom:20px;"></div>
 
         <!-- Formulario de nuevo/editar evento (oculto) -->
         <div class="card hidden" id="formulario-evento" style="border-color:rgba(99,102,241,0.3);">
@@ -3890,6 +3909,15 @@ try {
           <div class="form-group" style="margin-top:8px;">
             <label>Notas del evento</label>
             <textarea id="form-ev-notas" rows="2" placeholder="Descripción, agenda, información adicional..."></textarea>
+          </div>
+          <div class="form-group" style="margin-top:8px;">
+            <label>💬 Plantilla de confirmación (correo y WhatsApp)</label>
+            <textarea id="form-ev-plantilla" rows="4" placeholder="Hola [nombre] 👋..."></textarea>
+            <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">
+              Comodines: <code>[nombre]</code> <code>[evento]</code> <code>[fecha]</code> <code>[hora]</code> <code>[sistema]</code> <code>[link]</code> —
+              se usa en el correo de confirmación automático y al mandar WhatsApp manual a un inscrito desde 👥 Inscritos.
+              Cada evento tiene la suya (útil porque el link de Zoom/Meet cambia en cada curso).
+            </span>
           </div>
           <div class="form-actions">
             <button class="btn btn-primary" id="btnGuardarEvento">💾 Guardar Evento</button>
@@ -4950,12 +4978,12 @@ try {
 
 <!-- ===== MODAL: Inscritos a Evento ===== -->
 <div id="modal-inscritos" class="modal-center" style="display:none;">
-  <div class="modal-box" style="width:520px;max-width:95%;">
+  <div class="modal-box" style="width:920px;max-width:95%;">
     <div class="modal-header">
       <h2 id="modal-inscritos-titulo">👥 Inscritos</h2>
       <button class="modal-close" id="btnCerrarInscritos">×</button>
     </div>
-    <div style="padding:16px 18px;max-height:480px;overflow-y:auto;" id="modal-inscritos-lista"></div>
+    <div style="padding:16px 18px;max-height:560px;overflow-y:auto;" id="modal-inscritos-lista"></div>
   </div>
 </div>
 
@@ -5481,7 +5509,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarPapeleraEmpresas, guardarPapeleraContactos, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, guardarConfigCompac, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket, actualizarMetaAdjuntoTicket } from "../data/firebase.js";
+import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarPapeleraEmpresas, guardarPapeleraContactos, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, actualizarInscripcionEvento, eliminarInscripcionEvento, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, guardarConfigCompac, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket, actualizarMetaAdjuntoTicket } from "../data/firebase.js";
 import { parseEmailList, hoyLocalStr, parseFechaLocal, escapeHtml, slugBadge, esConsultoria, formatearDuracion, colorPuntoEstado, formatMoney } from "../data/utils.js";
 import JSZip from "jszip";
 
@@ -6230,7 +6258,7 @@ verificarSesion();
     if (crmLocalOnly || !firebaseEnabled) return;
     const eventosPublicos = (eventos || []).map((e: any) => ({
       id: e.id, nombre: e.nombre || "", fecha: e.fecha || "", hora: e.hora || "",
-      sistema: e.sistema || "", notas: e.notas || ""
+      sistema: e.sistema || "", notas: e.notas || "", link: e.link || "", plantilla: e.plantilla || ""
     }));
     await guardarConfigPublica({
       logoEmpresa: localStorage.getItem("crm_logo") || "",
@@ -15860,7 +15888,52 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     });
     if (prev && eventos.find(e => e.id === prev)) sel.value = prev;
     else sel.value = "";
+    renderTarjetasEventos();
   }
+
+  let eventosOrdenPor: "fecha" | "sistema" = "fecha";
+
+  // Selector visual de evento (tarjetas tipo dashboard) — reemplaza el <select> plano. Cada
+  // tarjeta, al hacer clic, solo mueve el valor del <select> oculto y dispara su "change": toda
+  // la lógica de mostrar/ocultar el panel del evento sigue viviendo en un solo lugar.
+  function renderTarjetasEventos() {
+    const cont = document.getElementById("eventos-tarjetas");
+    if (!cont) return;
+    const ordenados = [...eventos].sort((a, b) => {
+      if (eventosOrdenPor === "sistema") {
+        return (a.sistema || "").localeCompare(b.sistema || "") || (b.fecha || "").localeCompare(a.fecha || "");
+      }
+      if (!a.fecha && !b.fecha) return 0;
+      if (!a.fecha) return 1;
+      if (!b.fecha) return -1;
+      return b.fecha.localeCompare(a.fecha);
+    });
+    if (!ordenados.length) { cont.innerHTML = ""; return; }
+    cont.innerHTML = ordenados.map(ev => {
+      const fechaFmt = ev.fecha ? new Date(ev.fecha + "T00:00:00").toLocaleDateString("es-MX", { day:"2-digit", month:"short", year:"numeric" }) : "Sin fecha";
+      return `<div class="stat-card ev-tarjeta${ev.id === eventoActivoId ? " activa" : ""}" data-id="${ev.id}">
+        <div class="ev-tarjeta-nombre">${escapeHtml(ev.nombre)}</div>
+        <div class="ev-tarjeta-meta">
+          <span>📅 ${fechaFmt}${ev.hora ? " · " + ev.hora : ""}</span>
+          ${ev.sistema ? `<span>💼 ${escapeHtml(ev.sistema)}</span>` : ""}
+        </div>
+      </div>`;
+    }).join("");
+    cont.querySelectorAll(".ev-tarjeta").forEach(card => {
+      card.addEventListener("click", () => {
+        const id = (card as HTMLElement).dataset.id || "";
+        const sel = document.getElementById("selectEventoActivo") as HTMLSelectElement;
+        if (sel) { sel.value = id; sel.dispatchEvent(new Event("change")); }
+        cont.querySelectorAll(".ev-tarjeta").forEach(c => c.classList.remove("activa"));
+        card.classList.add("activa");
+      });
+    });
+  }
+
+  document.getElementById("selectOrdenEventos")?.addEventListener("change", (e) => {
+    eventosOrdenPor = (e.target as HTMLSelectElement).value as "fecha" | "sistema";
+    renderTarjetasEventos();
+  });
 
   function mostrarPanelEvento(ev) {
     document.getElementById("ev-empty").style.display = "none";
@@ -16100,6 +16173,25 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     else ocultarPanelEvento();
   });
 
+  // Texto de partida al crear un evento nuevo — el admin lo edita/completa con el link real de
+  // Zoom/Meet y lo que aplique a ese curso en particular. Ver comodines en resolverPlantillaEvento.
+  const PLANTILLA_EVENTO_DEFAULT = "Hola [nombre] 👋\n\nQuedaste registrado en [evento].\n📅 [fecha] [hora]\n🔗 Liga de acceso: [link]\n\n¡Nos vemos ahí!";
+
+  // Mismo patrón de comodines [x] que generarMensaje/generarMensajeLicencias, pero por evento
+  // (cada curso tiene su propio link de Zoom/Meet e info). Se usa tanto para el WhatsApp manual
+  // desde 👥 Inscritos como — en su versión JS plana, ver registro-evento.astro — para el correo
+  // de confirmación automático.
+  function resolverPlantillaEvento(plantilla: string, ev: any, inscrito: any) {
+    const fechaFmt = ev?.fecha ? new Date(ev.fecha + "T12:00:00").toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "";
+    return (plantilla || PLANTILLA_EVENTO_DEFAULT)
+      .replace(/\[nombre\]/g, inscrito?.nombre || "")
+      .replace(/\[evento\]/g, ev?.nombre || "")
+      .replace(/\[fecha\]/g, fechaFmt)
+      .replace(/\[hora\]/g, ev?.hora || "")
+      .replace(/\[sistema\]/g, ev?.sistema || "")
+      .replace(/\[link\]/g, ev?.link || "");
+  }
+
   // Nuevo evento
   document.getElementById("btnNuevoEvento")?.addEventListener("click", () => {
     document.getElementById("edit-evento-id").value = "";
@@ -16107,6 +16199,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     ["form-ev-nombre","form-ev-sistema","form-ev-link","form-ev-notas"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
     document.getElementById("form-ev-fecha").value = "";
     document.getElementById("form-ev-hora").value = "";
+    (document.getElementById("form-ev-plantilla") as HTMLTextAreaElement).value = PLANTILLA_EVENTO_DEFAULT;
     document.getElementById("formulario-evento").classList.remove("hidden");
     document.getElementById("formulario-evento").scrollIntoView({ behavior:"smooth" });
   });
@@ -16127,6 +16220,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       hora: document.getElementById("form-ev-hora").value,
       link: document.getElementById("form-ev-link").value.trim(),
       notas: document.getElementById("form-ev-notas").value.trim(),
+      plantilla: (document.getElementById("form-ev-plantilla") as HTMLTextAreaElement).value.trim(),
       empresas: existente?.empresas || [],
       extras: existente?.extras || [],
     };
@@ -16152,6 +16246,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     document.getElementById("form-ev-hora").value = ev.hora || "";
     document.getElementById("form-ev-link").value = ev.link || "";
     document.getElementById("form-ev-notas").value = ev.notas || "";
+    (document.getElementById("form-ev-plantilla") as HTMLTextAreaElement).value = ev.plantilla || PLANTILLA_EVENTO_DEFAULT;
     document.getElementById("formulario-evento").classList.remove("hidden");
     document.getElementById("formulario-evento").scrollIntoView({ behavior:"smooth" });
   });
@@ -16177,6 +16272,116 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     });
   });
 
+  // Tabla editable de inscritos: corregir un dato capturado mal o borrar un registro claramente
+  // falso se hace directo aquí, sin salir del CRM — antes esta lista era de solo lectura.
+  function renderTablaInscritos(inscritos: any[], ev: any, lista: HTMLElement) {
+    if (!inscritos.length) {
+      lista.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);">Aún no hay nadie inscrito.</div>`;
+      return;
+    }
+    const eventoExport = ev?.id || "";
+    const wrap = document.createElement("div");
+    wrap.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+        <span style="font-size:0.78rem; color:var(--text-muted);">${inscritos.length} persona(s) registrada(s)</span>
+        <button class="btn btn-success btn-sm" id="btnExportIns">📥 Exportar Excel</button>
+      </div>
+      <div class="table-wrap" style="max-height:440px;">
+        <table>
+          <thead>
+            <tr>
+              <th style="min-width:130px;">Nombre</th>
+              <th style="min-width:120px;">Empresa</th>
+              <th style="min-width:150px;">Correo</th>
+              <th style="min-width:110px;">Teléfono</th>
+              ${ev.sistema ? `<th style="min-width:70px; font-size:0.72rem;">Usa ${escapeHtml(ev.sistema)}</th>` : ""}
+              <th style="text-align:center; width:70px; font-size:0.72rem;">Canal WSP</th>
+              <th style="text-align:center; width:80px;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-inscritos"></tbody>
+        </table>
+      </div>`;
+    lista.innerHTML = "";
+    lista.appendChild(wrap);
+
+    (wrap.querySelector("#btnExportIns") as HTMLButtonElement).onclick = () => {
+      const wb = (window as any).XLSX.utils.book_new();
+      const rows = inscritos.map(i => ({
+        Nombre: i.nombre || "", Empresa: i.empresa || "", Correo: i.correo || "",
+        Teléfono: i.telefono || "", "Cómo se enteró": i.fuente || "",
+        [`Usa ${ev.sistema || "el sistema"}`]: i.usaSistema || "",
+        "Quiere canal WhatsApp": i.deseaCanalWhatsapp ? "Sí" : "No",
+        "Fecha de registro": i.fechaRegistro?.toDate ? i.fechaRegistro.toDate().toLocaleDateString("es-MX") : ""
+      }));
+      const ws = (window as any).XLSX.utils.json_to_sheet(rows);
+      (window as any).XLSX.utils.book_append_sheet(wb, ws, "Inscritos");
+      (window as any).XLSX.writeFile(wb, `inscritos-${ev.nombre || eventoExport}.xlsx`);
+    };
+
+    const tbody = wrap.querySelector("#tbody-inscritos") as HTMLElement;
+    const campoInput = (i: any, campo: string, placeholder = "") =>
+      `<input type="text" data-id="${i._id}" data-campo="${campo}" value="${escapeHtml(i[campo] || "")}" placeholder="${placeholder}" style="font-size:0.8rem; padding:5px 8px; width:100%;">`;
+
+    inscritos.forEach(i => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${campoInput(i, "nombre")}</td>
+        <td>${campoInput(i, "empresa")}</td>
+        <td>${campoInput(i, "correo")}</td>
+        <td>${campoInput(i, "telefono")}</td>
+        ${ev.sistema ? `<td style="text-align:center; font-size:0.75rem;">${i.usaSistema || "—"}</td>` : ""}
+        <td style="text-align:center;">${i.deseaCanalWhatsapp ? "✅" : "—"}</td>
+        <td style="text-align:center; white-space:nowrap;">
+          ${i.telefono ? `<button type="button" class="btn btn-whatsapp btn-xs btn-icon btn-wsp-inscrito" data-id="${i._id}" title="Enviar la plantilla de este evento por WhatsApp">💬</button>` : ""}
+          <button type="button" class="btn btn-danger btn-xs btn-icon btn-del-inscrito" data-id="${i._id}" title="Eliminar este registro">🗑️</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll("input[data-campo]").forEach(input => {
+      input.addEventListener("blur", async (e) => {
+        const el = e.target as HTMLInputElement;
+        const id = el.dataset.id, campo = el.dataset.campo as string;
+        const item = inscritos.find(i => i._id === id);
+        if (!item) return;
+        const nuevo = el.value.trim();
+        if (nuevo === (item[campo] || "")) return; // sin cambios, no gastar una escritura
+        if (campo === "correo" && nuevo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nuevo)) {
+          toast("⚠️ Correo inválido — no se guardó", "warning"); el.value = item[campo] || ""; return;
+        }
+        item[campo] = nuevo;
+        const ok = await actualizarInscripcionEvento(id, { [campo]: nuevo });
+        toast(ok ? "💾 Actualizado" : "⚠️ No se pudo guardar", ok ? "success" : "error");
+      });
+    });
+
+    tbody.querySelectorAll(".btn-wsp-inscrito").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const i = inscritos.find(x => x._id === (btn as HTMLElement).dataset.id);
+        if (!i) return;
+        abrirWhatsAppLink(i.telefono, resolverPlantillaEvento(ev.plantilla, ev, i));
+      });
+    });
+
+    tbody.querySelectorAll(".btn-del-inscrito").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = (btn as HTMLElement).dataset.id as string;
+        const i = inscritos.find(x => x._id === id);
+        if (!i) return;
+        if (!await confirmar(`¿Eliminar el registro de "${i.nombre || "sin nombre"}"? No se puede deshacer.`, "🗑️")) return;
+        const ok = await eliminarInscripcionEvento(id);
+        if (!ok) { toast("⚠️ No se pudo eliminar", "error"); return; }
+        const idx = inscritos.findIndex(x => x._id === id);
+        if (idx >= 0) inscritos.splice(idx, 1);
+        renderTablaInscritos(inscritos, ev, lista);
+        const badge = document.getElementById("badge-inscritos");
+        if (badge) badge.textContent = String(inscritos.length);
+        toast("🗑️ Registro eliminado");
+      });
+    });
+  }
+
   document.getElementById("btnVerInscripciones")?.addEventListener("click", async () => {
     const ev = getEventoActivo(); if (!ev) return;
     const modal = document.getElementById("modal-inscritos");
@@ -16188,38 +16393,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     modal.style.display = "flex";
     try {
       const inscritos = await obtenerInscripcionesEvento(ev.id);
-      if (!inscritos.length) {
-        lista.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);">Aún no hay nadie inscrito.</div>`;
-      } else {
-        const eventoExport = ev?.id || "";
-        const btnExportIns = document.createElement("button");
-        btnExportIns.className = "btn btn-success btn-sm";
-        btnExportIns.style.cssText = "margin-bottom:12px;";
-        btnExportIns.innerHTML = "📥 Exportar Excel";
-        btnExportIns.onclick = () => {
-          const wb = (window as any).XLSX.utils.book_new();
-          const rows = inscritos.map(i => ({
-            Nombre: i.nombre || "", Empresa: i.empresa || "", Correo: i.correo || "",
-            Teléfono: i.telefono || "", "Cómo se enteró": i.fuente || "",
-            "Fecha de registro": i.fechaRegistro?.toDate ? i.fechaRegistro.toDate().toLocaleDateString("es-MX") : ""
-          }));
-          const ws = (window as any).XLSX.utils.json_to_sheet(rows);
-          (window as any).XLSX.utils.book_append_sheet(wb, ws, "Inscritos");
-          (window as any).XLSX.writeFile(wb, `inscritos-${ev.nombre || eventoExport}.xlsx`);
-        };
-        lista.innerHTML = "";
-        lista.appendChild(btnExportIns);
-        const listDiv = document.createElement("div");
-        listDiv.innerHTML = `<div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:10px;">${inscritos.length} persona(s) registrada(s)</div>` +
-          inscritos.map(i => `<div style="padding:10px 12px;background:var(--bg-input);border-radius:8px;margin-bottom:6px;">
-            <div style="font-weight:700;color:var(--text-bright);">👤 ${escapeHtml(i.nombre)}</div>
-            ${i.empresa ? `<div style="font-size:0.78rem;color:var(--text-muted);">🏢 ${escapeHtml(i.empresa)}</div>` : ""}
-            ${i.correo ? `<div style="font-size:0.78rem;color:var(--text-muted);">✉️ ${escapeHtml(i.correo)}</div>` : ""}
-            ${i.telefono ? `<div style="font-size:0.78rem;color:var(--text-muted);">📞 ${escapeHtml(i.telefono)}</div>` : ""}
-            ${i.fuente ? `<div style="font-size:0.72rem;color:var(--brand-primary);margin-top:4px;">📌 ${escapeHtml(i.fuente)}</div>` : ""}
-          </div>`).join("");
-        lista.appendChild(listDiv);
-      }
+      renderTablaInscritos(inscritos, ev, lista);
     } catch(e) {
       lista.innerHTML = `<div style="text-align:center;padding:24px;color:#f87171;">Error al cargar inscritos.</div>`;
     }

@@ -1004,3 +1004,25 @@ export async function obtenerInscripcionesEvento(eventoId) {
   }
 }
 
+// Corrige un dato capturado mal (ej. typo en el teléfono) directo desde 👥 Inscritos en el CRM.
+export async function actualizarInscripcionEvento(id, datos) {
+  try {
+    await updateDoc(doc(db, "inscripciones_evento", id), limpiar(datos));
+    return true;
+  } catch (error) {
+    console.error("Error al actualizar inscripción:", error);
+    return false;
+  }
+}
+
+// Quita un registro claramente falso/basura de la lista de inscritos.
+export async function eliminarInscripcionEvento(id) {
+  try {
+    await deleteDoc(doc(db, "inscripciones_evento", id));
+    return true;
+  } catch (error) {
+    console.error("Error al eliminar inscripción:", error);
+    return false;
+  }
+}
+
