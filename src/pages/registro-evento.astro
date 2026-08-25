@@ -126,18 +126,18 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
       box-shadow: 0 20px 60px rgba(0,0,0,0.5);
     }
     .form-card-title {
-      font-size: 1.1rem;
+      font-size: 1.3rem;
       font-weight: 800;
       color: #f1f5f9;
       margin-bottom: 6px;
     }
     .form-card-subtitle {
-      font-size: 0.82rem;
+      font-size: 0.85rem;
       color: #64748b;
-      margin-bottom: 28px;
+      margin-bottom: 30px;
     }
     .form-group {
-      margin-bottom: 18px;
+      margin-bottom: 22px;
     }
     label {
       display: block;
@@ -146,15 +146,16 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
       color: #64748b;
       text-transform: uppercase;
       letter-spacing: 0.06em;
-      margin-bottom: 7px;
+      margin-bottom: 9px;
     }
     .required { color: #6366f1; }
     input, select, textarea {
+      display: block;
       width: 100%;
       background: rgba(255,255,255,0.04);
       border: 1.5px solid rgba(255,255,255,0.09);
       border-radius: 10px;
-      padding: 12px 14px;
+      padding: 13px 15px;
       color: #e2e8f0;
       font-size: 0.95rem;
       font-family: inherit;
@@ -176,13 +177,13 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
     @media(max-width: 500px) { .form-row { grid-template-columns: 1fr; } .form-card { padding: 24px 20px; } }
 
     .form-section-label {
-      font-size: 0.7rem;
-      font-weight: 800;
+      font-size: 0.68rem;
+      font-weight: 700;
       color: #818cf8;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin: 26px 0 14px;
-      padding-top: 18px;
+      letter-spacing: 0.1em;
+      margin: 30px 0 16px;
+      padding-top: 22px;
       border-top: 1px solid rgba(255,255,255,0.08);
     }
     .form-section-label:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
@@ -396,7 +397,7 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
         <div class="form-card-title">📝 Completa tu registro</div>
         <div class="form-card-subtitle">Llena el formulario y te esperamos en el evento.</div>
         <form id="form-registro">
-          <div class="form-section-label">👤 Tus datos</div>
+          <div class="form-section-label">Tus datos</div>
           <div class="form-row">
             <div class="form-group">
               <label>Nombre completo <span class="required">*</span></label>
@@ -431,7 +432,7 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
             </div>
           </div>` : ""}
 
-          <div class="form-section-label">🔔 Preferencias</div>
+          <div class="form-section-label">Preferencias</div>
           <div class="form-group">
             <label>¿Cómo te enteraste del evento?</label>
             <select id="r-fuente">
