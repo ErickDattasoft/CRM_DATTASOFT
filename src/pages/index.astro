@@ -16350,8 +16350,11 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     };
 
     const tbody = wrap.querySelector("#tbody-inscritos") as HTMLElement;
+    // autocomplete/autocorrect/spellcheck en "off": Chrome/Brave reconocen "nombre" y "teléfono"
+    // como campos de autofill y tapan el valor real con su propio ícono de sugerencia — el dato
+    // sigue ahí (confirmado en Firestore), solo lo esconde la UI del navegador.
     const campoInput = (i: any, campo: string, placeholder = "") =>
-      `<input type="text" data-id="${i._id}" data-campo="${campo}" value="${escapeHtml(i[campo] || "")}" placeholder="${placeholder}" style="font-size:0.8rem; padding:5px 8px; width:100%;">`;
+      `<input type="text" data-id="${i._id}" data-campo="${campo}" value="${escapeHtml(i[campo] || "")}" placeholder="${placeholder}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="font-size:0.8rem; padding:5px 8px; width:100%;">`;
 
     inscritos.forEach(i => {
       const tr = document.createElement("tr");

@@ -214,7 +214,9 @@ async function enviarCorreosConfirmacion(origin, evento, correoAdmin, nombreEmpr
   // b@x.com") — Brevo espera una lista, no un único destinatario con comas adentro.
   const adminList = correoAdmin.split(",").map(s => s.trim()).filter(Boolean);
 
-  const resultados = await Promise.allSettled([
+  // Fallos silenciosos a propósito (Promise.allSettled, sin then/catch de cada uno) — un correo
+  // que no se pudo mandar no debe tumbar el registro, que ya quedó guardado en Firestore.
+  await Promise.allSettled([
     adminList.length
       ? fetch(`${origin}/send-email`, { method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ to: adminList, subject: `🔔 Nuevo registro: ${nombre} — ${evento.nombre || evento.id}`, html: htmlAdmin }) })
@@ -224,15 +226,6 @@ async function enviarCorreosConfirmacion(origin, evento, correoAdmin, nombreEmpr
           body: JSON.stringify({ to: correo, subject: `✅ Confirmación de registro — ${evento.nombre || "Evento"}`, html: htmlCliente }) })
       : Promise.resolve(null),
   ]);
-
-  // Debug temporal — para ver si el envío interno a /send-email falló y por qué, en vez de que
-  // sea un fallo silencioso (Promise.allSettled no lanza error). Quitar una vez resuelto.
-  const [rAdmin, rCliente] = await Promise.all(resultados.map(async (r) => {
-    if (r.status === "rejected") return { status: "rejected", reason: String(r.reason) };
-    if (!r.value) return { status: "skipped" };
-    return { status: r.value.status, body: await r.value.text().catch(() => "") };
-  }));
-  return { admin: rAdmin, cliente: rCliente, correoAdminUsado: correoAdmin || null, correoClienteUsado: correo || null, origin };
 }
 
 // ── Handler ──────────────────────────────────────────────────────────────────────────────
@@ -279,9 +272,7 @@ export const onRequestPost = async (context) => {
   const tsData = await tsResp.json().catch(() => null);
   if (!tsData || !tsData.success) {
     console.error("[registrar-evento] siteverify rechazado:", JSON.stringify(tsData));
-    // El detalle (error-codes de Cloudflare) se manda al cliente solo temporalmente, mientras se
-    // depura el primer despliegue — no es información sensible (no expone el secreto).
-    return jsonResponse({ ok: false, error: "No se pudo verificar que eres una persona real", debug: tsData }, 403);
+    return jsonResponse({ ok: false, error: "No se pudo verificar que eres una persona real" }, 403);
   }
 
   if (!env.FIREBASE_PROJECT_ID || !env.FIREBASE_CLIENT_EMAIL || !env.FIREBASE_PRIVATE_KEY) {
@@ -293,8 +284,7 @@ export const onRequestPost = async (context) => {
     accessToken = await obtenerAccessTokenGoogle(env.FIREBASE_CLIENT_EMAIL, env.FIREBASE_PRIVATE_KEY);
   } catch (err) {
     console.error("[registrar-evento] Error de auth con Firebase:", err);
-    // Debug temporal — el mensaje de error no incluye la clave privada, solo la razón técnica.
-    return jsonResponse({ ok: false, error: "Error de autenticación con Firebase", debug: String(err?.message || err) }, 500);
+    return jsonResponse({ ok: false, error: "Error de autenticación con Firebase" }, 500);
   }
 
   const base = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents`;
@@ -330,7 +320,7 @@ export const onRequestPost = async (context) => {
   }
 
   const origin = new URL(request.url).origin;
-  const debugCorreos = await enviarCorreosConfirmacion(origin, evento, pubData.correoSoporte || "", pubData.nombreEmpresa || "DATTASOFT", nuevaInscripcion);
+  await enviarCorreosConfirmacion(origin, evento, pubData.correoSoporte || "", pubData.nombreEmpresa || "DATTASOFT", nuevaInscripcion);
 
-  return jsonResponse({ ok: true, evento: { nombre: evento.nombre, fecha: evento.fecha, hora: evento.hora }, debugCorreos });
+  return jsonResponse({ ok: true, evento: { nombre: evento.nombre, fecha: evento.fecha, hora: evento.hora } });
 };
