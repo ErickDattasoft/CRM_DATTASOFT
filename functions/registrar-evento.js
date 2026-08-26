@@ -173,7 +173,7 @@ async function existeInscripcion(base, headers, eventoId, correo, telefono) {
 // ── Correos de confirmación (reutiliza /send-email, que ya habla con Brevo) ────────────────
 
 async function enviarCorreosConfirmacion(origin, evento, correoAdmin, nombreEmpresaCRM, datos) {
-  const { nombre, empresa, correo, telefono, fuente, usaSistema, deseaCanalWhatsapp } = datos;
+  const { nombre, empresa, correo, telefono, fuente, usaSistema, asistira, deseaCanalWhatsapp } = datos;
   const fechaLarga = evento.fecha
     ? new Date(evento.fecha + "T12:00:00").toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
     : "";
@@ -202,7 +202,8 @@ async function enviarCorreosConfirmacion(origin, evento, correoAdmin, nombreEmpr
     ${empresa ? `<tr><td style="padding:10px 14px;font-weight:600;border-bottom:1px solid #e2e8f0;color:#334155;">Empresa</td><td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;">${escapeHtml(empresa)}</td></tr>` : ""}
     ${correo ? `<tr style="background:#f8fafc;"><td style="padding:10px 14px;font-weight:600;border-bottom:1px solid #e2e8f0;color:#334155;">Correo</td><td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;"><a href="mailto:${escapeHtml(correo)}" style="color:#6366f1;">${escapeHtml(correo)}</a></td></tr>` : ""}
     ${telefono ? `<tr><td style="padding:10px 14px;font-weight:600;border-bottom:1px solid #e2e8f0;color:#334155;">Teléfono</td><td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;">${escapeHtml(telefono)}</td></tr>` : ""}
-    ${usaSistema ? `<tr style="background:#f8fafc;"><td style="padding:10px 14px;font-weight:600;border-bottom:1px solid #e2e8f0;color:#334155;">¿Usa ${escapeHtml(evento.sistema || "")}?</td><td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;">${escapeHtml(usaSistema)}</td></tr>` : ""}
+    <tr style="background:#f8fafc;"><td style="padding:10px 14px;font-weight:600;border-bottom:1px solid #e2e8f0;color:#334155;">¿Asistirá?</td><td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;">${escapeHtml(asistira)}</td></tr>
+    ${usaSistema ? `<tr><td style="padding:10px 14px;font-weight:600;border-bottom:1px solid #e2e8f0;color:#334155;">¿Usa ${escapeHtml(evento.sistema || "")}?</td><td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;">${escapeHtml(usaSistema)}</td></tr>` : ""}
     ${fuente ? `<tr><td style="padding:10px 14px;font-weight:600;border-bottom:1px solid #e2e8f0;color:#334155;">Fuente</td><td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;">${escapeHtml(fuente)}</td></tr>` : ""}
     <tr style="background:#f8fafc;"><td style="padding:10px 14px;font-weight:600;color:#334155;">Canal WhatsApp</td><td style="padding:10px 14px;">${deseaCanalWhatsapp ? "✅ Sí quiere unirse" : "No"}</td></tr>
   </table>
@@ -240,10 +241,12 @@ export const onRequestPost = async (context) => {
   const telefono = String(payload.telefono || "").trim();
   const fuente = String(payload.fuente || "").trim();
   const usaSistemaPayload = String(payload.usaSistema || "").trim();
+  const asistira = String(payload.asistira || "").trim();
   const deseaCanalWhatsapp = !!payload.deseaCanalWhatsapp;
   const turnstileToken = payload.turnstileToken;
 
   if (!eventoId || !nombre) return jsonResponse({ ok: false, error: "Faltan campos obligatorios" }, 400);
+  if (!asistira) return jsonResponse({ ok: false, error: "Indica si asistirás al webinar" }, 400);
   if (!correo && !telefono) return jsonResponse({ ok: false, error: "Ingresa al menos un correo o un teléfono" }, 400);
   if (correo && !isValidEmail(correo)) return jsonResponse({ ok: false, error: "Correo inválido" }, 400);
   if (telefono && !isValidTelefono(telefono)) return jsonResponse({ ok: false, error: "Teléfono inválido" }, 400);
@@ -293,19 +296,17 @@ export const onRequestPost = async (context) => {
   const evento = (pubData.eventos || []).find(e => e.id === eventoId);
   if (!evento) return jsonResponse({ ok: false, error: "Evento no encontrado" }, 404);
 
-  if (evento.sistema) {
-    if (!usaSistemaPayload) return jsonResponse({ ok: false, error: `Indica si utilizas ${evento.sistema}` }, 400);
-    if (usaSistemaPayload === "No") {
-      return jsonResponse({ ok: true, bloqueadoPorSistema: true, sistema: evento.sistema, correoAdmin: pubData.correoSoporte || "" });
-    }
-  }
+  // "¿Usas [sistema]?" y "¿Asistirás?" son ahora solo informativos (se guardan y se muestran en
+  // Inscritos) — ya no bloquean el registro. Antes, responder "No" al sistema rechazaba el
+  // registro por completo; se decidió que es mejor dejar que todos se registren.
+  if (evento.sistema && !usaSistemaPayload) return jsonResponse({ ok: false, error: `Indica si utilizas ${evento.sistema}` }, 400);
 
   const yaExiste = await existeInscripcion(base, headers, eventoId, correo, telefono);
   if (yaExiste) return jsonResponse({ ok: true, duplicado: true });
 
   const nuevaInscripcion = {
     eventoId, eventoNombre: evento.nombre || "", nombre, empresa, correo, telefono, fuente,
-    usaSistema: usaSistemaPayload, deseaCanalWhatsapp, fechaRegistro: new Date().toISOString(),
+    usaSistema: usaSistemaPayload, asistira, deseaCanalWhatsapp, fechaRegistro: new Date().toISOString(),
   };
   const createResp = await fetch(`${base}/inscripciones_evento`, {
     method: "POST", headers, body: JSON.stringify({ fields: toFirestoreFields(nuevaInscripcion) }),

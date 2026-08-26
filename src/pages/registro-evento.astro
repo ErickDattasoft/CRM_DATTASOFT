@@ -422,17 +422,27 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
           </div>
           <div class="form-hint">Ingresa al menos uno de los dos (correo o teléfono) <span class="required">*</span></div>
 
-          ${evento.sistema ? `
           <div class="form-highlight-box">
-            <div class="form-group">
+            <div style="font-size:0.85rem; color:#a5b4fc; font-weight:600; margin-bottom:14px;">Para enviarte el link de acceso al webinar, cuéntanos:</div>
+            <div class="form-group" ${evento.sistema ? "" : 'style="margin-bottom:0;"'}>
+              <label>¿Asistirás al webinar? <span class="required">*</span></label>
+              <select id="r-asistira" required>
+                <option value="">— Selecciona —</option>
+                <option value="Sí">Sí, ahí estaré</option>
+                <option value="No">No podré, tal vez en otra ocasión</option>
+                <option value="Tal vez">Aún no estoy seguro/a</option>
+              </select>
+            </div>
+            ${evento.sistema ? `
+            <div class="form-group" style="margin-bottom:0; margin-top:18px;">
               <label>¿Actualmente utilizas ${escapeHtml(evento.sistema)}? <span class="required">*</span></label>
               <select id="r-usa-sistema" required>
                 <option value="">— Selecciona —</option>
                 <option value="Sí">Sí, lo utilizo</option>
                 <option value="No">No lo utilizo</option>
               </select>
-            </div>
-          </div>` : ""}
+            </div>` : ""}
+          </div>
 
           <div class="form-section-label">Preferencias</div>
           <div class="form-group">
@@ -489,6 +499,9 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
         if (correo && !isValidEmail(correo)) { alert("Ingresa un correo electrónico válido."); return; }
         if (telefono && !isValidTelefono(telefono)) { alert("Ingresa un teléfono válido (10 dígitos)."); return; }
 
+        const asistira = document.getElementById("r-asistira")?.value;
+        if (!asistira) { alert("Indica si asistirás al webinar."); return; }
+
         const usaSistema = evento.sistema ? document.getElementById("r-usa-sistema")?.value : "";
         if (evento.sistema && !usaSistema) { alert(`Indica si utilizas ${evento.sistema}.`); return; }
 
@@ -511,7 +524,7 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               eventoId, nombre, empresa: empresaReg, correo, telefono, fuente,
-              usaSistema, deseaCanalWhatsapp: canalWsp, turnstileToken,
+              usaSistema, asistira, deseaCanalWhatsapp: canalWsp, turnstileToken,
             }),
           });
           const data = await resp.json().catch(() => null);
@@ -521,23 +534,12 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
             throw new Error((data?.error || "No se pudo completar el registro") + detalle);
           }
 
-          if (data.bloqueadoPorSistema) {
-            formCard.innerHTML = `
-              <div class="state-box state-error">
-                <span class="state-icon">🔍</span>
-                <div class="state-title">Este evento no es para ti (por ahora)</div>
-                <div class="state-subtitle">Este curso está pensado para quienes ya utilizan <strong>${escapeHtml(data.sistema || evento.sistema)}</strong>.
-                Si buscas información sobre otro sistema, contáctanos${data.correoAdmin ? ` en <strong>${escapeHtml(data.correoAdmin)}</strong>` : ""} y con gusto te orientamos.</div>
-              </div>`;
-            return;
-          }
-
           if (data.duplicado) {
             formCard.innerHTML = `
               <div class="state-box state-success">
                 <span class="state-icon">ℹ️</span>
                 <div class="state-title">Ya estás registrado</div>
-                <div class="state-subtitle">Ya te habías registrado para este evento con estos datos. ¡Te esperamos!</div>
+                <div class="state-subtitle">Ya te habías registrado para este evento con estos datos. ¡Te esperamos!<br><br>El link del webinar se envía al correo o WhatsApp registrado — si es por correo, revisa también spam o correo no deseado.</div>
               </div>`;
             return;
           }
@@ -551,6 +553,8 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
                 ¡Hola <strong>${nombre}</strong>! Quedaste registrado para<br>
                 <strong>${evento.nombre}</strong>.<br><br>
                 Te esperamos el ${evento.fecha ? new Date(evento.fecha + "T12:00:00").toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long"}) : ""}${evento.hora ? " a las " + evento.hora : ""}. 😊
+                <br><br>
+                El link del webinar se enviará al correo o WhatsApp que registraste. Si es por correo, revisa también tu carpeta de spam o correo no deseado por si llega ahí.
               </div>
             </div>`;
         } catch(err) {

@@ -15953,11 +15953,6 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     document.getElementById("btnEliminarEvento").style.display = "inline-flex";
     document.getElementById("btnLinkRegistroEvento").style.display = "inline-flex";
     document.getElementById("btnVerInscripciones").style.display = "inline-flex";
-    // Contar inscritos async
-    obtenerInscripcionesEvento(ev.id).then(list => {
-      const badge = document.getElementById("badge-inscritos");
-      if (badge) badge.textContent = list.length;
-    }).catch(() => {});
 
     document.getElementById("ev-nombre-display").textContent = ev.nombre || "—";
     const sistEl = document.getElementById("ev-sistema-display");
@@ -15972,11 +15967,27 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     else notasEl.style.display = "none";
 
     const s = calcularStatsEvento(ev);
-    document.getElementById("ev-stat-invitados").textContent = s.invitados;
-    document.getElementById("ev-stat-asistira").textContent = s.asistira;
-    document.getElementById("ev-stat-no").textContent = s.no;
-    document.getElementById("ev-stat-noloc").textContent = s.noloc;
-    document.getElementById("ev-stat-pendiente").textContent = s.pendiente;
+    document.getElementById("ev-stat-invitados").textContent = String(s.invitados);
+    document.getElementById("ev-stat-asistira").textContent = String(s.asistira);
+    document.getElementById("ev-stat-no").textContent = String(s.no);
+    document.getElementById("ev-stat-noloc").textContent = String(s.noloc);
+    document.getElementById("ev-stat-pendiente").textContent = String(s.pendiente);
+
+    // Los inscritos del formulario público llegan aparte (Firestore, async) — se suman a los
+    // mismos contadores de Asistirá/No Asistirá/Pendiente según su propia respuesta de
+    // "¿Asistirás?", sin mezclarse con las tablas de Empresas/Extras invitadas manualmente.
+    // "Invitados" y "No Localizado" se dejan fuera: esos dos son específicos del seguimiento
+    // manual (alguien del equipo los contactó), no aplican a quien se autorregistró.
+    obtenerInscripcionesEvento(ev.id).then(list => {
+      const badge = document.getElementById("badge-inscritos");
+      if (badge) badge.textContent = String(list.length);
+      const asistiraExtra = list.filter(i => i.asistira === "Sí").length;
+      const noExtra = list.filter(i => i.asistira === "No").length;
+      const pendienteExtra = list.filter(i => !i.asistira || i.asistira === "Tal vez").length;
+      document.getElementById("ev-stat-asistira").textContent = String(s.asistira + asistiraExtra);
+      document.getElementById("ev-stat-no").textContent = String(s.no + noExtra);
+      document.getElementById("ev-stat-pendiente").textContent = String(s.pendiente + pendienteExtra);
+    }).catch(() => {});
 
     renderTablaEmpresasEvento(ev);
     renderTablaExtrasEvento(ev);
@@ -16312,6 +16323,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
               <th style="min-width:120px;">Empresa</th>
               <th style="min-width:150px;">Correo</th>
               <th style="min-width:110px;">Teléfono</th>
+              <th style="text-align:center; width:80px; font-size:0.72rem;">¿Asistirá?</th>
               ${ev.sistema ? `<th style="min-width:70px; font-size:0.72rem;">Usa ${escapeHtml(ev.sistema)}</th>` : ""}
               <th style="text-align:center; width:70px; font-size:0.72rem;">Canal WSP</th>
               <th style="text-align:center; width:80px;">Acciones</th>
@@ -16327,7 +16339,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       const wb = (window as any).XLSX.utils.book_new();
       const rows = inscritos.map(i => ({
         Nombre: i.nombre || "", Empresa: i.empresa || "", Correo: i.correo || "",
-        Teléfono: i.telefono || "", "Cómo se enteró": i.fuente || "",
+        Teléfono: i.telefono || "", "¿Asistirá?": i.asistira || "", "Cómo se enteró": i.fuente || "",
         [`Usa ${ev.sistema || "el sistema"}`]: i.usaSistema || "",
         "Quiere canal WhatsApp": i.deseaCanalWhatsapp ? "Sí" : "No",
         "Fecha de registro": i.fechaRegistro?.toDate ? i.fechaRegistro.toDate().toLocaleDateString("es-MX") : ""
@@ -16348,6 +16360,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         <td>${campoInput(i, "empresa")}</td>
         <td>${campoInput(i, "correo")}</td>
         <td>${campoInput(i, "telefono")}</td>
+        <td style="text-align:center; font-size:0.75rem;">${i.asistira || "—"}</td>
         ${ev.sistema ? `<td style="text-align:center; font-size:0.75rem;">${i.usaSistema || "—"}</td>` : ""}
         <td style="text-align:center;">${i.deseaCanalWhatsapp ? "✅" : "—"}</td>
         <td style="text-align:center; white-space:nowrap;">
