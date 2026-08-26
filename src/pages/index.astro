@@ -16316,17 +16316,17 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         <button class="btn btn-success btn-sm" id="btnExportIns">📥 Exportar Excel</button>
       </div>
       <div class="table-wrap" style="max-height:440px;">
-        <table>
+        <table style="table-layout:auto; width:auto; min-width:100%;">
           <thead>
             <tr>
-              <th style="min-width:130px;">Nombre</th>
-              <th style="min-width:120px;">Empresa</th>
-              <th style="min-width:150px;">Correo</th>
-              <th style="min-width:110px;">Teléfono</th>
-              <th style="text-align:center; width:80px; font-size:0.72rem;">¿Asistirá?</th>
-              ${ev.sistema ? `<th style="min-width:70px; font-size:0.72rem;">Usa ${escapeHtml(ev.sistema)}</th>` : ""}
-              <th style="text-align:center; width:70px; font-size:0.72rem;">Canal WSP</th>
-              <th style="text-align:center; width:80px;">Acciones</th>
+              <th style="width:160px; min-width:160px; white-space:nowrap;">Nombre</th>
+              <th style="width:150px; min-width:150px; white-space:nowrap;">Empresa</th>
+              <th style="width:190px; min-width:190px; white-space:nowrap;">Correo</th>
+              <th style="width:140px; min-width:140px; white-space:nowrap;">Teléfono</th>
+              <th style="text-align:center; width:110px; min-width:110px; white-space:nowrap; font-size:0.72rem;">¿Asistirá?</th>
+              ${ev.sistema ? `<th style="width:110px; min-width:110px; white-space:nowrap; font-size:0.72rem;">Usa ${escapeHtml(ev.sistema)}</th>` : ""}
+              <th style="text-align:center; width:90px; min-width:90px; white-space:nowrap; font-size:0.72rem;">Canal WSP</th>
+              <th style="text-align:center; width:90px; min-width:90px; white-space:nowrap;">Acciones</th>
             </tr>
           </thead>
           <tbody id="tbody-inscritos"></tbody>
