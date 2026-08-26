@@ -210,10 +210,14 @@ async function enviarCorreosConfirmacion(origin, evento, correoAdmin, nombreEmpr
   <p style="margin-top:20px;font-size:0.78rem;color:#94a3b8;">Puedes ver todos los inscritos en CRM → Eventos → 👥 Inscritos.</p>
 </div>`;
 
+  // correoSoporte puede traer varios correos separados por coma en un solo string (ej. "a@x.com,
+  // b@x.com") — Brevo espera una lista, no un único destinatario con comas adentro.
+  const adminList = correoAdmin.split(",").map(s => s.trim()).filter(Boolean);
+
   const resultados = await Promise.allSettled([
-    correoAdmin
+    adminList.length
       ? fetch(`${origin}/send-email`, { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ to: correoAdmin, subject: `🔔 Nuevo registro: ${nombre} — ${evento.nombre || evento.id}`, html: htmlAdmin }) })
+          body: JSON.stringify({ to: adminList, subject: `🔔 Nuevo registro: ${nombre} — ${evento.nombre || evento.id}`, html: htmlAdmin }) })
       : Promise.resolve(null),
     correo
       ? fetch(`${origin}/send-email`, { method: "POST", headers: { "Content-Type": "application/json" },
