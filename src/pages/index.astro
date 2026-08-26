@@ -3906,17 +3906,28 @@ try {
             <label>🔗 Link del evento (Zoom, Teams, Meet, etc.)</label>
             <input id="form-ev-link" placeholder="https://zoom.us/j/..." type="url">
           </div>
+          <div class="form-grid" style="margin-top:8px;">
+            <div class="form-group">
+              <label>👤 Nombre de contacto</label>
+              <input id="form-ev-contacto-nombre" placeholder="Ej: Erick Casas">
+            </div>
+            <div class="form-group">
+              <label>📱 WhatsApp de contacto</label>
+              <input id="form-ev-contacto-whatsapp" placeholder="Ej: 999 912 3456">
+            </div>
+          </div>
           <div class="form-group" style="margin-top:8px;">
             <label>Notas del evento</label>
             <textarea id="form-ev-notas" rows="2" placeholder="Descripción, agenda, información adicional..."></textarea>
           </div>
           <div class="form-group" style="margin-top:8px;">
             <label>💬 Plantilla de confirmación (correo y WhatsApp)</label>
-            <textarea id="form-ev-plantilla" rows="8" placeholder="Hola [nombre] 👋..."></textarea>
+            <textarea id="form-ev-plantilla" rows="10" placeholder="Hola [nombre] 👋..."></textarea>
             <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">
-              Comodines: <code>[nombre]</code> <code>[evento]</code> <code>[fecha]</code> <code>[hora]</code> <code>[sistema]</code> <code>[link]</code> —
+              Comodines: <code>[nombre]</code> <code>[evento]</code> <code>[fecha]</code> <code>[hora]</code> <code>[sistema]</code> <code>[link]</code>
+              <code>[contacto_nombre]</code> <code>[contacto_whatsapp]</code> —
               se usa en el correo de confirmación automático y al mandar WhatsApp manual a un inscrito desde 👥 Inscritos.
-              Cada evento tiene la suya (útil porque el link de Zoom/Meet cambia en cada curso).
+              Cada evento tiene la suya (útil porque el link de Zoom/Meet y el contacto cambian en cada curso).
             </span>
           </div>
           <div class="form-actions">
@@ -6258,7 +6269,8 @@ verificarSesion();
     if (crmLocalOnly || !firebaseEnabled) return;
     const eventosPublicos = (eventos || []).map((e: any) => ({
       id: e.id, nombre: e.nombre || "", fecha: e.fecha || "", hora: e.hora || "",
-      sistema: e.sistema || "", notas: e.notas || "", link: e.link || "", plantilla: e.plantilla || ""
+      sistema: e.sistema || "", notas: e.notas || "", link: e.link || "", plantilla: e.plantilla || "",
+      contactoNombre: e.contactoNombre || "", contactoWhatsapp: e.contactoWhatsapp || ""
     }));
     await guardarConfigPublica({
       logoEmpresa: localStorage.getItem("crm_logo") || "",
@@ -16175,12 +16187,12 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
   // Texto de partida al crear un evento nuevo — el admin lo edita/completa con el link real de
   // Zoom/Meet y lo que aplique a ese curso en particular. Ver comodines en resolverPlantillaEvento.
-  const PLANTILLA_EVENTO_DEFAULT = "Hola [nombre] 👋\n\nQuedaste registrado en [evento].\n📅 [fecha] [hora]\n🔗 Liga de acceso: [link]\n\n¡Nos vemos ahí!";
+  const PLANTILLA_EVENTO_DEFAULT = "Hola [nombre] 👋\n\nQuedaste registrado en [evento].\n📅 [fecha] [hora]\n🔗 Liga de acceso: [link]\n\nPara mayores informes, contáctanos por WhatsApp: [contacto_whatsapp]\n\n¡Nos vemos ahí!\n\n— [contacto_nombre]";
 
   // Mismo patrón de comodines [x] que generarMensaje/generarMensajeLicencias, pero por evento
-  // (cada curso tiene su propio link de Zoom/Meet e info). Se usa tanto para el WhatsApp manual
-  // desde 👥 Inscritos como — en su versión JS plana, ver registro-evento.astro — para el correo
-  // de confirmación automático.
+  // (cada curso tiene su propio link de Zoom/Meet, contacto, etc.). Se usa tanto para el WhatsApp
+  // manual desde 👥 Inscritos como — en su versión servidor, ver functions/registrar-evento.js —
+  // para el correo de confirmación automático.
   function resolverPlantillaEvento(plantilla: string, ev: any, inscrito: any) {
     const fechaFmt = ev?.fecha ? new Date(ev.fecha + "T12:00:00").toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "";
     return (plantilla || PLANTILLA_EVENTO_DEFAULT)
@@ -16189,14 +16201,16 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       .replace(/\[fecha\]/g, fechaFmt)
       .replace(/\[hora\]/g, ev?.hora || "")
       .replace(/\[sistema\]/g, ev?.sistema || "")
-      .replace(/\[link\]/g, ev?.link || "");
+      .replace(/\[link\]/g, ev?.link || "")
+      .replace(/\[contacto_nombre\]/g, ev?.contactoNombre || "")
+      .replace(/\[contacto_whatsapp\]/g, ev?.contactoWhatsapp || "");
   }
 
   // Nuevo evento
   document.getElementById("btnNuevoEvento")?.addEventListener("click", () => {
     document.getElementById("edit-evento-id").value = "";
     document.getElementById("form-evento-titulo").textContent = "➕ Nuevo Evento";
-    ["form-ev-nombre","form-ev-sistema","form-ev-link","form-ev-notas"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
+    ["form-ev-nombre","form-ev-sistema","form-ev-link","form-ev-notas","form-ev-contacto-nombre","form-ev-contacto-whatsapp"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
     document.getElementById("form-ev-fecha").value = "";
     document.getElementById("form-ev-hora").value = "";
     (document.getElementById("form-ev-plantilla") as HTMLTextAreaElement).value = PLANTILLA_EVENTO_DEFAULT;
@@ -16220,6 +16234,8 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       hora: document.getElementById("form-ev-hora").value,
       link: document.getElementById("form-ev-link").value.trim(),
       notas: document.getElementById("form-ev-notas").value.trim(),
+      contactoNombre: document.getElementById("form-ev-contacto-nombre").value.trim(),
+      contactoWhatsapp: document.getElementById("form-ev-contacto-whatsapp").value.trim(),
       plantilla: (document.getElementById("form-ev-plantilla") as HTMLTextAreaElement).value.trim(),
       empresas: existente?.empresas || [],
       extras: existente?.extras || [],
@@ -16246,6 +16262,8 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     document.getElementById("form-ev-hora").value = ev.hora || "";
     document.getElementById("form-ev-link").value = ev.link || "";
     document.getElementById("form-ev-notas").value = ev.notas || "";
+    document.getElementById("form-ev-contacto-nombre").value = ev.contactoNombre || "";
+    document.getElementById("form-ev-contacto-whatsapp").value = ev.contactoWhatsapp || "";
     (document.getElementById("form-ev-plantilla") as HTMLTextAreaElement).value = ev.plantilla || PLANTILLA_EVENTO_DEFAULT;
     document.getElementById("formulario-evento").classList.remove("hidden");
     document.getElementById("formulario-evento").scrollIntoView({ behavior:"smooth" });

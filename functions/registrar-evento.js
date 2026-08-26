@@ -31,7 +31,7 @@ function isValidTelefono(t) {
   return true;
 }
 
-const PLANTILLA_EVENTO_DEFAULT = "Hola [nombre] 👋\n\nQuedaste registrado en [evento].\n📅 [fecha] [hora]\n🔗 Liga de acceso: [link]\n\n¡Nos vemos ahí!";
+const PLANTILLA_EVENTO_DEFAULT = "Hola [nombre] 👋\n\nQuedaste registrado en [evento].\n📅 [fecha] [hora]\n🔗 Liga de acceso: [link]\n\nPara mayores informes, contáctanos por WhatsApp: [contacto_whatsapp]\n\n¡Nos vemos ahí!\n\n— [contacto_nombre]";
 
 function resolverPlantillaEvento(plantilla, ev, datosInscrito) {
   const fechaFmt = ev.fecha
@@ -43,7 +43,9 @@ function resolverPlantillaEvento(plantilla, ev, datosInscrito) {
     .replace(/\[fecha\]/g, fechaFmt)
     .replace(/\[hora\]/g, ev.hora || "")
     .replace(/\[sistema\]/g, ev.sistema || "")
-    .replace(/\[link\]/g, ev.link || "");
+    .replace(/\[link\]/g, ev.link || "")
+    .replace(/\[contacto_nombre\]/g, ev.contactoNombre || "")
+    .replace(/\[contacto_whatsapp\]/g, ev.contactoWhatsapp || "");
 }
 
 // ── Firestore REST: codificación/decodificación de valores tipados ─────────────────────────
