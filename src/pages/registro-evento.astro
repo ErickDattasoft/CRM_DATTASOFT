@@ -556,6 +556,7 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
                 <br><br>
                 El link del webinar se enviará al correo o WhatsApp que registraste. Si es por correo, revisa también tu carpeta de spam o correo no deseado por si llega ahí.
               </div>
+              ${data.debugCorreos ? `<div style="margin-top:16px;padding:12px;background:rgba(0,0,0,0.3);border-radius:8px;font-size:0.7rem;color:#94a3b8;text-align:left;font-family:monospace;white-space:pre-wrap;word-break:break-all;">${escapeHtml(JSON.stringify(data.debugCorreos, null, 2))}</div>` : ""}
             </div>`;
         } catch(err) {
           btn.disabled = false;

@@ -210,16 +210,25 @@ async function enviarCorreosConfirmacion(origin, evento, correoAdmin, nombreEmpr
   <p style="margin-top:20px;font-size:0.78rem;color:#94a3b8;">Puedes ver todos los inscritos en CRM → Eventos → 👥 Inscritos.</p>
 </div>`;
 
-  await Promise.allSettled([
+  const resultados = await Promise.allSettled([
     correoAdmin
       ? fetch(`${origin}/send-email`, { method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ to: correoAdmin, subject: `🔔 Nuevo registro: ${nombre} — ${evento.nombre || evento.id}`, html: htmlAdmin }) })
-      : Promise.resolve(),
+      : Promise.resolve(null),
     correo
       ? fetch(`${origin}/send-email`, { method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ to: correo, subject: `✅ Confirmación de registro — ${evento.nombre || "Evento"}`, html: htmlCliente }) })
-      : Promise.resolve(),
+      : Promise.resolve(null),
   ]);
+
+  // Debug temporal — para ver si el envío interno a /send-email falló y por qué, en vez de que
+  // sea un fallo silencioso (Promise.allSettled no lanza error). Quitar una vez resuelto.
+  const [rAdmin, rCliente] = await Promise.all(resultados.map(async (r) => {
+    if (r.status === "rejected") return { status: "rejected", reason: String(r.reason) };
+    if (!r.value) return { status: "skipped" };
+    return { status: r.value.status, body: await r.value.text().catch(() => "") };
+  }));
+  return { admin: rAdmin, cliente: rCliente, correoAdminUsado: correoAdmin || null, correoClienteUsado: correo || null, origin };
 }
 
 // ── Handler ──────────────────────────────────────────────────────────────────────────────
@@ -317,7 +326,7 @@ export const onRequestPost = async (context) => {
   }
 
   const origin = new URL(request.url).origin;
-  await enviarCorreosConfirmacion(origin, evento, pubData.correoSoporte || "", pubData.nombreEmpresa || "DATTASOFT", nuevaInscripcion);
+  const debugCorreos = await enviarCorreosConfirmacion(origin, evento, pubData.correoSoporte || "", pubData.nombreEmpresa || "DATTASOFT", nuevaInscripcion);
 
-  return jsonResponse({ ok: true, evento: { nombre: evento.nombre, fecha: evento.fecha, hora: evento.hora } });
+  return jsonResponse({ ok: true, evento: { nombre: evento.nombre, fecha: evento.fecha, hora: evento.hora }, debugCorreos });
 };
