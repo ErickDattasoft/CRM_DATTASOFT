@@ -92,19 +92,26 @@ function base64url(input) {
   return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+// Extrae el payload base64 de un PEM sin asumir cómo haya quedado pegado en la variable de
+// entorno: puede traer saltos de línea reales, "\n" escapados (dos caracteres, común al pegar
+// una clave multilínea en un campo de una sola línea), o comillas/comas de sobra si alguien
+// copió la línea completa del .json incluyendo la sintaxis JSON. Se quitan primero los "\n"
+// escapados como si fueran saltos de línea (no se pueden tratar solo como "carácter inválido" —
+// dejarían colada la "n" y corromperían la clave) y luego se descarta cualquier cosa que no sea
+// alfabeto base64 válido.
 function pemToArrayBuffer(pem) {
-  const b64 = pem.replace(/-----BEGIN PRIVATE KEY-----/, "").replace(/-----END PRIVATE KEY-----/, "").replace(/\s+/g, "");
+  const b64 = pem
+    .replace(/-----BEGIN PRIVATE KEY-----/g, "")
+    .replace(/-----END PRIVATE KEY-----/g, "")
+    .replace(/\\n/g, "")
+    .replace(/[^A-Za-z0-9+/=]/g, "");
   const bin = atob(b64);
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return bytes.buffer;
 }
 
-async function obtenerAccessTokenGoogle(clientEmail, privateKeyPemRaw) {
-  // El campo de entorno puede traer "\n" literales (común al pegar una clave multilínea en un
-  // input de una sola línea) en vez de saltos de línea reales — se normaliza antes de usarla.
-  const privateKeyPem = privateKeyPemRaw.includes("\\n") ? privateKeyPemRaw.replace(/\\n/g, "\n") : privateKeyPemRaw;
-
+async function obtenerAccessTokenGoogle(clientEmail, privateKeyPem) {
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: "RS256", typ: "JWT" };
   const claims = {
