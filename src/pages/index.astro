@@ -16481,6 +16481,8 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     try {
       const inscritos = await obtenerInscripcionesEvento(ev.id);
       renderTablaInscritos(inscritos, ev, lista);
+      const badge = document.getElementById("badge-inscritos");
+      if (badge) badge.textContent = String(inscritos.length);
     } catch(e) {
       lista.innerHTML = `<div style="text-align:center;padding:24px;color:#f87171;">Error al cargar inscritos.</div>`;
     }
