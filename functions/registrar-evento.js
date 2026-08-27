@@ -53,10 +53,10 @@ function resolverPlantillaEvento(plantilla, ev, datosInscrito) {
 
 // ── Firestore: helpers específicos de este flujo ────────────────────────────────────────────
 
-async function runQueryExiste(base, headers, filtros) {
+async function runQueryExiste(base, headers, collectionId, filtros) {
   const body = {
     structuredQuery: {
-      from: [{ collectionId: "inscripciones_evento" }],
+      from: [{ collectionId }],
       where: {
         compositeFilter: {
           op: "AND",
@@ -75,8 +75,18 @@ async function runQueryExiste(base, headers, filtros) {
 }
 
 async function existeInscripcion(base, headers, eventoId, correo, telefono) {
-  if (correo && await runQueryExiste(base, headers, [{ field: "eventoId", value: eventoId }, { field: "correo", value: correo }])) return true;
-  if (telefono && await runQueryExiste(base, headers, [{ field: "eventoId", value: eventoId }, { field: "telefono", value: telefono }])) return true;
+  if (correo && await runQueryExiste(base, headers, "inscripciones_evento", [{ field: "eventoId", value: eventoId }, { field: "correo", value: correo }])) return true;
+  if (telefono && await runQueryExiste(base, headers, "inscripciones_evento", [{ field: "eventoId", value: eventoId }, { field: "telefono", value: telefono }])) return true;
+  return false;
+}
+
+// Cruce contra gente ya marcada como problemática en un evento anterior (ver 🚫 en Inscritos) —
+// no bloquea el registro (mismo criterio que correoSospechoso: más vale saber que alguien
+// reincidente se está registrando de nuevo, que dejarlo intentar con otro dato falso), solo lo
+// deja marcado para que el staff decida antes de admitirlo a la llamada.
+async function estaEnListaNegra(base, headers, correo, telefono) {
+  if (correo && await runQueryExiste(base, headers, "lista_negra_eventos", [{ field: "correo", value: correo }])) return true;
+  if (telefono && await runQueryExiste(base, headers, "lista_negra_eventos", [{ field: "telefono", value: telefono }])) return true;
   return false;
 }
 
@@ -214,10 +224,18 @@ export const onRequestPost = async (context) => {
   const yaExiste = await existeInscripcion(base, headers, eventoId, correo, telefono);
   if (yaExiste) return jsonResponse({ ok: true, duplicado: true });
 
+  const enListaNegra = await estaEnListaNegra(base, headers, correo, telefono);
+
+  // IP solo para uso forense (identificar a alguien que causó un incidente en un webinar aunque
+  // vuelva a registrarse con datos distintos) — nunca se muestra en el registro público ni se usa
+  // para bloquear nada automáticamente.
+  const ip = request.headers.get("CF-Connecting-IP") || "";
+
   const nuevaInscripcion = {
     eventoId, eventoNombre: evento.nombre || "", nombre, empresa, correo, telefono, fuente,
     usaSistema: usaSistemaPayload, asistira, deseaCanalWhatsapp, fechaRegistro: new Date().toISOString(),
     correoSospechoso: correo ? esCorreoDesechable(correo) : false,
+    enListaNegra, ip,
   };
   const createResp = await fetch(`${base}/inscripciones_evento`, {
     method: "POST", headers, body: JSON.stringify({ fields: toFirestoreFields(nuevaInscripcion) }),

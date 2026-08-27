@@ -5520,7 +5520,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarPapeleraEmpresas, guardarPapeleraContactos, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, actualizarInscripcionEvento, eliminarInscripcionEvento, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, guardarConfigCompac, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket, actualizarMetaAdjuntoTicket } from "../data/firebase.js";
+import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarPapeleraEmpresas, guardarPapeleraContactos, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, actualizarInscripcionEvento, eliminarInscripcionEvento, obtenerListaNegraEventos, agregarAListaNegraEventos, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, guardarConfigCompac, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket, actualizarMetaAdjuntoTicket } from "../data/firebase.js";
 import { parseEmailList, hoyLocalStr, parseFechaLocal, escapeHtml, slugBadge, esConsultoria, formatearDuracion, colorPuntoEstado, formatMoney } from "../data/utils.js";
 import JSZip from "jszip";
 
@@ -16303,12 +16303,19 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
   // Tabla editable de inscritos: corregir un dato capturado mal o borrar un registro claramente
   // falso se hace directo aquí, sin salir del CRM — antes esta lista era de solo lectura.
-  function renderTablaInscritos(inscritos: any[], ev: any, lista: HTMLElement) {
+  function renderTablaInscritos(inscritos: any[], ev: any, lista: HTMLElement, listaNegra: any[] = []) {
     if (!inscritos.length) {
       lista.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);">Aún no hay nadie inscrito.</div>`;
       return;
     }
     const eventoExport = ev?.id || "";
+    // Cruce en vivo contra la lista negra (no solo el campo enListaNegra grabado al momento del
+    // registro) — así un incidente marcado DESPUÉS de que alguien ya se registró también se ve
+    // reflejado de inmediato en su fila existente, sin esperar a que se vuelva a registrar.
+    const correosNegra = new Set(listaNegra.filter(x => x.correo).map(x => x.correo));
+    const telefonosNegra = new Set(listaNegra.filter(x => x.telefono).map(x => x.telefono));
+    const estaEnListaNegra = (i: any) =>
+      (i.correo && correosNegra.has(i.correo)) || (i.telefono && telefonosNegra.has(i.telefono)) || !!i.enListaNegra;
     const wrap = document.createElement("div");
     wrap.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
@@ -16326,6 +16333,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
               <th style="width:150px; min-width:150px; white-space:nowrap;">Empresa</th>
               <th style="width:190px; min-width:190px; white-space:nowrap;">Correo</th>
               <th style="text-align:center; width:60px; min-width:60px; white-space:nowrap; font-size:0.72rem;" title="🟢 entregado · 🟡 pendiente · 🔴 rebotó">📧</th>
+              <th style="text-align:center; width:56px; min-width:56px; white-space:nowrap; font-size:0.72rem;" title="Marcado como problemático en algún evento (ej. mala conducta en videollamada)">🚫</th>
               <th style="width:140px; min-width:140px; white-space:nowrap;">Teléfono</th>
               <th style="text-align:center; width:110px; min-width:110px; white-space:nowrap; font-size:0.72rem;">¿Asistirá?</th>
               ${ev.sistema ? `<th style="width:110px; min-width:110px; white-space:nowrap; font-size:0.72rem;">Usa ${escapeHtml(ev.sistema)}</th>` : ""}
@@ -16346,6 +16354,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         Nombre: i.nombre || "", Empresa: i.empresa || "", Correo: i.correo || "",
         "Estado del correo": i.correo ? (i.correoEstado || "pendiente") : "",
         "Correo sospechoso (desechable)": i.correo ? (i.correoSospechoso ? "Sí" : "No") : "",
+        "Lista negra": estaEnListaNegra(i) ? "Sí" : "No",
         Teléfono: i.telefono || "", "¿Asistirá?": i.asistira || "", "Cómo se enteró": i.fuente || "",
         [`Usa ${ev.sistema || "el sistema"}`]: i.usaSistema || "",
         "Quiere canal WhatsApp": i.deseaCanalWhatsapp ? "Sí" : "No",
@@ -16369,7 +16378,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           abrirWhatsAppLink(i.telefono, resolverPlantillaEvento(ev.plantilla, ev, i));
           i.contactadoWsp = true;
           actualizarInscripcionEvento(i._id, { contactadoWsp: true }).catch(() => {});
-          if (idx === pendientes.length - 1) renderTablaInscritos(inscritos, ev, lista);
+          if (idx === pendientes.length - 1) renderTablaInscritos(inscritos, ev, lista, listaNegra);
         }, idx * 500);
       });
     };
@@ -16381,6 +16390,15 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       if (i.correoEstado === "entregado") return `<span title="Entregado">🟢</span>${bandera}`;
       if (i.correoEstado === "rebotado") return `<span title="Rebotó — probablemente un correo falso/inexistente">🔴</span>${bandera}`;
       return `<span title="Aún sin confirmar entrega (Brevo puede tardar unos minutos)">🟡</span>${bandera}`;
+    };
+    const celdaListaNegra = (i: any) => {
+      if (!i.correo && !i.telefono) return `<span style="color:var(--text-muted);">—</span>`;
+      if (estaEnListaNegra(i)) {
+        const entrada = listaNegra.find(x => (i.correo && x.correo === i.correo) || (i.telefono && x.telefono === i.telefono));
+        const motivo = entrada?.motivo ? escapeHtml(entrada.motivo) : "Marcado como problemático";
+        return `<span title="${motivo}">🚫</span>`;
+      }
+      return `<button type="button" class="btn btn-ghost btn-xs btn-icon btn-marcar-negra" data-id="${i._id}" title="Marcar como problemático (ej. mala conducta en videollamada) — quedará visible si se vuelve a registrar en cualquier evento futuro" style="opacity:0.4;">🚫</button>`;
     };
     // autocomplete/autocorrect/spellcheck en "off": Chrome/Brave reconocen "nombre" y "teléfono"
     // como campos de autofill y tapan el valor real con su propio ícono de sugerencia — el dato
@@ -16395,6 +16413,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         <td>${campoInput(i, "empresa")}</td>
         <td>${campoInput(i, "correo")}</td>
         <td style="text-align:center;">${semaforoCorreo(i)}</td>
+        <td style="text-align:center;">${celdaListaNegra(i)}</td>
         <td>${campoInput(i, "telefono")}</td>
         <td style="text-align:center; font-size:0.75rem;">${i.asistira || "—"}</td>
         ${ev.sistema ? `<td style="text-align:center; font-size:0.75rem;">${i.usaSistema || "—"}</td>` : ""}
@@ -16436,7 +16455,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         if (!i.contactadoWsp) {
           i.contactadoWsp = true;
           actualizarInscripcionEvento(i._id, { contactadoWsp: true }).catch(() => {});
-          renderTablaInscritos(inscritos, ev, lista);
+          renderTablaInscritos(inscritos, ev, lista, listaNegra);
         }
       });
     });
@@ -16453,6 +16472,20 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       });
     });
 
+    tbody.querySelectorAll(".btn-marcar-negra").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const i = inscritos.find(x => x._id === (btn as HTMLElement).dataset.id);
+        if (!i) return;
+        if (!await confirmar(`¿Marcar a "${i.nombre || "esta persona"}" como problemático? Quedará señalado con 🚫 si se vuelve a registrar en cualquier evento futuro, y en esta misma lista.`, "🚫")) return;
+        const motivo = prompt("Motivo (opcional) — ej. \"conducta indebida en cámara durante el webinar\":", "") || "";
+        const ok = await agregarAListaNegraEventos({ correo: i.correo, telefono: i.telefono, motivo });
+        if (!ok) { toast("⚠️ No se pudo guardar", "error"); return; }
+        listaNegra.push({ correo: (i.correo || "").toLowerCase().trim(), telefono: (i.telefono || "").trim(), motivo });
+        renderTablaInscritos(inscritos, ev, lista, listaNegra);
+        toast("🚫 Marcado como problemático");
+      });
+    });
+
     tbody.querySelectorAll(".btn-del-inscrito").forEach(btn => {
       btn.addEventListener("click", async () => {
         const id = (btn as HTMLElement).dataset.id as string;
@@ -16463,7 +16496,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         if (!ok) { toast("⚠️ No se pudo eliminar", "error"); return; }
         const idx = inscritos.findIndex(x => x._id === id);
         if (idx >= 0) inscritos.splice(idx, 1);
-        renderTablaInscritos(inscritos, ev, lista);
+        renderTablaInscritos(inscritos, ev, lista, listaNegra);
         const badge = document.getElementById("badge-inscritos");
         if (badge) badge.textContent = String(inscritos.length);
         toast("🗑️ Registro eliminado");
@@ -16481,8 +16514,8 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     lista.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-muted);">Cargando...</div>`;
     modal.style.display = "flex";
     try {
-      const inscritos = await obtenerInscripcionesEvento(ev.id);
-      renderTablaInscritos(inscritos, ev, lista);
+      const [inscritos, listaNegra] = await Promise.all([obtenerInscripcionesEvento(ev.id), obtenerListaNegraEventos()]);
+      renderTablaInscritos(inscritos, ev, lista, listaNegra);
       const badge = document.getElementById("badge-inscritos");
       if (badge) badge.textContent = String(inscritos.length);
     } catch(e) {

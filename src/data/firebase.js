@@ -1015,6 +1015,35 @@ export async function actualizarInscripcionEvento(id, datos) {
   }
 }
 
+export async function obtenerListaNegraEventos() {
+  try {
+    const snap = await getDocs(collection(db, "lista_negra_eventos"));
+    return snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+  } catch (error) {
+    console.error("Error al obtener lista negra:", error);
+    return [];
+  }
+}
+
+// Marca a alguien como problemático (ej. mala conducta en un webinar) para que quede visible si
+// vuelve a registrarse con el mismo correo/teléfono en un evento futuro — no depende de que el
+// staff recuerde quién causó el incidente.
+export async function agregarAListaNegraEventos({ correo, telefono, motivo }) {
+  try {
+    const colRef = collection(db, "lista_negra_eventos");
+    await addDoc(colRef, {
+      correo: (correo || "").toLowerCase().trim(),
+      telefono: (telefono || "").trim(),
+      motivo: (motivo || "").trim(),
+      fecha: serverTimestamp(),
+    });
+    return true;
+  } catch (error) {
+    console.error("Error al agregar a lista negra:", error);
+    return false;
+  }
+}
+
 // Quita un registro claramente falso/basura de la lista de inscritos.
 export async function eliminarInscripcionEvento(id) {
   try {
