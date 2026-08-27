@@ -5,10 +5,8 @@
 // basura sin siquiera tocar el formulario. Esta función mueve el guardado aquí: valida el
 // captcha de Turnstile, vuelve a validar los datos (nunca confiar en lo que mande el cliente),
 // lee el evento real desde Firestore (no lo que diga el payload), y solo entonces escribe.
-//
-// No hay SDK de firebase-admin disponible en el runtime de Cloudflare Workers/Pages (depende de
-// Node puro) — se habla con Firestore por su API REST, autenticando con un JWT firmado con la
-// cuenta de servicio (Web Crypto API, no Node crypto) y canjeándolo por un access token de Google.
+
+import { toFirestoreValue, toFirestoreFields, fromFirestoreFields, firestoreAdminAuth } from "./_lib/firestore-admin.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
@@ -48,99 +46,6 @@ function resolverPlantillaEvento(plantilla, ev, datosInscrito) {
     .replace(/\[contacto_whatsapp\]/g, ev.contactoWhatsapp || "");
 }
 
-// ── Firestore REST: codificación/decodificación de valores tipados ─────────────────────────
-
-function toFirestoreValue(v) {
-  if (v === null || v === undefined) return { nullValue: null };
-  if (typeof v === "boolean") return { booleanValue: v };
-  if (typeof v === "number") return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
-  return { stringValue: String(v) };
-}
-
-function toFirestoreFields(obj) {
-  const fields = {};
-  for (const [k, val] of Object.entries(obj)) {
-    if (val === undefined) continue;
-    fields[k] = toFirestoreValue(val);
-  }
-  return fields;
-}
-
-function fromFirestoreValue(v) {
-  if (!v || typeof v !== "object") return null;
-  if ("stringValue" in v) return v.stringValue;
-  if ("integerValue" in v) return parseInt(v.integerValue, 10);
-  if ("doubleValue" in v) return v.doubleValue;
-  if ("booleanValue" in v) return v.booleanValue;
-  if ("timestampValue" in v) return v.timestampValue;
-  if ("nullValue" in v) return null;
-  if ("arrayValue" in v) return (v.arrayValue.values || []).map(fromFirestoreValue);
-  if ("mapValue" in v) return fromFirestoreFields(v.mapValue.fields || {});
-  return null;
-}
-
-function fromFirestoreFields(fields) {
-  const out = {};
-  for (const [k, v] of Object.entries(fields || {})) out[k] = fromFirestoreValue(v);
-  return out;
-}
-
-// ── Auth de cuenta de servicio (JWT Bearer → access token) ─────────────────────────────────
-
-function base64url(input) {
-  const bytes = typeof input === "string" ? new TextEncoder().encode(input) : new Uint8Array(input);
-  let bin = "";
-  for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-// Extrae el payload base64 de un PEM sin asumir cómo haya quedado pegado en la variable de
-// entorno: puede traer saltos de línea reales, "\n" escapados (dos caracteres, común al pegar
-// una clave multilínea en un campo de una sola línea), o comillas/comas de sobra si alguien
-// copió la línea completa del .json incluyendo la sintaxis JSON. Se quitan primero los "\n"
-// escapados como si fueran saltos de línea (no se pueden tratar solo como "carácter inválido" —
-// dejarían colada la "n" y corromperían la clave) y luego se descarta cualquier cosa que no sea
-// alfabeto base64 válido.
-function pemToArrayBuffer(pem) {
-  const b64 = pem
-    .replace(/-----BEGIN PRIVATE KEY-----/g, "")
-    .replace(/-----END PRIVATE KEY-----/g, "")
-    .replace(/\\n/g, "")
-    .replace(/[^A-Za-z0-9+/=]/g, "");
-  const bin = atob(b64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return bytes.buffer;
-}
-
-async function obtenerAccessTokenGoogle(clientEmail, privateKeyPem) {
-  const now = Math.floor(Date.now() / 1000);
-  const header = { alg: "RS256", typ: "JWT" };
-  const claims = {
-    iss: clientEmail,
-    scope: "https://www.googleapis.com/auth/datastore",
-    aud: "https://oauth2.googleapis.com/token",
-    iat: now,
-    exp: now + 3600,
-  };
-  const unsigned = `${base64url(JSON.stringify(header))}.${base64url(JSON.stringify(claims))}`;
-
-  const cryptoKey = await crypto.subtle.importKey(
-    "pkcs8", pemToArrayBuffer(privateKeyPem), { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]
-  );
-  const firma = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", cryptoKey, new TextEncoder().encode(unsigned));
-  const jwt = `${unsigned}.${base64url(firma)}`;
-
-  const resp = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: jwt }),
-  });
-  if (!resp.ok) throw new Error(`No se pudo obtener access token de Google (HTTP ${resp.status})`);
-  const data = await resp.json();
-  return data.access_token;
-}
-
 // ── Firestore: helpers específicos de este flujo ────────────────────────────────────────────
 
 async function runQueryExiste(base, headers, filtros) {
@@ -172,7 +77,7 @@ async function existeInscripcion(base, headers, eventoId, correo, telefono) {
 
 // ── Correos de confirmación (reutiliza /send-email, que ya habla con Brevo) ────────────────
 
-async function enviarCorreosConfirmacion(origin, evento, correoAdmin, nombreEmpresaCRM, datos) {
+async function enviarCorreosConfirmacion(origin, evento, correoAdmin, nombreEmpresaCRM, datos, docId) {
   const { nombre, empresa, correo, telefono, fuente, usaSistema, asistira, deseaCanalWhatsapp } = datos;
   const fechaLarga = evento.fecha
     ? new Date(evento.fecha + "T12:00:00").toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
@@ -222,8 +127,12 @@ async function enviarCorreosConfirmacion(origin, evento, correoAdmin, nombreEmpr
           body: JSON.stringify({ to: adminList, subject: `🔔 Nuevo registro: ${nombre} — ${evento.nombre || evento.id}`, html: htmlAdmin }) })
       : Promise.resolve(null),
     correo
+      // La tag "insc_<docId>" es lo único que le permite al webhook de Brevo (ver
+      // functions/brevo-webhook.js) saber a qué inscripción corresponde un aviso de
+      // entregado/rebotado — Brevo la regresa tal cual en cada evento del webhook. Sin docId
+      // (no debería pasar, pero por si acaso) se manda sin tag en vez de una tag rota.
       ? fetch(`${origin}/send-email`, { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ to: correo, subject: `✅ Confirmación de registro — ${evento.nombre || "Evento"}`, html: htmlCliente }) })
+          body: JSON.stringify({ to: correo, subject: `✅ Confirmación de registro — ${evento.nombre || "Evento"}`, html: htmlCliente, ...(docId ? { tags: [`insc_${docId}`] } : {}) }) })
       : Promise.resolve(null),
   ]);
 }
@@ -275,20 +184,13 @@ export const onRequestPost = async (context) => {
     return jsonResponse({ ok: false, error: "No se pudo verificar que eres una persona real" }, 403);
   }
 
-  if (!env.FIREBASE_PROJECT_ID || !env.FIREBASE_CLIENT_EMAIL || !env.FIREBASE_PRIVATE_KEY) {
-    return jsonResponse({ ok: false, error: "Credenciales de Firebase no configuradas en el servidor" }, 500);
-  }
-
-  let accessToken;
+  let base, headers;
   try {
-    accessToken = await obtenerAccessTokenGoogle(env.FIREBASE_CLIENT_EMAIL, env.FIREBASE_PRIVATE_KEY);
+    ({ base, headers } = await firestoreAdminAuth(env));
   } catch (err) {
     console.error("[registrar-evento] Error de auth con Firebase:", err);
     return jsonResponse({ ok: false, error: "Error de autenticación con Firebase" }, 500);
   }
-
-  const base = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents`;
-  const headers = { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" };
 
   // Datos del evento SIEMPRE desde Firestore, nunca desde lo que mande el navegador — evita que
   // alguien invente un nombre/link de evento distinto pasando solo un eventoId real.
@@ -318,9 +220,13 @@ export const onRequestPost = async (context) => {
     console.error("[registrar-evento] Error al crear documento:", await createResp.text().catch(() => ""));
     return jsonResponse({ ok: false, error: "No se pudo guardar el registro" }, 500);
   }
+  // "name" viene como projects/.../documents/inscripciones_evento/<ID> — el último segmento es
+  // el ID real del documento, se usa para etiquetar el correo de confirmación (ver más abajo).
+  const createdDoc = await createResp.json().catch(() => null);
+  const docId = createdDoc?.name ? createdDoc.name.split("/").pop() : null;
 
   const origin = new URL(request.url).origin;
-  await enviarCorreosConfirmacion(origin, evento, pubData.correoSoporte || "", pubData.nombreEmpresa || "DATTASOFT", nuevaInscripcion);
+  await enviarCorreosConfirmacion(origin, evento, pubData.correoSoporte || "", pubData.nombreEmpresa || "DATTASOFT", nuevaInscripcion, docId);
 
   return jsonResponse({ ok: true, evento: { nombre: evento.nombre, fecha: evento.fecha, hora: evento.hora } });
 };

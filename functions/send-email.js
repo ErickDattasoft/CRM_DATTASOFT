@@ -17,7 +17,7 @@ export const onRequestPost = async (context) => {
     });
   }
 
-  const { to, subject, html, replyTo, from, cc, bcc, attachment } = payload;
+  const { to, subject, html, replyTo, from, cc, bcc, attachment, tags } = payload;
   if (!to || !subject || !html) {
     return new Response(JSON.stringify({ error: "Faltan campos: to, subject, html" }), {
       status: 400, headers: { "Content-Type": "application/json" },
@@ -59,6 +59,12 @@ export const onRequestPost = async (context) => {
     body.attachment = attachment
       .filter(a => a && a.content && a.name)
       .map(a => ({ content: a.content, name: a.name }));
+  }
+  // Brevo regresa las tags tal cual en sus webhooks de entrega/rebote — se usan para saber a qué
+  // registro de Firestore corresponde un aviso de "entregado"/"rebotó" (ver brevo-webhook.js).
+  if (tags) {
+    const tagList = (Array.isArray(tags) ? tags : [tags]).map(t => String(t).trim()).filter(Boolean);
+    if (tagList.length) body.tags = tagList;
   }
 
   const resp = await fetch("https://api.brevo.com/v3/smtp/email", {

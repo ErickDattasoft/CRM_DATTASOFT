@@ -16313,7 +16313,10 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     wrap.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
         <span style="font-size:0.78rem; color:var(--text-muted);">${inscritos.length} persona(s) registrada(s)</span>
-        <button class="btn btn-success btn-sm" id="btnExportIns">📥 Exportar Excel</button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-whatsapp btn-sm" id="btnWspPendientesIns" title="Abre WhatsApp una por una para quien tenga teléfono y no esté marcado como Contactado">💬 WhatsApp a pendientes</button>
+          <button class="btn btn-success btn-sm" id="btnExportIns">📥 Exportar Excel</button>
+        </div>
       </div>
       <div class="table-wrap" style="max-height:440px;">
         <table style="table-layout:auto; width:auto; min-width:100%;">
@@ -16322,10 +16325,12 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
               <th style="width:160px; min-width:160px; white-space:nowrap;">Nombre</th>
               <th style="width:150px; min-width:150px; white-space:nowrap;">Empresa</th>
               <th style="width:190px; min-width:190px; white-space:nowrap;">Correo</th>
+              <th style="text-align:center; width:60px; min-width:60px; white-space:nowrap; font-size:0.72rem;" title="🟢 entregado · 🟡 pendiente · 🔴 rebotó">📧</th>
               <th style="width:140px; min-width:140px; white-space:nowrap;">Teléfono</th>
               <th style="text-align:center; width:110px; min-width:110px; white-space:nowrap; font-size:0.72rem;">¿Asistirá?</th>
               ${ev.sistema ? `<th style="width:110px; min-width:110px; white-space:nowrap; font-size:0.72rem;">Usa ${escapeHtml(ev.sistema)}</th>` : ""}
               <th style="text-align:center; width:90px; min-width:90px; white-space:nowrap; font-size:0.72rem;">Canal WSP</th>
+              <th style="text-align:center; width:90px; min-width:90px; white-space:nowrap; font-size:0.72rem;">Contactado</th>
               <th style="text-align:center; width:90px; min-width:90px; white-space:nowrap;">Acciones</th>
             </tr>
           </thead>
@@ -16339,9 +16344,11 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       const wb = (window as any).XLSX.utils.book_new();
       const rows = inscritos.map(i => ({
         Nombre: i.nombre || "", Empresa: i.empresa || "", Correo: i.correo || "",
+        "Estado del correo": i.correo ? (i.correoEstado || "pendiente") : "",
         Teléfono: i.telefono || "", "¿Asistirá?": i.asistira || "", "Cómo se enteró": i.fuente || "",
         [`Usa ${ev.sistema || "el sistema"}`]: i.usaSistema || "",
         "Quiere canal WhatsApp": i.deseaCanalWhatsapp ? "Sí" : "No",
+        "Contactado por WhatsApp": i.telefono ? (i.contactadoWsp ? "Sí" : "No") : "",
         "Fecha de registro": i.fechaRegistro?.toDate ? i.fechaRegistro.toDate().toLocaleDateString("es-MX") : ""
       }));
       const ws = (window as any).XLSX.utils.json_to_sheet(rows);
@@ -16349,7 +16356,30 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       (window as any).XLSX.writeFile(wb, `inscritos-${ev.nombre || eventoExport}.xlsx`);
     };
 
+    // Igual que btnWspMasivo/btnWspLicencias (ver esos handlers): abre una pestaña de WhatsApp
+    // por persona, espaciadas 500ms para que el navegador no las bloquee como si fuera spam de
+    // ventanas — el usuario todavía tiene que darle "Enviar" en cada una.
+    (wrap.querySelector("#btnWspPendientesIns") as HTMLButtonElement).onclick = async () => {
+      const pendientes = inscritos.filter(i => i.telefono && !i.contactadoWsp);
+      if (!pendientes.length) { toast("✅ No hay pendientes de contactar por WhatsApp"); return; }
+      if (!await confirmar(`¿Abrir WhatsApp para ${pendientes.length} persona(s) que aún no han sido marcadas como contactadas? Se abren una por una — hay que darle Enviar en cada una.`, "💬")) return;
+      pendientes.forEach((i, idx) => {
+        setTimeout(() => {
+          abrirWhatsAppLink(i.telefono, resolverPlantillaEvento(ev.plantilla, ev, i));
+          i.contactadoWsp = true;
+          actualizarInscripcionEvento(i._id, { contactadoWsp: true }).catch(() => {});
+          if (idx === pendientes.length - 1) renderTablaInscritos(inscritos, ev, lista);
+        }, idx * 500);
+      });
+    };
+
     const tbody = wrap.querySelector("#tbody-inscritos") as HTMLElement;
+    const semaforoCorreo = (i: any) => {
+      if (!i.correo) return `<span style="color:var(--text-muted);">—</span>`;
+      if (i.correoEstado === "entregado") return `<span title="Entregado">🟢</span>`;
+      if (i.correoEstado === "rebotado") return `<span title="Rebotó — probablemente un correo falso/inexistente">🔴</span>`;
+      return `<span title="Aún sin confirmar entrega (Brevo puede tardar unos minutos)">🟡</span>`;
+    };
     // autocomplete/autocorrect/spellcheck en "off": Chrome/Brave reconocen "nombre" y "teléfono"
     // como campos de autofill y tapan el valor real con su propio ícono de sugerencia — el dato
     // sigue ahí (confirmado en Firestore), solo lo esconde la UI del navegador.
@@ -16362,10 +16392,14 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         <td>${campoInput(i, "nombre")}</td>
         <td>${campoInput(i, "empresa")}</td>
         <td>${campoInput(i, "correo")}</td>
+        <td style="text-align:center;">${semaforoCorreo(i)}</td>
         <td>${campoInput(i, "telefono")}</td>
         <td style="text-align:center; font-size:0.75rem;">${i.asistira || "—"}</td>
         ${ev.sistema ? `<td style="text-align:center; font-size:0.75rem;">${i.usaSistema || "—"}</td>` : ""}
         <td style="text-align:center;">${i.deseaCanalWhatsapp ? "✅" : "—"}</td>
+        <td style="text-align:center;">
+          ${i.telefono ? `<input type="checkbox" class="chk-contactado-inscrito" data-id="${i._id}" ${i.contactadoWsp ? "checked" : ""} style="width:auto; accent-color:#25d366; cursor:pointer;" title="Marcar como ya contactado por WhatsApp">` : `<span style="color:var(--text-muted);">—</span>`}
+        </td>
         <td style="text-align:center; white-space:nowrap;">
           ${i.telefono ? `<button type="button" class="btn btn-whatsapp btn-xs btn-icon btn-wsp-inscrito" data-id="${i._id}" title="Enviar la plantilla de este evento por WhatsApp">💬</button>` : ""}
           <button type="button" class="btn btn-danger btn-xs btn-icon btn-del-inscrito" data-id="${i._id}" title="Eliminar este registro">🗑️</button>
@@ -16395,6 +16429,25 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         const i = inscritos.find(x => x._id === (btn as HTMLElement).dataset.id);
         if (!i) return;
         abrirWhatsAppLink(i.telefono, resolverPlantillaEvento(ev.plantilla, ev, i));
+        // Mandarle WhatsApp a mano cuenta como "ya lo contacté" — se marca solo, sin obligar a
+        // también tildar el checkbox aparte.
+        if (!i.contactadoWsp) {
+          i.contactadoWsp = true;
+          actualizarInscripcionEvento(i._id, { contactadoWsp: true }).catch(() => {});
+          renderTablaInscritos(inscritos, ev, lista);
+        }
+      });
+    });
+
+    tbody.querySelectorAll(".chk-contactado-inscrito").forEach(chk => {
+      chk.addEventListener("change", async (e) => {
+        const el = e.target as HTMLInputElement;
+        const id = el.dataset.id as string;
+        const item = inscritos.find(i => i._id === id);
+        if (!item) return;
+        item.contactadoWsp = el.checked;
+        const ok = await actualizarInscripcionEvento(id, { contactadoWsp: el.checked });
+        if (!ok) { toast("⚠️ No se pudo guardar", "error"); el.checked = !el.checked; item.contactadoWsp = el.checked; }
       });
     });
 
