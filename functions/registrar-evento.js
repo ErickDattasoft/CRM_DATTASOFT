@@ -7,6 +7,7 @@
 // lee el evento real desde Firestore (no lo que diga el payload), y solo entonces escribe.
 
 import { toFirestoreValue, toFirestoreFields, fromFirestoreFields, firestoreAdminAuth } from "./_lib/firestore-admin.js";
+import { DOMINIOS_DESECHABLES } from "./_lib/dominios-desechables.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
@@ -19,6 +20,10 @@ function escapeHtml(s) {
 }
 
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+
+// No bloquea el registro (un falso positivo perdería un prospecto real) — solo marca el correo
+// para que el staff lo vea reflejado como 🚩 en Inscritos y decida si vale la pena darle seguimiento.
+const esCorreoDesechable = (correo) => DOMINIOS_DESECHABLES.has(correo.split("@").pop() || "");
 
 function isValidTelefono(t) {
   const digitos = t.replace(/[^\d]/g, "");
@@ -212,6 +217,7 @@ export const onRequestPost = async (context) => {
   const nuevaInscripcion = {
     eventoId, eventoNombre: evento.nombre || "", nombre, empresa, correo, telefono, fuente,
     usaSistema: usaSistemaPayload, asistira, deseaCanalWhatsapp, fechaRegistro: new Date().toISOString(),
+    correoSospechoso: correo ? esCorreoDesechable(correo) : false,
   };
   const createResp = await fetch(`${base}/inscripciones_evento`, {
     method: "POST", headers, body: JSON.stringify({ fields: toFirestoreFields(nuevaInscripcion) }),

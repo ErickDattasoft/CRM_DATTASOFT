@@ -16345,6 +16345,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       const rows = inscritos.map(i => ({
         Nombre: i.nombre || "", Empresa: i.empresa || "", Correo: i.correo || "",
         "Estado del correo": i.correo ? (i.correoEstado || "pendiente") : "",
+        "Correo sospechoso (desechable)": i.correo ? (i.correoSospechoso ? "Sí" : "No") : "",
         Teléfono: i.telefono || "", "¿Asistirá?": i.asistira || "", "Cómo se enteró": i.fuente || "",
         [`Usa ${ev.sistema || "el sistema"}`]: i.usaSistema || "",
         "Quiere canal WhatsApp": i.deseaCanalWhatsapp ? "Sí" : "No",
@@ -16376,9 +16377,10 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const tbody = wrap.querySelector("#tbody-inscritos") as HTMLElement;
     const semaforoCorreo = (i: any) => {
       if (!i.correo) return `<span style="color:var(--text-muted);">—</span>`;
-      if (i.correoEstado === "entregado") return `<span title="Entregado">🟢</span>`;
-      if (i.correoEstado === "rebotado") return `<span title="Rebotó — probablemente un correo falso/inexistente">🔴</span>`;
-      return `<span title="Aún sin confirmar entrega (Brevo puede tardar unos minutos)">🟡</span>`;
+      const bandera = i.correoSospechoso ? ` <span title="Dominio de correo temporal/desechable conocido — probablemente no es un prospecto real">🚩</span>` : "";
+      if (i.correoEstado === "entregado") return `<span title="Entregado">🟢</span>${bandera}`;
+      if (i.correoEstado === "rebotado") return `<span title="Rebotó — probablemente un correo falso/inexistente">🔴</span>${bandera}`;
+      return `<span title="Aún sin confirmar entrega (Brevo puede tardar unos minutos)">🟡</span>${bandera}`;
     };
     // autocomplete/autocorrect/spellcheck en "off": Chrome/Brave reconocen "nombre" y "teléfono"
     // como campos de autofill y tapan el valor real con su propio ícono de sugerencia — el dato
