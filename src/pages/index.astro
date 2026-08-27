@@ -3920,12 +3920,32 @@ try {
             <label>Notas del evento</label>
             <textarea id="form-ev-notas" rows="2" placeholder="Descripción, agenda, información adicional..."></textarea>
           </div>
-          <div class="form-group" style="margin-top:8px; max-width:260px;">
-            <label>🚧 Límite de registros por IP</label>
-            <input id="form-ev-limite-ip" type="number" min="1" placeholder="5 (por defecto)">
+          <div class="form-grid" style="margin-top:8px;">
+            <div class="form-group" style="max-width:260px;">
+              <label>🚧 Límite de registros por IP</label>
+              <input id="form-ev-limite-ip" type="number" min="1" placeholder="5 (por defecto)">
+              <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">
+                Evita que alguien inunde Inscritos registrando muchas entradas desde la misma conexión. Si una empresa te pide inscribir a varios empleados, sube este número solo para ese evento.
+              </span>
+            </div>
+            <div class="form-group" style="max-width:260px;">
+              <label>⏰ Recordatorio — horas antes</label>
+              <input id="form-ev-horas-recordatorio" type="number" min="0" placeholder="24 (por defecto)">
+              <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">
+                Correo automático recordando el evento. Pon 0 para desactivarlo en este evento.
+              </span>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:8px;">
+            <label>📩 Mensaje de seguimiento (después del evento)</label>
+            <textarea id="form-ev-mensaje-seguimiento" rows="4" placeholder="Déjalo vacío si no quieres mandar seguimiento para este evento. Ej: Gracias por tu interés en [evento]. Aquí está la grabación: [link]..."></textarea>
             <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">
-              Evita que alguien inunde Inscritos registrando muchas entradas desde la misma conexión. Si una empresa te pide inscribir a varios empleados, sube este número solo para ese evento.
+              Si lo llenas, se manda automáticamente por correo a los inscritos (mismos comodines que la plantilla de arriba) unas horas después de que termine el evento.
             </span>
+          </div>
+          <div class="form-group" style="margin-top:8px; max-width:260px;">
+            <label>⏱️ Seguimiento — horas después</label>
+            <input id="form-ev-horas-seguimiento" type="number" min="1" placeholder="24 (por defecto)">
           </div>
           <div class="form-group" style="margin-top:8px;">
             <label>💬 Plantilla de confirmación (correo y WhatsApp)</label>
@@ -5527,7 +5547,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarPapeleraEmpresas, guardarPapeleraContactos, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, actualizarInscripcionEvento, eliminarInscripcionEvento, obtenerListaNegraEventos, agregarAListaNegraEventos, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, guardarConfigCompac, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket, actualizarMetaAdjuntoTicket } from "../data/firebase.js";
+import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarPapeleraEmpresas, guardarPapeleraContactos, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, actualizarInscripcionEvento, eliminarInscripcionEvento, obtenerListaNegraEventos, agregarAListaNegraEventos, obtenerHistorialAsistencias, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, guardarConfigCompac, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket, actualizarMetaAdjuntoTicket } from "../data/firebase.js";
 import { parseEmailList, hoyLocalStr, parseFechaLocal, escapeHtml, slugBadge, esConsultoria, formatearDuracion, colorPuntoEstado, formatMoney } from "../data/utils.js";
 import JSZip from "jszip";
 
@@ -16228,7 +16248,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   document.getElementById("btnNuevoEvento")?.addEventListener("click", () => {
     document.getElementById("edit-evento-id").value = "";
     document.getElementById("form-evento-titulo").textContent = "➕ Nuevo Evento";
-    ["form-ev-nombre","form-ev-sistema","form-ev-link","form-ev-notas","form-ev-contacto-nombre","form-ev-contacto-whatsapp","form-ev-limite-ip"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
+    ["form-ev-nombre","form-ev-sistema","form-ev-link","form-ev-notas","form-ev-contacto-nombre","form-ev-contacto-whatsapp","form-ev-limite-ip","form-ev-horas-recordatorio","form-ev-mensaje-seguimiento","form-ev-horas-seguimiento"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
     document.getElementById("form-ev-fecha").value = "";
     document.getElementById("form-ev-hora").value = "";
     (document.getElementById("form-ev-plantilla") as HTMLTextAreaElement).value = PLANTILLA_EVENTO_DEFAULT;
@@ -16246,6 +16266,8 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const id = document.getElementById("edit-evento-id").value || `ev_${Date.now()}`;
     const existente = eventos.find(e => e.id === id);
     const limiteIpTexto = (document.getElementById("form-ev-limite-ip") as HTMLInputElement).value.trim();
+    const horasRecordatorioTexto = (document.getElementById("form-ev-horas-recordatorio") as HTMLInputElement).value.trim();
+    const horasSeguimientoTexto = (document.getElementById("form-ev-horas-seguimiento") as HTMLInputElement).value.trim();
     const datos = {
       id, nombre,
       sistema: document.getElementById("form-ev-sistema").value.trim(),
@@ -16257,6 +16279,9 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       contactoWhatsapp: document.getElementById("form-ev-contacto-whatsapp").value.trim(),
       plantilla: (document.getElementById("form-ev-plantilla") as HTMLTextAreaElement).value.trim(),
       limiteRegistrosPorIp: limiteIpTexto ? Math.max(1, parseInt(limiteIpTexto, 10)) : null,
+      horasRecordatorio: horasRecordatorioTexto ? Math.max(0, parseInt(horasRecordatorioTexto, 10)) : null,
+      mensajeSeguimiento: (document.getElementById("form-ev-mensaje-seguimiento") as HTMLTextAreaElement).value.trim(),
+      horasSeguimiento: horasSeguimientoTexto ? Math.max(1, parseInt(horasSeguimientoTexto, 10)) : null,
       empresas: existente?.empresas || [],
       extras: existente?.extras || [],
     };
@@ -16285,6 +16310,9 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     document.getElementById("form-ev-contacto-nombre").value = ev.contactoNombre || "";
     document.getElementById("form-ev-contacto-whatsapp").value = ev.contactoWhatsapp || "";
     document.getElementById("form-ev-limite-ip").value = ev.limiteRegistrosPorIp ? String(ev.limiteRegistrosPorIp) : "";
+    document.getElementById("form-ev-horas-recordatorio").value = Number.isFinite(ev.horasRecordatorio) ? String(ev.horasRecordatorio) : "";
+    document.getElementById("form-ev-mensaje-seguimiento").value = ev.mensajeSeguimiento || "";
+    document.getElementById("form-ev-horas-seguimiento").value = ev.horasSeguimiento ? String(ev.horasSeguimiento) : "";
     (document.getElementById("form-ev-plantilla") as HTMLTextAreaElement).value = ev.plantilla || PLANTILLA_EVENTO_DEFAULT;
     document.getElementById("formulario-evento").classList.remove("hidden");
     document.getElementById("formulario-evento").scrollIntoView({ behavior:"smooth" });
@@ -16313,7 +16341,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
   // Tabla editable de inscritos: corregir un dato capturado mal o borrar un registro claramente
   // falso se hace directo aquí, sin salir del CRM — antes esta lista era de solo lectura.
-  function renderTablaInscritos(inscritos: any[], ev: any, lista: HTMLElement, listaNegra: any[] = []) {
+  function renderTablaInscritos(inscritos: any[], ev: any, lista: HTMLElement, listaNegra: any[] = [], historial: any[] = []) {
     if (!inscritos.length) {
       lista.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);">Aún no hay nadie inscrito.</div>`;
       return;
@@ -16326,6 +16354,10 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const telefonosNegra = new Set(listaNegra.filter(x => x.telefono).map(x => x.telefono));
     const estaEnListaNegra = (i: any) =>
       (i.correo && correosNegra.has(i.correo)) || (i.telefono && telefonosNegra.has(i.telefono)) || !!i.enListaNegra;
+    // Si esta persona ya asistió de verdad a OTRO evento antes (historial trae de todos los
+    // eventos, no solo el actual) — para cuando un webinar se repite y no tiene caso reinvitar a
+    // quien ya fue.
+    const asistioAntes = (i: any) => historial.find(h => h.eventoId !== ev?.id && ((i.correo && h.correo === i.correo) || (i.telefono && h.telefono === i.telefono)));
     const wrap = document.createElement("div");
     wrap.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
@@ -16341,11 +16373,13 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
             <tr>
               <th style="width:160px; min-width:160px; white-space:nowrap;">Nombre</th>
               <th style="width:150px; min-width:150px; white-space:nowrap;">Empresa</th>
+              <th style="text-align:center; width:100px; min-width:100px; white-space:nowrap; font-size:0.72rem;" title="Ya asistió de verdad a otro evento antes — no tiene mucho caso reinvitarlo si este webinar se repite">🔁 Antes</th>
               <th style="width:190px; min-width:190px; white-space:nowrap;">Correo</th>
               <th style="text-align:center; width:60px; min-width:60px; white-space:nowrap; font-size:0.72rem;" title="🟢 entregado · 🟡 pendiente · 🔴 rebotó">📧</th>
               <th style="text-align:center; width:56px; min-width:56px; white-space:nowrap; font-size:0.72rem;" title="Marcado como problemático en algún evento (ej. mala conducta en videollamada)">🚫</th>
               <th style="width:140px; min-width:140px; white-space:nowrap;">Teléfono</th>
               <th style="text-align:center; width:110px; min-width:110px; white-space:nowrap; font-size:0.72rem;">¿Asistirá?</th>
+              <th style="text-align:center; width:80px; min-width:80px; white-space:nowrap; font-size:0.72rem;" title="Asistencia real confirmada (no solo la intención declarada al registrarse)">✅ Asistió</th>
               ${ev.sistema ? `<th style="width:110px; min-width:110px; white-space:nowrap; font-size:0.72rem;">Usa ${escapeHtml(ev.sistema)}</th>` : ""}
               <th style="text-align:center; width:90px; min-width:90px; white-space:nowrap; font-size:0.72rem;">Canal WSP</th>
               <th style="text-align:center; width:90px; min-width:90px; white-space:nowrap; font-size:0.72rem;">Contactado</th>
@@ -16365,7 +16399,8 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         "Estado del correo": i.correo ? (i.correoEstado || "pendiente") : "",
         "Correo sospechoso (desechable)": i.correo ? (i.correoSospechoso ? "Sí" : "No") : "",
         "Lista negra": estaEnListaNegra(i) ? "Sí" : "No",
-        Teléfono: i.telefono || "", "¿Asistirá?": i.asistira || "", "Cómo se enteró": i.fuente || "",
+        "Ya asistió antes a otro evento": asistioAntes(i)?.eventoNombre || "",
+        Teléfono: i.telefono || "", "¿Asistirá?": i.asistira || "", "Asistió (real)": i.asistioReal ? "Sí" : "No", "Cómo se enteró": i.fuente || "",
         [`Usa ${ev.sistema || "el sistema"}`]: i.usaSistema || "",
         "Quiere canal WhatsApp": i.deseaCanalWhatsapp ? "Sí" : "No",
         "Contactado por WhatsApp": i.telefono ? (i.contactadoWsp ? "Sí" : "No") : "",
@@ -16388,7 +16423,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           abrirWhatsAppLink(i.telefono, resolverPlantillaEvento(ev.plantilla, ev, i));
           i.contactadoWsp = true;
           actualizarInscripcionEvento(i._id, { contactadoWsp: true }).catch(() => {});
-          if (idx === pendientes.length - 1) renderTablaInscritos(inscritos, ev, lista, listaNegra);
+          if (idx === pendientes.length - 1) renderTablaInscritos(inscritos, ev, lista, listaNegra, historial);
         }, idx * 500);
       });
     };
@@ -16400,6 +16435,11 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       if (i.correoEstado === "entregado") return `<span title="Entregado">🟢</span>${bandera}`;
       if (i.correoEstado === "rebotado") return `<span title="Rebotó — probablemente un correo falso/inexistente">🔴</span>${bandera}`;
       return `<span title="Aún sin confirmar entrega (Brevo puede tardar unos minutos)">🟡</span>${bandera}`;
+    };
+    const celdaHistorial = (i: any) => {
+      const previo = asistioAntes(i);
+      if (!previo) return `<span style="color:var(--text-muted);">—</span>`;
+      return `<span style="font-size:0.68rem; color:#a5b4fc;" title="Ya asistió a: ${escapeHtml(previo.eventoNombre || "otro evento")}">🔁 ${escapeHtml(previo.eventoNombre || "otro evento")}</span>`;
     };
     const celdaListaNegra = (i: any) => {
       if (!i.correo && !i.telefono) return `<span style="color:var(--text-muted);">—</span>`;
@@ -16421,11 +16461,13 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       tr.innerHTML = `
         <td>${campoInput(i, "nombre")}</td>
         <td>${campoInput(i, "empresa")}</td>
+        <td style="text-align:center;">${celdaHistorial(i)}</td>
         <td>${campoInput(i, "correo")}</td>
         <td style="text-align:center;">${semaforoCorreo(i)}</td>
         <td style="text-align:center;">${celdaListaNegra(i)}</td>
         <td>${campoInput(i, "telefono")}</td>
         <td style="text-align:center; font-size:0.75rem;">${i.asistira || "—"}</td>
+        <td style="text-align:center;"><input type="checkbox" class="chk-asistio-real" data-id="${i._id}" ${i.asistioReal ? "checked" : ""} style="width:auto; accent-color:#22c55e; cursor:pointer;" title="Marcar asistencia real confirmada"></td>
         ${ev.sistema ? `<td style="text-align:center; font-size:0.75rem;">${i.usaSistema || "—"}</td>` : ""}
         <td style="text-align:center;">${i.deseaCanalWhatsapp ? "✅" : "—"}</td>
         <td style="text-align:center;">
@@ -16465,7 +16507,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         if (!i.contactadoWsp) {
           i.contactadoWsp = true;
           actualizarInscripcionEvento(i._id, { contactadoWsp: true }).catch(() => {});
-          renderTablaInscritos(inscritos, ev, lista, listaNegra);
+          renderTablaInscritos(inscritos, ev, lista, listaNegra, historial);
         }
       });
     });
@@ -16482,6 +16524,19 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       });
     });
 
+    tbody.querySelectorAll(".chk-asistio-real").forEach(chk => {
+      chk.addEventListener("change", async (e) => {
+        const el = e.target as HTMLInputElement;
+        const id = el.dataset.id as string;
+        const item = inscritos.find(i => i._id === id);
+        if (!item) return;
+        item.asistioReal = el.checked;
+        const ok = await actualizarInscripcionEvento(id, { asistioReal: el.checked });
+        if (!ok) { toast("⚠️ No se pudo guardar", "error"); el.checked = !el.checked; item.asistioReal = el.checked; return; }
+        if (el.checked) historial.push({ correo: (item.correo || "").toLowerCase().trim(), telefono: (item.telefono || "").trim(), eventoId: ev.id, eventoNombre: ev.nombre || "" });
+      });
+    });
+
     tbody.querySelectorAll(".btn-marcar-negra").forEach(btn => {
       btn.addEventListener("click", async () => {
         const i = inscritos.find(x => x._id === (btn as HTMLElement).dataset.id);
@@ -16492,7 +16547,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         const ok = await agregarAListaNegraEventos({ correo: i.correo, telefono: i.telefono, motivo, marcadoPor });
         if (!ok) { toast("⚠️ No se pudo guardar", "error"); return; }
         listaNegra.push({ correo: (i.correo || "").toLowerCase().trim(), telefono: (i.telefono || "").trim(), motivo, marcadoPor });
-        renderTablaInscritos(inscritos, ev, lista, listaNegra);
+        renderTablaInscritos(inscritos, ev, lista, listaNegra, historial);
         toast("🚫 Marcado como problemático");
       });
     });
@@ -16507,7 +16562,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         if (!ok) { toast("⚠️ No se pudo eliminar", "error"); return; }
         const idx = inscritos.findIndex(x => x._id === id);
         if (idx >= 0) inscritos.splice(idx, 1);
-        renderTablaInscritos(inscritos, ev, lista, listaNegra);
+        renderTablaInscritos(inscritos, ev, lista, listaNegra, historial);
         const badge = document.getElementById("badge-inscritos");
         if (badge) badge.textContent = String(inscritos.length);
         toast("🗑️ Registro eliminado");
@@ -16525,8 +16580,8 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     lista.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-muted);">Cargando...</div>`;
     modal.style.display = "flex";
     try {
-      const [inscritos, listaNegra] = await Promise.all([obtenerInscripcionesEvento(ev.id), obtenerListaNegraEventos()]);
-      renderTablaInscritos(inscritos, ev, lista, listaNegra);
+      const [inscritos, listaNegra, historial] = await Promise.all([obtenerInscripcionesEvento(ev.id), obtenerListaNegraEventos(), obtenerHistorialAsistencias()]);
+      renderTablaInscritos(inscritos, ev, lista, listaNegra, historial);
       const badge = document.getElementById("badge-inscritos");
       if (badge) badge.textContent = String(inscritos.length);
     } catch(e) {

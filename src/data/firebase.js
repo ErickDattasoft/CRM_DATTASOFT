@@ -1004,6 +1004,22 @@ export async function obtenerInscripcionesEvento(eventoId) {
   }
 }
 
+// Quién ya asistió de verdad (marcado a mano en Inscritos) a CUALQUIER evento anterior — para que
+// si un webinar se repite, se vea de una vez quién no tiene caso volver a invitar. Trae solo lo
+// necesario (correo/telefono/nombre del evento), no el documento completo de cada inscripción.
+export async function obtenerHistorialAsistencias() {
+  try {
+    const snap = await getDocs(collection(db, "inscripciones_evento"));
+    return snap.docs
+      .map(d => d.data())
+      .filter(d => d.asistioReal)
+      .map(d => ({ correo: d.correo || "", telefono: d.telefono || "", eventoId: d.eventoId || "", eventoNombre: d.eventoNombre || "" }));
+  } catch (error) {
+    console.error("Error al obtener historial de asistencias:", error);
+    return [];
+  }
+}
+
 // Corrige un dato capturado mal (ej. typo en el teléfono) directo desde 👥 Inscritos en el CRM.
 export async function actualizarInscripcionEvento(id, datos) {
   try {

@@ -1,0 +1,17 @@
+name: Recordatorios y seguimiento de eventos
+
+# Cloudflare Pages no soporta Cron Triggers (eso es solo para Workers "planos") — este workflow
+# es el reloj real: llama cada hora a /cron-eventos, que revisa si algún evento cae justo en su
+# ventana de recordatorio (antes) o seguimiento (después) y manda los correos que falten.
+on:
+  schedule:
+    - cron: "5 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  disparar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Llamar a /cron-eventos
+        run: |
+          curl -sf -X POST "https://crm-dattasoft.pages.dev/cron-eventos?key=${{ secrets.CRON_EVENTOS_SECRET }}"

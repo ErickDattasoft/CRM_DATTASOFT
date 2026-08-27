@@ -539,7 +539,28 @@ const firebaseApiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || "AIzaSyDT6EkBk
                 <span class="state-icon">ℹ️</span>
                 <div class="state-title">Ya estás registrado</div>
                 <div class="state-subtitle">Ya te habías registrado para este evento con estos datos. ¡Te esperamos!<br><br>El link del webinar se envía al correo o WhatsApp registrado — si es por correo, revisa también spam o correo no deseado.</div>
+                ${correo ? `<button type="button" class="btn-submit" id="btn-reenviar-link" style="margin-top:16px;">🔁 No encuentro el correo, reenviármelo</button>
+                <div id="reenviar-msg" style="font-size:0.8rem; color:#94a3b8; margin-top:10px;"></div>` : ""}
               </div>`;
+            const btnReenviar = document.getElementById("btn-reenviar-link");
+            if (btnReenviar) {
+              btnReenviar.addEventListener("click", async () => {
+                btnReenviar.disabled = true;
+                btnReenviar.textContent = "⏳ Enviando...";
+                const msg = document.getElementById("reenviar-msg");
+                try {
+                  const r = await fetch("/reenviar-link", {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ eventoId, correo }),
+                  });
+                  const d = await r.json().catch(() => null);
+                  if (msg) msg.textContent = d?.mensaje || "Si el correo está registrado en este evento, te reenviamos el acceso en unos segundos.";
+                } catch {
+                  if (msg) msg.textContent = "No se pudo reenviar en este momento — intenta de nuevo en un rato.";
+                }
+                btnReenviar.remove();
+              });
+            }
             return;
           }
 
