@@ -3920,6 +3920,13 @@ try {
             <label>Notas del evento</label>
             <textarea id="form-ev-notas" rows="2" placeholder="Descripción, agenda, información adicional..."></textarea>
           </div>
+          <div class="form-group" style="margin-top:8px; max-width:260px;">
+            <label>🚧 Límite de registros por IP</label>
+            <input id="form-ev-limite-ip" type="number" min="1" placeholder="5 (por defecto)">
+            <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">
+              Evita que alguien inunde Inscritos registrando muchas entradas desde la misma conexión. Si una empresa te pide inscribir a varios empleados, sube este número solo para ese evento.
+            </span>
+          </div>
           <div class="form-group" style="margin-top:8px;">
             <label>💬 Plantilla de confirmación (correo y WhatsApp)</label>
             <textarea id="form-ev-plantilla" rows="10" placeholder="Hola [nombre] 👋..."></textarea>
@@ -16221,7 +16228,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   document.getElementById("btnNuevoEvento")?.addEventListener("click", () => {
     document.getElementById("edit-evento-id").value = "";
     document.getElementById("form-evento-titulo").textContent = "➕ Nuevo Evento";
-    ["form-ev-nombre","form-ev-sistema","form-ev-link","form-ev-notas","form-ev-contacto-nombre","form-ev-contacto-whatsapp"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
+    ["form-ev-nombre","form-ev-sistema","form-ev-link","form-ev-notas","form-ev-contacto-nombre","form-ev-contacto-whatsapp","form-ev-limite-ip"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
     document.getElementById("form-ev-fecha").value = "";
     document.getElementById("form-ev-hora").value = "";
     (document.getElementById("form-ev-plantilla") as HTMLTextAreaElement).value = PLANTILLA_EVENTO_DEFAULT;
@@ -16238,6 +16245,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     if (!nombre) { toast("⚠️ El nombre del evento es obligatorio.", "warning"); return; }
     const id = document.getElementById("edit-evento-id").value || `ev_${Date.now()}`;
     const existente = eventos.find(e => e.id === id);
+    const limiteIpTexto = (document.getElementById("form-ev-limite-ip") as HTMLInputElement).value.trim();
     const datos = {
       id, nombre,
       sistema: document.getElementById("form-ev-sistema").value.trim(),
@@ -16248,6 +16256,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       contactoNombre: document.getElementById("form-ev-contacto-nombre").value.trim(),
       contactoWhatsapp: document.getElementById("form-ev-contacto-whatsapp").value.trim(),
       plantilla: (document.getElementById("form-ev-plantilla") as HTMLTextAreaElement).value.trim(),
+      limiteRegistrosPorIp: limiteIpTexto ? Math.max(1, parseInt(limiteIpTexto, 10)) : null,
       empresas: existente?.empresas || [],
       extras: existente?.extras || [],
     };
@@ -16275,6 +16284,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     document.getElementById("form-ev-notas").value = ev.notas || "";
     document.getElementById("form-ev-contacto-nombre").value = ev.contactoNombre || "";
     document.getElementById("form-ev-contacto-whatsapp").value = ev.contactoWhatsapp || "";
+    document.getElementById("form-ev-limite-ip").value = ev.limiteRegistrosPorIp ? String(ev.limiteRegistrosPorIp) : "";
     (document.getElementById("form-ev-plantilla") as HTMLTextAreaElement).value = ev.plantilla || PLANTILLA_EVENTO_DEFAULT;
     document.getElementById("formulario-evento").classList.remove("hidden");
     document.getElementById("formulario-evento").scrollIntoView({ behavior:"smooth" });
@@ -16395,8 +16405,8 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       if (!i.correo && !i.telefono) return `<span style="color:var(--text-muted);">—</span>`;
       if (estaEnListaNegra(i)) {
         const entrada = listaNegra.find(x => (i.correo && x.correo === i.correo) || (i.telefono && x.telefono === i.telefono));
-        const motivo = entrada?.motivo ? escapeHtml(entrada.motivo) : "Marcado como problemático";
-        return `<span title="${motivo}">🚫</span>`;
+        const partes = [entrada?.motivo || "Marcado como problemático", entrada?.marcadoPor ? `— por ${entrada.marcadoPor}` : ""].filter(Boolean);
+        return `<span title="${escapeHtml(partes.join(" "))}">🚫</span>`;
       }
       return `<button type="button" class="btn btn-ghost btn-xs btn-icon btn-marcar-negra" data-id="${i._id}" title="Marcar como problemático (ej. mala conducta en videollamada) — quedará visible si se vuelve a registrar en cualquier evento futuro" style="opacity:0.4;">🚫</button>`;
     };
@@ -16478,9 +16488,10 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         if (!i) return;
         if (!await confirmar(`¿Marcar a "${i.nombre || "esta persona"}" como problemático? Quedará señalado con 🚫 si se vuelve a registrar en cualquier evento futuro, y en esta misma lista.`, "🚫")) return;
         const motivo = prompt("Motivo (opcional) — ej. \"conducta indebida en cámara durante el webinar\":", "") || "";
-        const ok = await agregarAListaNegraEventos({ correo: i.correo, telefono: i.telefono, motivo });
+        const marcadoPor = getUsuarioActual()?.nombre || "";
+        const ok = await agregarAListaNegraEventos({ correo: i.correo, telefono: i.telefono, motivo, marcadoPor });
         if (!ok) { toast("⚠️ No se pudo guardar", "error"); return; }
-        listaNegra.push({ correo: (i.correo || "").toLowerCase().trim(), telefono: (i.telefono || "").trim(), motivo });
+        listaNegra.push({ correo: (i.correo || "").toLowerCase().trim(), telefono: (i.telefono || "").trim(), motivo, marcadoPor });
         renderTablaInscritos(inscritos, ev, lista, listaNegra);
         toast("🚫 Marcado como problemático");
       });

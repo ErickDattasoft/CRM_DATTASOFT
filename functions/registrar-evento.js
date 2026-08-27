@@ -80,6 +80,33 @@ async function existeInscripcion(base, headers, eventoId, correo, telefono) {
   return false;
 }
 
+const LIMITE_IP_DEFAULT = 5;
+
+// Cuenta cuántas inscripciones ya existen para este evento desde esta IP — basta con pedirle a
+// Firestore como máximo `limite` documentos y contar cuántos regresó: si regresa exactamente
+// `limite`, ya se alcanzó (o se pasó) el tope, sin necesitar una query de agregación aparte.
+async function contarRegistrosPorIp(base, headers, eventoId, ip, limite) {
+  const body = {
+    structuredQuery: {
+      from: [{ collectionId: "inscripciones_evento" }],
+      where: {
+        compositeFilter: {
+          op: "AND",
+          filters: [
+            { fieldFilter: { field: { fieldPath: "eventoId" }, op: "EQUAL", value: toFirestoreValue(eventoId) } },
+            { fieldFilter: { field: { fieldPath: "ip" }, op: "EQUAL", value: toFirestoreValue(ip) } },
+          ],
+        },
+      },
+      limit: limite,
+    },
+  };
+  const resp = await fetch(`${base}:runQuery`, { method: "POST", headers, body: JSON.stringify(body) });
+  if (!resp.ok) return 0;
+  const rows = await resp.json().catch(() => []);
+  return Array.isArray(rows) ? rows.filter(r => r && r.document).length : 0;
+}
+
 // Cruce contra gente ya marcada como problemática en un evento anterior (ver 🚫 en Inscritos) —
 // no bloquea el registro (mismo criterio que correoSospechoso: más vale saber que alguien
 // reincidente se está registrando de nuevo, que dejarlo intentar con otro dato falso), solo lo
@@ -224,12 +251,23 @@ export const onRequestPost = async (context) => {
   const yaExiste = await existeInscripcion(base, headers, eventoId, correo, telefono);
   if (yaExiste) return jsonResponse({ ok: true, duplicado: true });
 
-  const enListaNegra = await estaEnListaNegra(base, headers, correo, telefono);
-
-  // IP solo para uso forense (identificar a alguien que causó un incidente en un webinar aunque
-  // vuelva a registrarse con datos distintos) — nunca se muestra en el registro público ni se usa
-  // para bloquear nada automáticamente.
+  // IP: doble uso. (1) forense — identificar a alguien que causó un incidente en un webinar aunque
+  // vuelva a registrarse con datos distintos, nunca se muestra en el registro público. (2) límite
+  // de registros por IP por evento, configurable desde CRM → Eventos (evento.limiteRegistrosPorIp,
+  // default LIMITE_IP_DEFAULT) — evita que alguien inunde Inscritos registrando muchas entradas
+  // seguidas; se puede subir para un evento puntual si una empresa real pide inscribir a varios
+  // empleados desde la misma red.
   const ip = request.headers.get("CF-Connecting-IP") || "";
+  if (ip) {
+    const limite = Number.isFinite(evento.limiteRegistrosPorIp) && evento.limiteRegistrosPorIp > 0
+      ? evento.limiteRegistrosPorIp : LIMITE_IP_DEFAULT;
+    const yaHayDeEstaIp = await contarRegistrosPorIp(base, headers, eventoId, ip, limite);
+    if (yaHayDeEstaIp >= limite) {
+      return jsonResponse({ ok: false, error: "Se alcanzó el límite de registros permitidos desde esta conexión para este evento. Si necesitas inscribir a más personas (por ejemplo, varios empleados de tu empresa), contáctanos directamente." }, 429);
+    }
+  }
+
+  const enListaNegra = await estaEnListaNegra(base, headers, correo, telefono);
 
   const nuevaInscripcion = {
     eventoId, eventoNombre: evento.nombre || "", nombre, empresa, correo, telefono, fuente,

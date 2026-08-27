@@ -1028,13 +1028,14 @@ export async function obtenerListaNegraEventos() {
 // Marca a alguien como problemático (ej. mala conducta en un webinar) para que quede visible si
 // vuelve a registrarse con el mismo correo/teléfono en un evento futuro — no depende de que el
 // staff recuerde quién causó el incidente.
-export async function agregarAListaNegraEventos({ correo, telefono, motivo }) {
+export async function agregarAListaNegraEventos({ correo, telefono, motivo, marcadoPor }) {
   try {
     const colRef = collection(db, "lista_negra_eventos");
     await addDoc(colRef, {
       correo: (correo || "").toLowerCase().trim(),
       telefono: (telefono || "").trim(),
       motivo: (motivo || "").trim(),
+      marcadoPor: (marcadoPor || "").trim(),
       fecha: serverTimestamp(),
     });
     return true;
