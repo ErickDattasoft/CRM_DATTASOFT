@@ -2072,6 +2072,19 @@ try {
     border-radius: 10px; padding: 12px 14px; margin-top: 12px; font-size: 0.82rem;
     color: var(--text-main); line-height: 1.55;
   }
+  /* ── Manual rápido desplegable, embebido en la sección Eventos (no el Manual de Uso global) ── */
+  .eventos-manual {
+    background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg);
+    margin-bottom: 18px; overflow: hidden;
+  }
+  .eventos-manual > summary {
+    list-style: none; cursor: pointer; padding: 14px 18px; font-size: 0.9rem; font-weight: 800;
+    color: var(--text-bright); display: flex; align-items: center; gap: 8px; user-select: none;
+  }
+  .eventos-manual > summary::-webkit-details-marker { display: none; }
+  .eventos-manual > summary::after { content: "▸"; margin-left: auto; color: var(--text-muted); transition: transform .15s; }
+  .eventos-manual[open] > summary::after { transform: rotate(90deg); }
+  .eventos-manual-body { padding: 4px 20px 20px; border-top: 1px solid var(--border-color); }
   .manual-tabla { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: 10px; }
   .manual-tabla th { background: rgba(99,102,241,0.1); color: var(--text-bright); padding: 8px 12px; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: .05em; }
   .manual-tabla td { padding: 9px 12px; border-bottom: 1px solid var(--border-color); color: var(--text-main); vertical-align: middle; }
@@ -3856,6 +3869,40 @@ try {
       <!-- SECTION: EVENTOS               -->
       <!-- ============================== -->
       <div class="section" id="section-eventos">
+        <details class="eventos-manual">
+          <summary>📖 Manual rápido de Eventos — cómo funciona todo esto</summary>
+          <div class="eventos-manual-body">
+
+            <div class="manual-subtitulo">1. Crear el evento y compartir el link</div>
+            <div class="manual-paso"><div class="manual-paso-num">1</div><div class="manual-paso-txt"><span class="btn-demo btn-demo-primary">➕ Nuevo Evento</span> — llena nombre, sistema, fecha/hora, link real de Zoom/Meet, contacto y la plantilla del mensaje.</div></div>
+            <div class="manual-paso"><div class="manual-paso-num">2</div><div class="manual-paso-txt"><span class="btn-demo btn-demo-ghost">🔗 Link Registro</span> copia el link del <strong>formulario público</strong> — es el que se publica en redes/WhatsApp.</div></div>
+            <div class="manual-aviso"><span class="manual-tip-icon">⚠️</span><span><strong>Nunca publiques el link real de Zoom/Meet en redes sociales.</strong> Solo comparte el link de registro de arriba — el link real de la llamada solo le llega a cada inscrito por su correo/WhatsApp de confirmación. Publicar el link real es lo que deja pasar gente sin registrarse.</span></div>
+
+            <div class="manual-subtitulo">2. Qué significan los íconos en 👥 Inscritos</div>
+            <table class="manual-tabla">
+              <tr><th>Ícono</th><th>Qué significa</th></tr>
+              <tr><td>🟢 🟡 🔴 (columna 📧)</td><td>Estado real de entrega del correo (Brevo): verde=entregado, amarillo=aún sin confirmar (puede tardar minutos), rojo=rebotó (correo probablemente falso).</td></tr>
+              <tr><td>🚩</td><td>El dominio del correo es de un servicio de correo temporal/desechable conocido (mailinator, yopmail, etc.). No bloquea el registro, solo avisa que probablemente no es un prospecto real.</td></tr>
+              <tr><td>🚫</td><td>Persona marcada como problemática (botón manual, ej. mala conducta en una videollamada anterior). Se cruza automáticamente si se vuelve a registrar en cualquier evento futuro. Clic en el ícono apagado para marcar a alguien; pasa el mouse sobre el ícono rojo para ver el motivo y quién lo marcó.</td></tr>
+              <tr><td>🔁 Antes</td><td>Ya asistió de verdad (✅ Asistió tildado) a OTRO evento — útil para no reinvitar a alguien si un webinar se repite.</td></tr>
+              <tr><td>✅ Asistió</td><td>Asistencia REAL confirmada a mano por ti — distinto de "¿Asistirá?", que es solo lo que la persona dijo al registrarse.</td></tr>
+            </table>
+
+            <div class="manual-subtitulo">3. WhatsApp de seguimiento</div>
+            <div class="manual-paso"><div class="manual-paso-num">1</div><div class="manual-paso-txt">Botón 💬 por fila abre WhatsApp con la plantilla ya lista, y marca a esa persona como <strong>Contactado</strong> solo.</div></div>
+            <div class="manual-paso"><div class="manual-paso-num">2</div><div class="manual-paso-txt"><span class="btn-demo btn-demo-primary">💬 WhatsApp a pendientes</span> abre una pestaña por cada quien tenga teléfono y NO esté marcado como Contactado — una por una, hay que darle Enviar en cada una.</div></div>
+
+            <div class="manual-subtitulo">4. Protecciones anti-abuso (configurables por evento)</div>
+            <div class="manual-paso"><div class="manual-paso-num">1</div><div class="manual-paso-txt"><strong>🚧 Límite de registros por IP</strong> (en ✏️ Editar Evento): 5 por defecto. Si una empresa real te pide inscribir a varios empleados desde la misma oficina, sube este número solo en ese evento.</div></div>
+
+            <div class="manual-subtitulo">5. Correos automáticos (opcionales, por evento)</div>
+            <div class="manual-paso"><div class="manual-paso-num">1</div><div class="manual-paso-txt"><strong>⏰ Recordatorio — horas antes:</strong> correo automático recordando el evento. 24h por defecto, pon <strong>0</strong> para desactivarlo en ese evento.</div></div>
+            <div class="manual-paso"><div class="manual-paso-num">2</div><div class="manual-paso-txt"><strong>📩 Mensaje de seguimiento:</strong> se manda después del evento (24h por defecto). <strong>Si lo dejas vacío, no se manda nada</strong> — es opcional a propósito, evento por evento.</div></div>
+            <div class="manual-paso"><div class="manual-paso-num">3</div><div class="manual-paso-txt">Si alguien ya registrado intenta registrarse de nuevo, el formulario público le ofrece un botón para <strong>reenviarle el correo de confirmación</strong> — no necesitas hacer nada tú.</div></div>
+            <div class="manual-tip"><span class="manual-tip-icon">💡</span><span>Estos correos los manda un proceso automático que corre cada hora — no son instantáneos al minuto exacto, pero no hace falta que tú los dispares.</span></div>
+
+          </div>
+        </details>
         <!-- Selector de evento activo -->
         <!-- El <select> real sigue existiendo (oculto) como fuente de verdad del evento activo —
              las tarjetas de abajo solo lo actualizan y disparan su evento "change", así se reusa
@@ -4607,11 +4654,15 @@ try {
 
             <div class="manual-subtitulo">Formulario público de registro</div>
             <div class="manual-paso"><div class="manual-paso-num">1</div><div class="manual-paso-txt">En el panel de un evento, haz clic en <span class="btn-demo btn-demo-primary">🔗 Link Registro</span>. Esto <strong>copia al portapapeles</strong> una URL pública.</div></div>
-            <div class="manual-paso"><div class="manual-paso-num">2</div><div class="manual-paso-txt">Pega esa URL en Facebook, WhatsApp, correo, etc. Quien la abra verá un formulario moderno para registrarse.</div></div>
-            <div class="manual-paso"><div class="manual-paso-num">3</div><div class="manual-paso-txt">Al registrarse, <strong>tú recibes un correo</strong> con los datos del nuevo inscrito, y el cliente recibe una confirmación automática.</div></div>
-            <div class="manual-paso"><div class="manual-paso-num">4</div><div class="manual-paso-txt">Para ver quién se registró: botón <span class="btn-demo btn-demo-ghost">👥 Inscritos</span> — muestra nombre, empresa, correo, teléfono y cómo se enteró.</div></div>
+            <div class="manual-paso"><div class="manual-paso-num">2</div><div class="manual-paso-txt">Pega esa URL (nunca el link real de Zoom/Meet) en Facebook, WhatsApp, correo, etc. Quien la abra verá un formulario moderno para registrarse, protegido contra bots (Turnstile).</div></div>
+            <div class="manual-paso"><div class="manual-paso-num">3</div><div class="manual-paso-txt">Al registrarse, <strong>tú recibes un correo</strong> con los datos del nuevo inscrito, y el cliente recibe una confirmación automática con el link real del evento.</div></div>
+            <div class="manual-paso"><div class="manual-paso-num">4</div><div class="manual-paso-txt">Para ver quién se registró: botón <span class="btn-demo btn-demo-ghost">👥 Inscritos</span> — muestra nombre, empresa, correo, teléfono, cómo se enteró, semáforo de entrega del correo, y más.</div></div>
 
             <div class="manual-aviso"><span class="manual-tip-icon">⚠️</span><span>El correo de notificación va a la dirección configurada en <strong>Configuración → Correo de soporte</strong>. Si no hay correo configurado, no llega la notificación al admin, pero el registro sí queda guardado en el CRM.</span></div>
+
+            <div class="manual-subtitulo">Antiabuso, seguimiento y automatizaciones</div>
+            <div class="manual-paso"><div class="manual-paso-num">1</div><div class="manual-paso-txt">Semáforo de entrega de correo (🟢🟡🔴), aviso de correos desechables (🚩), lista negra de gente problemática (🚫), límite configurable de registros por IP, asistencia real con historial entre eventos (✅🔁), WhatsApp de seguimiento, reenvío de link, y recordatorios/seguimiento automáticos por correo.</div></div>
+            <div class="manual-tip"><span class="manual-tip-icon">💡</span><span>Todo esto tiene su propia guía, con más detalle, directo dentro de la sección <strong>Eventos</strong>: botón <strong>📖 Manual rápido de Eventos</strong> arriba de la lista de eventos.</span></div>
           </div>
 
           <!-- ── VERSIONES ──────────────────────────────────── -->
