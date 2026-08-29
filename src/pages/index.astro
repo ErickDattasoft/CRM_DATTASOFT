@@ -13856,22 +13856,20 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           ${sec.eventos.map(ev => {
             const regla = configN8n.reglas.find(r => r.id === ev.id) || { id: ev.id, activo: false, destinatariosIds: [] };
             return `
-            <div class="n8n-regla-row" data-id="${ev.id}" style="width:100%; box-sizing:border-box; padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; margin-bottom:6px;">
-              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; width:100%;">
-                <div style="flex:1; min-width:220px;">
-                  <label style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:0.85rem; cursor:pointer;">
-                    <input type="checkbox" class="n8n-regla-activo" ${regla.activo?"checked":""}> ${ev.nombre}
-                  </label>
-                  <div style="font-size:0.72rem; color:var(--text-muted); margin-left:26px;">${ev.desc}</div>
+            <div class="n8n-regla-row" data-id="${ev.id}" style="display:grid; grid-template-columns:1fr auto; align-items:start; gap:10px; width:100%; box-sizing:border-box; padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; margin-bottom:6px;">
+              <div style="min-width:0;">
+                <label style="display:grid; grid-template-columns:18px 1fr; align-items:center; gap:8px; font-weight:600; font-size:0.85rem; cursor:pointer;">
+                  <input type="checkbox" class="n8n-regla-activo" ${regla.activo?"checked":""}> <span>${ev.nombre}</span>
+                </label>
+                <div style="font-size:0.72rem; color:var(--text-muted); margin:2px 0 0 26px;">${ev.desc}</div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; margin-left:26px;">
+                  ${destActivos.length ? destActivos.map(d => `
+                    <label style="display:flex; align-items:center; gap:4px; font-size:0.76rem;">
+                      <input type="checkbox" class="n8n-regla-dest" value="${d.id}" ${(regla.destinatariosIds||[]).includes(d.id)?"checked":""}> ${escapeHtml(d.nombre)}
+                    </label>`).join("") : `<span style="font-size:0.74rem; color:var(--text-muted);">Sin destinatarios activos configurados arriba.</span>`}
                 </div>
-                ${ev.conHora ? `<input type="time" class="n8n-regla-hora" value="${regla.hora||"08:00"}" style="width:100px;">` : ""}
               </div>
-              <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; margin-left:26px;">
-                ${destActivos.length ? destActivos.map(d => `
-                  <label style="display:flex; align-items:center; gap:4px; font-size:0.76rem;">
-                    <input type="checkbox" class="n8n-regla-dest" value="${d.id}" ${(regla.destinatariosIds||[]).includes(d.id)?"checked":""}> ${escapeHtml(d.nombre)}
-                  </label>`).join("") : `<span style="font-size:0.74rem; color:var(--text-muted);">Sin destinatarios activos configurados arriba.</span>`}
-              </div>
+              ${ev.conHora ? `<input type="time" class="n8n-regla-hora" value="${regla.hora||"08:00"}" style="width:110px; color-scheme:dark;">` : ""}
             </div>`;
           }).join("")}
         </div>
