@@ -324,7 +324,15 @@ try {
       gap: 8px;
     }
 
-    /* ===== CONFIGURACIÓN: barra de acceso rápido a secciones ===== */
+    /* ===== CONFIGURACIÓN: cuadro de búsqueda + barra de acceso rápido a secciones ===== */
+    .cfg-buscar-wrap { margin-bottom: 10px; }
+    #cfg-buscar {
+      width: 100%; padding: 10px 14px; font-size: 0.85rem;
+      background: var(--bg-input); border: 1px solid var(--border-color); border-radius: var(--radius-md);
+      color: var(--text-main);
+    }
+    #cfg-buscar:focus { border-color: var(--brand-primary); outline: none; }
+    .cfg-quicknav-btn.cfg-oculto-busqueda { display: none !important; }
     .cfg-quicknav {
       position: sticky;
       top: 0;
@@ -2072,19 +2080,19 @@ try {
     border-radius: 10px; padding: 12px 14px; margin-top: 12px; font-size: 0.82rem;
     color: var(--text-main); line-height: 1.55;
   }
-  /* ── Manual rápido desplegable, embebido en la sección Eventos (no el Manual de Uso global) ── */
+  /* ── Manual rápido desplegable, embebido en la sección Eventos (no el Manual de Uso global) ──
+     Mismo patrón <details>/<summary> nativo que "🕵️ Actividad del ticket" (que ya funciona) —
+     a propósito NO se toca el display del <summary> ni su marcador nativo, para no arriesgar
+     que algún navegador deje de reconocerlo como disparador de apertura/cierre. */
   .eventos-manual {
     background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg);
-    margin-bottom: 18px; overflow: hidden;
+    margin-bottom: 18px; padding: 14px 18px;
   }
   .eventos-manual > summary {
-    list-style: none; cursor: pointer; padding: 14px 18px; font-size: 0.9rem; font-weight: 800;
-    color: var(--text-bright); display: flex; align-items: center; gap: 8px; user-select: none;
+    cursor: pointer; font-size: 0.9rem; font-weight: 800; color: var(--text-bright); user-select: none;
   }
-  .eventos-manual > summary::-webkit-details-marker { display: none; }
-  .eventos-manual > summary::after { content: "▸"; margin-left: auto; color: var(--text-muted); transition: transform .15s; }
-  .eventos-manual[open] > summary::after { transform: rotate(90deg); }
-  .eventos-manual-body { padding: 4px 20px 20px; border-top: 1px solid var(--border-color); }
+  .eventos-manual[open] > summary { margin-bottom: 12px; }
+  .eventos-manual-body { padding-top: 10px; border-top: 1px solid var(--border-color); }
   .manual-tabla { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: 10px; }
   .manual-tabla th { background: rgba(99,102,241,0.1); color: var(--text-bright); padding: 8px 12px; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: .05em; }
   .manual-tabla td { padding: 9px 12px; border-bottom: 1px solid var(--border-color); color: var(--text-main); vertical-align: middle; }
@@ -3367,8 +3375,8 @@ try {
               <button type="button" data-cmd="fontSize" data-val="5" title="Texto grande">A+</button>
               <button type="button" data-cmd="fontSize" data-val="2" title="Texto pequeño">A-</button>
               <button type="button" id="btnInsertarImagenTk" title="Insertar imagen desde archivo">🖼️ Imagen</button>
-              <button type="button" id="btnAgregarPlantillaTk" title="Agrega un encabezado (Fecha/Síntoma/Problema/Solución/Tiempo trabajado) al inicio, para llenarlo a mano" style="margin-left:auto;">📋 Encabezado</button>
-              <button type="button" id="btnAgregarFirmaTk" title="Agregar tu firma configurada (Mi firma, en el menú)">🖊️ Firma</button>
+              <button type="button" id="btnAgregarPlantillaTk" title="Agrega tu encabezado (Mi firma y encabezado, en el menú) — o la plantilla por defecto (Fecha/Síntoma/Problema/Solución/Tiempo trabajado) si no configuraste uno" style="margin-left:auto;">📋 Encabezado</button>
+              <button type="button" id="btnAgregarFirmaTk" title="Agregar tu firma configurada (Mi firma y encabezado, en el menú)">🖊️ Firma</button>
             </div>
             <input type="file" id="form-tk-descripcion-img-input" accept="image/*" multiple style="display:none">
             <div class="rte-editor" contenteditable="true" id="form-tk-descripcion" data-placeholder="Describe el problema en detalle..."></div>
@@ -3439,6 +3447,9 @@ try {
       <!-- SECTION: CONFIGURACIÓN         -->
       <!-- ============================== -->
       <div class="section" id="section-configuracion">
+        <div class="cfg-buscar-wrap">
+          <input type="text" id="cfg-buscar" placeholder="🔍 Buscar en Configuración... (ej. correo, WhatsApp, backup, Turnstile)" autocomplete="off">
+        </div>
         <div class="cfg-quicknav" id="cfg-quicknav">
           <button type="button" class="cfg-quicknav-btn" data-cfg-target="cfg-card-logo">🏷️ Logo</button>
           <button type="button" class="cfg-quicknav-btn" data-cfg-target="cfg-card-correo">📧 Correo</button>
@@ -5295,22 +5306,33 @@ try {
 <div id="modal-mi-firma" class="modal-center" style="display:none;">
   <div class="modal-box" style="width:480px; max-width:95%;">
     <div class="modal-header">
-      <h2>✍️ Mi firma</h2>
+      <h2>✍️ Mi firma y encabezado</h2>
       <button class="modal-close" id="btnCerrarMiFirma">×</button>
     </div>
     <div style="padding:20px; display:flex; flex-direction:column; gap:10px;">
       <p style="font-size:0.82rem; color:var(--text-muted); line-height:1.5;">
-        Se agrega al final de la descripción de un ticket con el botón "🖊️ Firma" del editor.
-        Solo tú la ves y la editas — cada usuario tiene la suya.
+        Ambos son personales — solo tú los ves y los editas, cada usuario tiene los suyos.
       </p>
+
+      <div style="font-size:0.8rem; font-weight:700; color:var(--text-bright);">📋 Mi encabezado <span style="font-weight:400; color:var(--text-muted); font-size:0.74rem;">— al inicio del ticket, botón "📋 Encabezado"</span></div>
+      <p style="font-size:0.76rem; color:var(--text-muted); margin-top:-6px;">Déjalo vacío para seguir usando la plantilla por defecto (Fecha/Síntoma/Problema/Solución/Tiempo trabajado). El comodín <code>[fecha]</code> se reemplaza por la fecha de hoy.</p>
+      <div class="rte-toolbar" id="rte-toolbar-encabezado">
+        <button type="button" data-cmd="bold" title="Negrita"><b>B</b></button>
+        <button type="button" data-cmd="italic" title="Cursiva"><i>I</i></button>
+        <button type="button" data-cmd="underline" title="Subrayado"><u>U</u></button>
+      </div>
+      <div class="rte-editor" contenteditable="true" id="mi-encabezado-editor" data-placeholder="Vacío = usar la plantilla por defecto" style="min-height:70px;"></div>
+
+      <div style="font-size:0.8rem; font-weight:700; color:var(--text-bright); margin-top:8px;">🖊️ Mi firma <span style="font-weight:400; color:var(--text-muted); font-size:0.74rem;">— al final del ticket, botón "🖊️ Firma"</span></div>
       <div class="rte-toolbar" id="rte-toolbar-firma">
         <button type="button" data-cmd="bold" title="Negrita"><b>B</b></button>
         <button type="button" data-cmd="italic" title="Cursiva"><i>I</i></button>
         <button type="button" data-cmd="underline" title="Subrayado"><u>U</u></button>
       </div>
       <div class="rte-editor" contenteditable="true" id="mi-firma-editor" data-placeholder="Ej: Saludos, Erick Casas — Soporte Técnico DATTASOFT" style="min-height:90px;"></div>
+
       <div class="form-actions" style="margin-top:4px;">
-        <button class="btn btn-primary btn-sm" id="btnGuardarMiFirma">💾 Guardar firma</button>
+        <button class="btn btn-primary btn-sm" id="btnGuardarMiFirma">💾 Guardar</button>
         <button class="btn btn-secondary btn-sm" id="btnCancelarMiFirma">Cancelar</button>
       </div>
     </div>
@@ -6655,15 +6677,37 @@ verificarSesion();
 
   // Barra de acceso rápido dentro de Configuración: salta a la tarjeta sin scrollear
   // toda la página, y la resalta un momento para confirmar a dónde llegó.
-  document.querySelectorAll(".cfg-quicknav-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const target = document.getElementById(btn.dataset.cfgTarget);
-      if (!target) return;
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
-      target.classList.remove("cfg-card-flash");
-      void target.offsetWidth; // reinicia la animación si se hace clic dos veces seguidas
-      target.classList.add("cfg-card-flash");
+  function saltarACardConfig(target) {
+    if (!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    target.classList.remove("cfg-card-flash");
+    void target.offsetWidth; // reinicia la animación si se hace clic dos veces seguidas
+    target.classList.add("cfg-card-flash");
+  }
+  const cfgQuicknavBtns = Array.from(document.querySelectorAll(".cfg-quicknav-btn"));
+  cfgQuicknavBtns.forEach(btn => {
+    btn.addEventListener("click", () => saltarACardConfig(document.getElementById(btn.dataset.cfgTarget)));
+  });
+
+  // Cuadro de búsqueda de Configuración: filtra los botones de acceso rápido buscando tanto en su
+  // propia etiqueta como en todo el texto de la tarjeta a la que apuntan — así encuentra algo aunque
+  // no sepas el nombre exacto de la sección (ej. buscar "Turnstile" encuentra la tarjeta que lo
+  // menciona, aunque el botón solo diga "🔒 Cuenta Segura"). Enter salta directo al primer resultado.
+  const normalizarBusqueda = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const cfgBuscarInput = document.getElementById("cfg-buscar") as HTMLInputElement;
+  cfgBuscarInput?.addEventListener("input", () => {
+    const q = normalizarBusqueda(cfgBuscarInput.value.trim());
+    cfgQuicknavBtns.forEach(btn => {
+      if (!q) { btn.classList.remove("cfg-oculto-busqueda"); return; }
+      const target = document.getElementById(btn.dataset.cfgTarget as string);
+      const textoCompleto = normalizarBusqueda(btn.textContent + " " + (target?.textContent || ""));
+      btn.classList.toggle("cfg-oculto-busqueda", !textoCompleto.includes(q));
     });
+  });
+  cfgBuscarInput?.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    const primero = cfgQuicknavBtns.find(b => !b.classList.contains("cfg-oculto-busqueda"));
+    if (primero) saltarACardConfig(document.getElementById(primero.dataset.cfgTarget as string));
   });
 
   // ============================================================
@@ -7310,8 +7354,10 @@ verificarSesion();
     const modal = document.getElementById("modal-mi-firma");
     const u = getUsuarioActual();
     const registro = u ? getUsuarios().find((x: any) => x.nombre === u.nombre) : null;
-    const editor = document.getElementById("mi-firma-editor");
-    if (editor) editor.innerHTML = sanitizeDescripcionHtml(registro?.firma || "");
+    const editorFirma = document.getElementById("mi-firma-editor");
+    if (editorFirma) editorFirma.innerHTML = sanitizeDescripcionHtml(registro?.firma || "");
+    const editorEncabezado = document.getElementById("mi-encabezado-editor");
+    if (editorEncabezado) editorEncabezado.innerHTML = sanitizeDescripcionHtml(registro?.encabezado || "");
     if (modal) modal.style.display = "flex";
   }
   document.getElementById("btnMiFirma")?.addEventListener("click", abrirModalMiFirma);
@@ -7328,17 +7374,26 @@ verificarSesion();
     document.execCommand((btn as HTMLElement).dataset.cmd!, false, (btn as HTMLElement).dataset.val || null);
     document.getElementById("mi-firma-editor")?.focus();
   });
+  document.getElementById("rte-toolbar-encabezado")?.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest("button");
+    if (!btn) return;
+    e.preventDefault();
+    document.execCommand((btn as HTMLElement).dataset.cmd!, false, (btn as HTMLElement).dataset.val || null);
+    document.getElementById("mi-encabezado-editor")?.focus();
+  });
   document.getElementById("btnGuardarMiFirma")?.addEventListener("click", async () => {
     const u = getUsuarioActual();
     if (!u) return;
-    const html = sanitizeDescripcionHtml(document.getElementById("mi-firma-editor")?.innerHTML.trim() || "");
+    const htmlFirma = sanitizeDescripcionHtml(document.getElementById("mi-firma-editor")?.innerHTML.trim() || "");
+    const htmlEncabezado = sanitizeDescripcionHtml(document.getElementById("mi-encabezado-editor")?.innerHTML.trim() || "");
     const usuarios = getUsuarios();
     const i = usuarios.findIndex(x => x.nombre === u.nombre);
     if (i === -1) return;
-    usuarios[i].firma = html;
+    usuarios[i].firma = htmlFirma;
+    usuarios[i].encabezado = htmlEncabezado;
     saveUsuariosLocal(usuarios);
     if (!crmLocalOnly) await guardarUsuarios(usuarios).catch(() => {});
-    toast("✍️ Firma guardada");
+    toast("✍️ Guardado");
     const m = document.getElementById("modal-mi-firma"); if (m) m.style.display = "none";
   });
 
@@ -11827,7 +11882,13 @@ verificarSesion();
       const desc = document.getElementById("form-tk-descripcion");
       if (desc) {
         const hoy = new Date().toLocaleDateString("es-MX");
-        const plantilla = `<b>Fecha:</b> ${hoy}<br><br><b>Síntoma:</b><br><br><b>Problema:</b><br><br><b>Solución:</b><br><br><b>Tiempo trabajado:</b><br><br>`;
+        const u = getUsuarioActual();
+        const registro = u ? getUsuarios().find(x => x.nombre === u.nombre) : null;
+        // Si el usuario configuró su propio encabezado (Mi firma y encabezado, en el menú), se usa
+        // ese en vez de la plantilla fija — [fecha] sigue reemplazándose por la fecha de hoy.
+        const plantilla = registro?.encabezado?.trim()
+          ? registro.encabezado.replace(/\[fecha\]/g, hoy)
+          : `<b>Fecha:</b> ${hoy}<br><br><b>Síntoma:</b><br><br><b>Problema:</b><br><br><b>Solución:</b><br><br><b>Tiempo trabajado:</b><br><br>`;
         desc.innerHTML = plantilla + desc.innerHTML;
         desc.focus();
       }
@@ -13795,9 +13856,9 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
           ${sec.eventos.map(ev => {
             const regla = configN8n.reglas.find(r => r.id === ev.id) || { id: ev.id, activo: false, destinatariosIds: [] };
             return `
-            <div class="n8n-regla-row" data-id="${ev.id}" style="padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; margin-bottom:6px;">
-              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
-                <div>
+            <div class="n8n-regla-row" data-id="${ev.id}" style="width:100%; box-sizing:border-box; padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; margin-bottom:6px;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; width:100%;">
+                <div style="flex:1; min-width:220px;">
                   <label style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:0.85rem; cursor:pointer;">
                     <input type="checkbox" class="n8n-regla-activo" ${regla.activo?"checked":""}> ${ev.nombre}
                   </label>
