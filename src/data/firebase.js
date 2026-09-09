@@ -631,7 +631,7 @@ export async function obtenerSiguienteFolioTicket(cantidad = 1) {
  * se usa — una vez sembrado, restaurar tickets con folios más altos (o más bajos) no lo mueve, y
  * el próximo ticket nuevo podría chocar con uno recién restaurado.
  */
-export async function sincronizarContadorTickets(ticketsRestaurados) {
+export async function sincronizarContadorTickets(ticketsRestaurados, { forzar = false } = {}) {
   try {
     const maxRestaurado = ticketsRestaurados.length ? Math.max(...ticketsRestaurados.map(t => t.numero || 0)) : 0;
     if (!maxRestaurado) return true;
@@ -639,7 +639,15 @@ export async function sincronizarContadorTickets(ticketsRestaurados) {
     await runTransaction(db, async (transaction) => {
       const snap = await transaction.get(docRef);
       const actual = snap.exists() ? (snap.data().contadorTickets || 0) : 0;
-      if (maxRestaurado > actual) transaction.update(docRef, { contadorTickets: maxRestaurado });
+      // `forzar` FIJA el contador al máximo real en vez de solo subirlo — necesario tras un
+      // REEMPLAZAR TODO/renumeración deliberada que baja el máximo real (ej. limpiar duplicados o
+      // cerrar un hueco de folios): sin esto, el contador se quedaba pegado en un valor viejo más
+      // alto (el "solo sube" es la protección normal, pero aquí el usuario ya confirmó
+      // explícitamente que este es el estado correcto y quiere que el contador lo refleje tal
+      // cual, no que lo proteja contra sí mismo).
+      if (forzar ? maxRestaurado !== actual : maxRestaurado > actual) {
+        transaction.update(docRef, { contadorTickets: maxRestaurado });
+      }
     });
     return true;
   } catch (error) {

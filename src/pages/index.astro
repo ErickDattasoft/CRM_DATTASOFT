@@ -14405,7 +14405,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       const okGuardado = crmLocalOnly ? (guardarLocal("crm_tickets", tickets), true) : await guardarTickets(tickets, papelera, { forzar: true });
       if (okGuardado) {
         msg += `✅ ${tickets.length} tickets reemplazados (folios originales conservados). `;
-        if (!crmLocalOnly) await sincronizarContadorTickets(tickets);
+        if (!crmLocalOnly) await sincronizarContadorTickets(tickets, { forzar: true });
       } else {
         msg += `❌ El reemplazo de tickets NO se guardó en Firebase (revisa el aviso de error) — vuelve a intentarlo antes de seguir usando el CRM. `;
       }
