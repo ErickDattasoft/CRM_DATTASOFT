@@ -349,7 +349,7 @@ export async function eliminarAdjuntoTicket(id) {
 /**
  * Guarda los contactos del CRM en Firestore.
  */
-export async function guardarContactos(contactos, papeleraActual = []) {
+export async function guardarContactos(contactos, papeleraActual = [], { forzar = false } = {}) {
   try {
     const docRef = doc(db, "agenda", "datos");
     let anteriores = [];
@@ -359,7 +359,7 @@ export async function guardarContactos(contactos, papeleraActual = []) {
     } catch { /* si falla la lectura previa, el guardado real sigue de todas formas */ }
     // Los contactos no tienen id propio: correo si lo hay, si no nombre+empresa.
     const claveContacto = c => c?.correo ? `correo:${c.correo.toLowerCase()}` : `nombre:${(c?.nombre||"").toLowerCase()}__${(c?.empresa||"").toLowerCase()}`;
-    const desaparecidos = detectarDesaparecidos(anteriores, contactos, papeleraActual, claveContacto);
+    const desaparecidos = forzar ? [] : detectarDesaparecidos(anteriores, contactos, papeleraActual, claveContacto);
     if (desaparecidos.length) {
       const nombres = desaparecidos.map(c => c?.nombre).join(", ");
       avisarErrorGuardado("contactos", `Esta pestaña tiene datos desactualizados: "${nombres}" existe(n) en el servidor pero no aquí. Refresca la página (F5) y repite el cambio para no perderlo(s).`);

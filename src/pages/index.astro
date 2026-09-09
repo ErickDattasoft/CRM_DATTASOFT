@@ -4955,6 +4955,7 @@ try {
         <option value="full">CRM Completo (todo)</option>
         <option value="empresas">Solo Empresas</option>
         <option value="contactos">Solo Contactos</option>
+        <option value="contactos-reemplazar">🔴 Contactos: REEMPLAZAR TODO (borra los actuales)</option>
         <option value="tickets">Solo Tickets (agregar, folio nuevo)</option>
         <option value="tickets-agregar-original">🟡 Tickets: agregar SOLO los que falten (folio original, no toca los demás)</option>
         <option value="tickets-reemplazar">🔴 Tickets: REEMPLAZAR TODO (conserva folios, borra los actuales)</option>
@@ -14278,6 +14279,9 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         if (mode === "full" || mode === "empresas") resumen += `• Empresas: <strong>${(data.clientes||[]).length}</strong><br>`;
         if (mode === "full" || mode === "contactos") resumen += `• Contactos: <strong>${(data.contactos||[]).length}</strong><br>`;
         if (mode === "full" || mode === "tickets") resumen += `• Tickets: <strong>${(data.tickets||[]).length}</strong><br>`;
+        if (mode === "contactos-reemplazar") {
+          resumen += `⚠️ Esto va a <strong>BORRAR los ${contactos.length} contactos actuales</strong> y dejar en su lugar los <strong>${(data.contactos||[]).length}</strong> de este archivo. Úsalo solo para limpiar duplicados con un archivo ya depurado.<br>`;
+        }
         if (mode === "tickets-reemplazar") {
           resumen += `⚠️ Esto va a <strong>BORRAR los ${tickets.length} tickets actuales</strong> y dejar en su lugar los <strong>${(data.tickets||[]).length}</strong> de este archivo, con sus folios tal cual vienen (no se renumeran). Úsalo solo para restaurar un respaldo tras una pérdida de datos.<br>`;
         }
@@ -14340,6 +14344,20 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         if (okGuardado) msg += `✅ ${nuevos.length} contactos importados. `;
         else msg += `❌ Los contactos NO se guardaron en Firebase (revisa el aviso de error). `;
       }
+    }
+    // Modo de emergencia igual que "tickets-reemplazar": BORRA por completo el arreglo actual de
+    // contactos y lo sustituye por el del archivo tal cual — para aplicar una lista ya depurada
+    // a mano (ej. quitando duplicados) sin que la comparación aditiva de arriba estorbe.
+    if (mode === "contactos-reemplazar" && Array.isArray(jsonImportData.contactos)) {
+      const confirmado = confirm(
+        `¿Seguro? Esto va a BORRAR los ${contactos.length} contactos actuales y dejar en su lugar los ${jsonImportData.contactos.length} de este archivo. No se puede deshacer desde aquí (solo restaurando otro respaldo).`
+      );
+      if (!confirmado) return;
+      contactos.length = 0;
+      contactos.push(...jsonImportData.contactos.map(c => ({ ...c })));
+      const okGuardado = crmLocalOnly ? (guardarLocal("crm_contactos", contactos), true) : await guardarContactos(contactos, papeleraContactos, { forzar: true });
+      if (okGuardado) msg += `✅ ${contactos.length} contactos reemplazados. `;
+      else msg += `❌ El reemplazo de contactos NO se guardó en Firebase (revisa el aviso de error) — vuelve a intentarlo. `;
     }
     if ((mode === "full" || mode === "tickets") && Array.isArray(jsonImportData.tickets) && jsonImportData.tickets.length) {
       // Como este modo siempre renumera (para nunca chocar folios), no hay forma de detectar
