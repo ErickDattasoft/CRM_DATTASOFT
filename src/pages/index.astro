@@ -14342,22 +14342,35 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       }
     }
     if ((mode === "full" || mode === "tickets") && Array.isArray(jsonImportData.tickets) && jsonImportData.tickets.length) {
+      // Como este modo siempre renumera (para nunca chocar folios), no hay forma de detectar
+      // "ya existe" por numero — así que se detecta por contenido (asunto+empresa+fechaCreacion).
+      // Sin esto, importar el mismo backup más de una vez duplicaba cada ticket con un folio
+      // fantasma nuevo cada vez — el incidente real que dejó 402 tickets (43 reales, 360 copias)
+      // de repetir esta importación ~10 veces.
+      const claveTicket = t => `${(t.asunto||"").trim().toLowerCase()}__${(t.empresa||"").trim().toLowerCase()}__${t.fechaCreacion||""}`;
+      const clavesActuales = new Set(tickets.map(claveTicket));
+      const porImportar = jsonImportData.tickets.filter(t => !clavesActuales.has(claveTicket(t)));
+      const yaExistian = jsonImportData.tickets.length - porImportar.length;
+      if (!porImportar.length) {
+        msg += `Ningún ticket nuevo — los ${yaExistian} del archivo ya existen en el CRM (se omitieron para no duplicar). `;
+      } else {
       let baseNum;
       if (crmLocalOnly || !firebaseEnabled) {
         baseNum = tickets.length > 0 ? Math.max(...tickets.map(t => t.numero)) : 1000;
       } else {
-        const folioRes = await obtenerSiguienteFolioTicket(jsonImportData.tickets.length);
+        const folioRes = await obtenerSiguienteFolioTicket(porImportar.length);
         if (!folioRes.ok) {
           toast("❌ No se pudieron reservar folios para los tickets importados (sin conexión con Firebase). Nada se importó — intenta de nuevo.", "error");
           return;
         }
         baseNum = folioRes.numero - 1;
       }
-      const nuevos = jsonImportData.tickets.map((t, i) => ({ ...t, numero: baseNum + i + 1 }));
+      const nuevos = porImportar.map((t, i) => ({ ...t, numero: baseNum + i + 1 }));
       tickets.push(...nuevos);
       const okGuardado = crmLocalOnly ? (guardarLocal("crm_tickets", tickets), true) : await guardarTickets(tickets, papelera);
-      if (okGuardado) msg += `✅ ${nuevos.length} tickets importados. `;
+      if (okGuardado) msg += `✅ ${nuevos.length} tickets importados${yaExistian ? ` (${yaExistian} omitidos por ya existir)` : ""}. `;
       else msg += `❌ Los tickets NO se guardaron en Firebase (revisa el aviso de error). `;
+      }
     }
     // Modo de emergencia para recuperar de una pérdida de datos: a diferencia de "Solo Tickets"
     // (aditivo, siempre renumera), esto BORRA por completo el arreglo actual de tickets y lo
