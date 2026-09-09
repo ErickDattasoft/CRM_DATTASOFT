@@ -31,6 +31,24 @@ function avisarErrorGuardado(operacion, error) {
   }
 }
 
+/**
+ * Salvaguarda contra el bug real que perdió tickets #1004/#1041/#1042/#1043 en septiembre 2026:
+ * clientes/contactos/tickets se guardan como un arreglo completo (setDoc con merge:true solo
+ * mergea a nivel de campo, no adentro del arreglo), así que una pestaña con una copia
+ * desactualizada en memoria que guarda CUALQUIER cambio pisa por completo lo que el servidor
+ * tenía — incluyendo entradas agregadas por otra persona/pestaña mientras tanto. Antes de
+ * escribir, compara contra lo que el servidor tiene ahora mismo (`anteriores`, ya se lee de
+ * todas formas): si el servidor tiene entradas que el arreglo por guardar no incluye y que
+ * tampoco están en la papelera (o sea, nadie las borró a propósito desde esta sesión), es esa
+ * misma condición de carrera — se bloquea el guardado en vez de perderlas en silencio.
+ * Devuelve la lista de entradas "desaparecidas" (vacía si el guardado es seguro).
+ */
+function detectarDesaparecidos(anteriores, nuevos, papeleraActual, keyFn) {
+  const clavesNuevos = new Set(nuevos.map(keyFn));
+  const clavesPapelera = new Set((papeleraActual || []).map(keyFn));
+  return anteriores.filter(item => !clavesNuevos.has(keyFn(item)) && !clavesPapelera.has(keyFn(item)));
+}
+
 const app  = firebaseEnabled ? initializeApp(firebaseConfig) : null;
 const db   = firebaseEnabled ? getFirestore(app) : null;
 const auth = firebaseEnabled ? getAuth(app) : null;
@@ -171,7 +189,7 @@ async function registrarHistorial(tipo, anteriores, nuevos, idFn) {
 /**
  * Guarda los datos de clientes actualizados en Firestore.
  */
-export async function guardarClientes(clientes) {
+export async function guardarClientes(clientes, papeleraActual = []) {
   try {
     const docRef = doc(db, "agenda", "datos");
     let anteriores = [];
@@ -179,6 +197,12 @@ export async function guardarClientes(clientes) {
       const snapAntes = await getDoc(docRef);
       anteriores = snapAntes.exists() ? (snapAntes.data().clientes || []) : [];
     } catch { /* si falla la lectura previa, el guardado real sigue de todas formas */ }
+    const desaparecidas = detectarDesaparecidos(anteriores, clientes, papeleraActual, c => c?.EMPRESA ?? "");
+    if (desaparecidas.length) {
+      const nombres = desaparecidas.map(c => c?.EMPRESA).join(", ");
+      avisarErrorGuardado("clientes", `Esta pestaña tiene datos desactualizados: "${nombres}" existe(n) en el servidor pero no aquí. Refresca la página (F5) y repite el cambio para no perderla(s).`);
+      return { error: "datos-desactualizados" };
+    }
     await setDoc(docRef, { clientes: limpiar(clientes) }, { merge: true });
     registrarHistorial("empresa", anteriores, clientes, c => c?.EMPRESA ?? "");
     return true;
@@ -230,7 +254,7 @@ export async function guardarPlantillaLicencias(plantillaLicencias) {
 /**
  * Guarda los tickets de soporte en Firestore.
  */
-export async function guardarTickets(tickets) {
+export async function guardarTickets(tickets, papeleraActual = [], { forzar = false } = {}) {
   try {
     const docRef = doc(db, "agenda", "datos");
     let anteriores = [];
@@ -238,6 +262,12 @@ export async function guardarTickets(tickets) {
       const snapAntes = await getDoc(docRef);
       anteriores = snapAntes.exists() ? (snapAntes.data().tickets || []) : [];
     } catch { /* si falla la lectura previa, el guardado real sigue de todas formas */ }
+    const desaparecidos = forzar ? [] : detectarDesaparecidos(anteriores, tickets, papeleraActual, t => t?.numero ?? "");
+    if (desaparecidos.length) {
+      const nums = desaparecidos.map(t => t?.numero).join(", ");
+      avisarErrorGuardado("tickets", `Esta pestaña tiene datos desactualizados: ticket(s) #${nums} existe(n) en el servidor pero no aquí. Refresca la página (F5) y repite el cambio para no perderlo(s).`);
+      return false;
+    }
     await setDoc(docRef, { tickets: limpiar(tickets) }, { merge: true });
     registrarHistorial("ticket", anteriores, tickets, t => t?.numero ?? "");
     return true;
@@ -319,7 +349,7 @@ export async function eliminarAdjuntoTicket(id) {
 /**
  * Guarda los contactos del CRM en Firestore.
  */
-export async function guardarContactos(contactos) {
+export async function guardarContactos(contactos, papeleraActual = []) {
   try {
     const docRef = doc(db, "agenda", "datos");
     let anteriores = [];
@@ -327,9 +357,16 @@ export async function guardarContactos(contactos) {
       const snapAntes = await getDoc(docRef);
       anteriores = snapAntes.exists() ? (snapAntes.data().contactos || []) : [];
     } catch { /* si falla la lectura previa, el guardado real sigue de todas formas */ }
+    // Los contactos no tienen id propio: correo si lo hay, si no nombre+empresa.
+    const claveContacto = c => c?.correo ? `correo:${c.correo.toLowerCase()}` : `nombre:${(c?.nombre||"").toLowerCase()}__${(c?.empresa||"").toLowerCase()}`;
+    const desaparecidos = detectarDesaparecidos(anteriores, contactos, papeleraActual, claveContacto);
+    if (desaparecidos.length) {
+      const nombres = desaparecidos.map(c => c?.nombre).join(", ");
+      avisarErrorGuardado("contactos", `Esta pestaña tiene datos desactualizados: "${nombres}" existe(n) en el servidor pero no aquí. Refresca la página (F5) y repite el cambio para no perderlo(s).`);
+      return false;
+    }
     await setDoc(docRef, { contactos: limpiar(contactos) }, { merge: true });
-    // Los contactos no tienen id propio: nombre+empresa es lo más cercano a único que hay.
-    registrarHistorial("contacto", anteriores, contactos, c => `${c?.nombre ?? ""}__${c?.empresa ?? ""}`);
+    registrarHistorial("contacto", anteriores, contactos, claveContacto);
     return true;
   } catch (error) {
     avisarErrorGuardado("contactos", error);
@@ -545,6 +582,69 @@ export async function obtenerSiguienteFolioCotizacion(anio) {
   } catch (error) {
     avisarErrorGuardado("folio de cotización", error);
     return { ok: false, error: error?.code || error?.message || String(error) };
+  }
+}
+
+// ================================================================
+// TICKETS — folio atómico
+// ================================================================
+
+/**
+ * Igual que obtenerSiguienteFolioCotizacion() pero para tickets: reserva de forma atómica
+ * (runTransaction) el siguiente numero de ticket, en vez del Math.max(...tickets.map(t=>t.numero))+1
+ * que index.astro usaba antes en cada punto donde nace un ticket — ese patrón sí podía duplicarse
+ * bajo uso concurrente (dos tickets creados casi al mismo tiempo, o un ticket creado justo después
+ * de restaurar un backup viejo con numeros más bajos en memoria), la misma clase de condición de
+ * carrera que ya se documentó aquí mismo y que causó folios repetidos/mezclados entre tickets.
+ * El contador vive en agenda/datos.contadorTickets. Si nunca se ha usado (CRM ya tenía tickets
+ * antes de este contador), arranca desde el numero más alto que ya exista para no chocar con ellos.
+ * `cantidad` reserva un bloque de varios folios consecutivos de una vez (para importaciones
+ * masivas) — devuelve el primer numero del bloque; el llamador asigna numero, numero+1, numero+2...
+ */
+export async function obtenerSiguienteFolioTicket(cantidad = 1) {
+  try {
+    const docRef = doc(db, "agenda", "datos");
+    const primerNumero = await runTransaction(db, async (transaction) => {
+      const snap = await transaction.get(docRef);
+      const data = snap.exists() ? snap.data() : {};
+      let contador = data.contadorTickets;
+      if (contador == null) {
+        const ticketsActuales = data.tickets || [];
+        contador = ticketsActuales.length ? Math.max(...ticketsActuales.map(t => t.numero || 0)) : 1000;
+      }
+      const siguiente = contador + cantidad;
+      transaction.update(docRef, { contadorTickets: siguiente });
+      return contador + 1;
+    });
+    return { ok: true, numero: primerNumero };
+  } catch (error) {
+    avisarErrorGuardado("folio de ticket", error);
+    return { ok: false, error: error?.code || error?.message || String(error) };
+  }
+}
+
+/**
+ * Sube (nunca baja) contadorTickets para que sea al menos el numero de ticket más alto dado —
+ * llamar SIEMPRE después de un reemplazo completo de tickets (restaurar backup "tal cual") para
+ * que el siguiente ticket creado en vivo no repita un folio que acaba de volver por la
+ * restauración. Sin esto, obtenerSiguienteFolioTicket() solo se auto-siembra la PRIMERA vez que
+ * se usa — una vez sembrado, restaurar tickets con folios más altos (o más bajos) no lo mueve, y
+ * el próximo ticket nuevo podría chocar con uno recién restaurado.
+ */
+export async function sincronizarContadorTickets(ticketsRestaurados) {
+  try {
+    const maxRestaurado = ticketsRestaurados.length ? Math.max(...ticketsRestaurados.map(t => t.numero || 0)) : 0;
+    if (!maxRestaurado) return true;
+    const docRef = doc(db, "agenda", "datos");
+    await runTransaction(db, async (transaction) => {
+      const snap = await transaction.get(docRef);
+      const actual = snap.exists() ? (snap.data().contadorTickets || 0) : 0;
+      if (maxRestaurado > actual) transaction.update(docRef, { contadorTickets: maxRestaurado });
+    });
+    return true;
+  } catch (error) {
+    avisarErrorGuardado("contador de tickets", error);
+    return false;
   }
 }
 
