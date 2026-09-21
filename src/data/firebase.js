@@ -43,10 +43,28 @@ function avisarErrorGuardado(operacion, error) {
  * misma condición de carrera — se bloquea el guardado en vez de perderlas en silencio.
  * Devuelve la lista de entradas "desaparecidas" (vacía si el guardado es seguro).
  */
-function detectarDesaparecidos(anteriores, nuevos, papeleraActual, keyFn) {
+function detectarDesaparecidos(anteriores, nuevos, papeleraActual, keyFn, conocidas) {
   const clavesNuevos = new Set(nuevos.map(keyFn));
   const clavesPapelera = new Set((papeleraActual || []).map(keyFn));
-  return anteriores.filter(item => !clavesNuevos.has(keyFn(item)) && !clavesPapelera.has(keyFn(item)));
+  // Solo cuenta como "desaparecido" lo que el servidor tiene y ESTA sesión nunca vio: eso es lo
+  // que delata una pestaña desactualizada. Lo que la sesión sí conocía y ya no está (o cambió de
+  // clave porque se editó el correo/nombre/empresa, o se fusionaron duplicados) es una edición
+  // intencional — antes esto se bloqueaba por error y los cambios "no se guardaban".
+  return anteriores.filter(item => {
+    const k = keyFn(item);
+    return !clavesNuevos.has(k) && !clavesPapelera.has(k) && !(conocidas && conocidas.has(k));
+  });
+}
+
+const _clavesConocidas = { tickets: new Set(), clientes: new Set(), contactos: new Set() };
+const _claveTicket = t => t?.numero ?? "";
+const _claveEmpresa = c => c?.EMPRESA ?? "";
+const _claveContacto = c => c?.correo ? `correo:${c.correo.toLowerCase()}` : `nombre:${(c?.nombre||"").toLowerCase()}__${(c?.empresa||"").toLowerCase()}`;
+function recordarConocidas(datos) {
+  if (!datos) return;
+  if (Array.isArray(datos.tickets)) _clavesConocidas.tickets = new Set(datos.tickets.map(_claveTicket));
+  if (Array.isArray(datos.clientes)) _clavesConocidas.clientes = new Set(datos.clientes.map(_claveEmpresa));
+  if (Array.isArray(datos.contactos)) _clavesConocidas.contactos = new Set(datos.contactos.map(_claveContacto));
 }
 
 const app  = firebaseEnabled ? initializeApp(firebaseConfig) : null;
@@ -114,10 +132,11 @@ export function suscribirCRM(callback, onError) {
   const docRef = doc(db, "agenda", "datos");
   return onSnapshot(
     docRef,
-    (docSnap) => callback(
-      docSnap.exists() ? docSnap.data() : null,
-      docSnap.metadata.hasPendingWrites
-    ),
+    (docSnap) => {
+      const datos = docSnap.exists() ? docSnap.data() : null;
+      recordarConocidas(datos);
+      callback(datos, docSnap.metadata.hasPendingWrites);
+    },
     (error) => {
       console.error("[CRM] Error en listener Firebase:", error);
       if (onError) onError(error);
@@ -134,7 +153,9 @@ export async function cargarDatosCRM() {
     const docRef = doc(db, "agenda", "datos");
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-      return docSnap.data();
+      const datos = docSnap.data();
+      recordarConocidas(datos);
+      return datos;
     }
     return null;
   } catch (error) {
@@ -197,14 +218,15 @@ export async function guardarClientes(clientes, papeleraActual = []) {
       const snapAntes = await getDoc(docRef);
       anteriores = snapAntes.exists() ? (snapAntes.data().clientes || []) : [];
     } catch { /* si falla la lectura previa, el guardado real sigue de todas formas */ }
-    const desaparecidas = detectarDesaparecidos(anteriores, clientes, papeleraActual, c => c?.EMPRESA ?? "");
+    const desaparecidas = detectarDesaparecidos(anteriores, clientes, papeleraActual, _claveEmpresa, _clavesConocidas.clientes);
     if (desaparecidas.length) {
       const nombres = desaparecidas.map(c => c?.EMPRESA).join(", ");
       avisarErrorGuardado("clientes", `Esta pestaña tiene datos desactualizados: "${nombres}" existe(n) en el servidor pero no aquí. Refresca la página (F5) y repite el cambio para no perderla(s).`);
       return { error: "datos-desactualizados" };
     }
     await setDoc(docRef, { clientes: limpiar(clientes) }, { merge: true });
-    registrarHistorial("empresa", anteriores, clientes, c => c?.EMPRESA ?? "");
+    _clavesConocidas.clientes = new Set(clientes.map(_claveEmpresa));
+    registrarHistorial("empresa", anteriores, clientes, _claveEmpresa);
     return true;
   } catch (error) {
     avisarErrorGuardado("clientes", error);
@@ -262,14 +284,15 @@ export async function guardarTickets(tickets, papeleraActual = [], { forzar = fa
       const snapAntes = await getDoc(docRef);
       anteriores = snapAntes.exists() ? (snapAntes.data().tickets || []) : [];
     } catch { /* si falla la lectura previa, el guardado real sigue de todas formas */ }
-    const desaparecidos = forzar ? [] : detectarDesaparecidos(anteriores, tickets, papeleraActual, t => t?.numero ?? "");
+    const desaparecidos = forzar ? [] : detectarDesaparecidos(anteriores, tickets, papeleraActual, _claveTicket, _clavesConocidas.tickets);
     if (desaparecidos.length) {
       const nums = desaparecidos.map(t => t?.numero).join(", ");
       avisarErrorGuardado("tickets", `Esta pestaña tiene datos desactualizados: ticket(s) #${nums} existe(n) en el servidor pero no aquí. Refresca la página (F5) y repite el cambio para no perderlo(s).`);
       return false;
     }
     await setDoc(docRef, { tickets: limpiar(tickets) }, { merge: true });
-    registrarHistorial("ticket", anteriores, tickets, t => t?.numero ?? "");
+    _clavesConocidas.tickets = new Set(tickets.map(_claveTicket));
+    registrarHistorial("ticket", anteriores, tickets, _claveTicket);
     return true;
   } catch (error) {
     avisarErrorGuardado("tickets", error);
@@ -358,14 +381,15 @@ export async function guardarContactos(contactos, papeleraActual = [], { forzar 
       anteriores = snapAntes.exists() ? (snapAntes.data().contactos || []) : [];
     } catch { /* si falla la lectura previa, el guardado real sigue de todas formas */ }
     // Los contactos no tienen id propio: correo si lo hay, si no nombre+empresa.
-    const claveContacto = c => c?.correo ? `correo:${c.correo.toLowerCase()}` : `nombre:${(c?.nombre||"").toLowerCase()}__${(c?.empresa||"").toLowerCase()}`;
-    const desaparecidos = forzar ? [] : detectarDesaparecidos(anteriores, contactos, papeleraActual, claveContacto);
+    const claveContacto = _claveContacto;
+    const desaparecidos = forzar ? [] : detectarDesaparecidos(anteriores, contactos, papeleraActual, claveContacto, _clavesConocidas.contactos);
     if (desaparecidos.length) {
       const nombres = desaparecidos.map(c => c?.nombre).join(", ");
       avisarErrorGuardado("contactos", `Esta pestaña tiene datos desactualizados: "${nombres}" existe(n) en el servidor pero no aquí. Refresca la página (F5) y repite el cambio para no perderlo(s).`);
       return false;
     }
     await setDoc(docRef, { contactos: limpiar(contactos) }, { merge: true });
+    _clavesConocidas.contactos = new Set(contactos.map(_claveContacto));
     registrarHistorial("contacto", anteriores, contactos, claveContacto);
     return true;
   } catch (error) {
