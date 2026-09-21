@@ -8785,11 +8785,11 @@ verificarSesion();
     const el = id => document.getElementById(id);
     el("dash-total-empresas").textContent = clientes.length;
     el("dash-total-contactos").textContent = contactos.length;
-    el("dash-total-tickets").textContent = tickets.length;
+    el("dash-total-tickets").textContent = tickets.filter(t => !t.eliminadoPorAdmin).length;
     const nTkAbiertos = tickets.filter(t => t.estado === "Abierto").length;
     const nTkPendientes = tickets.filter(t => t.estado === "Pendiente").length;
     const nTkResueltos = tickets.filter(t => t.estado === "Resuelto").length;
-    const nTkCerrados = tickets.filter(t => t.estado === "Cerrado").length;
+    const nTkCerrados = tickets.filter(t => t.estado === "Cerrado" && !t.eliminadoPorAdmin).length;
     el("dash-tickets-abiertos").textContent = nTkAbiertos;
     el("dash-tickets-pendientes").textContent = nTkPendientes;
     el("dash-tickets-resueltos").textContent = nTkResueltos;
@@ -11795,11 +11795,11 @@ verificarSesion();
 
     // Update counters
     const el = id => document.getElementById(id);
-    el("tk-count-total").textContent = tickets.length;
+    el("tk-count-total").textContent = tickets.filter(t => !t.eliminadoPorAdmin).length;
     el("tk-count-abiertos").textContent = tickets.filter(t => t.estado === "Abierto").length;
     el("tk-count-pendientes").textContent = tickets.filter(t => t.estado === "Pendiente").length;
     el("tk-count-resueltos").textContent = tickets.filter(t => t.estado === "Resuelto").length;
-    el("tk-count-cerrados").textContent = tickets.filter(t => t.estado === "Cerrado").length;
+    el("tk-count-cerrados").textContent = tickets.filter(t => t.estado === "Cerrado" && !t.eliminadoPorAdmin).length;
   }
 
   // Ticket Form
