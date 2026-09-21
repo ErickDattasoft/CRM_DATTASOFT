@@ -3582,6 +3582,12 @@ try {
             <input type="checkbox" id="chk-backup-imagenes" style="margin-top:2px;">
             <span>🖼️ <strong style="color:var(--text-main);">Incluir imágenes y adjuntos de tickets</strong> en este respaldo — pide elegir una carpeta y guarda ahí el JSON y los archivos (<code>ticket-1059_1.jpg</code>…) dentro de "IMAGENES DE TICKETS", sin repetir los que ya se guardaron. Déjalo sin marcar para un respaldo rápido; el JSON siempre indica qué tickets tienen imágenes. El botón "🛡️ Respaldar" de arriba nunca descarga imágenes.</span>
           </label>
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:6px 0 0 24px; font-size:0.78rem; color:var(--text-muted);">
+            <span>Solo estos tickets:</span>
+            <input type="text" id="inp-backup-folios" placeholder="ej. 1059  ·  1055-1059  ·  1050, 1059" autocomplete="off" style="max-width:250px; font-size:0.78rem; padding:5px 8px;">
+            <button type="button" class="btn btn-ghost btn-xs" id="btn-backup-ultimo" title="Escribe el folio del último ticket que tiene imágenes o adjuntos">Último con imágenes</button>
+            <span style="font-size:0.7rem;">(vacío = todos los tickets con imágenes)</span>
+          </div>
           <div id="backup-alerta" style="display:none; margin-top:12px; padding:10px 14px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px; font-size:0.8rem; color:#f59e0b;">
             ⚠️ <span id="backup-alerta-msg"></span> — Se recomienda hacer backup cada semana.
           </div>
@@ -14639,7 +14645,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
   function extensionAdjunto(mime: string, nombre?: string) {
     const mapa: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/gif": "gif", "image/webp": "webp", "application/pdf": "pdf" };
-    const m = (nombre || "").match(/.([A-Za-z0-9]{1,5})$/);
+    const m = (nombre || "").match(/\.([A-Za-z0-9]{1,5})$/);
     return mapa[(mime || "").toLowerCase()] || (m ? m[1].toLowerCase() : "bin");
   }
 
@@ -14672,12 +14678,12 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     archivos.forEach(a => carpeta!.file(a.nombre, a.bytes));
     const blob = await zip.generateAsync({ type: "blob" });
     const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob); link.download = filename.replace(/.json$/, ".zip"); link.click();
+    link.href = URL.createObjectURL(blob); link.download = filename.replace(/\.json$/, ".zip"); link.click();
     URL.revokeObjectURL(link.href);
     return true;
   }
 
-  async function descargarBackupCompleto(incluirImagenes = false) {
+  async function descargarBackupCompleto(incluirImagenes = false, soloTickets: Set<number> | null = null) {
     const backup = {
       version: "2.2",
       app: "CRM DATTASOFT",
@@ -14711,16 +14717,21 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const archivosImagen: { nombre: string; bytes: Uint8Array }[] = [];
     const inventario = inventarioImagenesTickets();
     if (inventario.length && incluirImagenes && !crmLocalOnly && firebaseEnabled) {
-      const total = inventario.reduce((n, g) => n + g.items.length, 0);
+      const total = inventario.filter(g => !soloTickets || soloTickets.has(g.ticket)).reduce((n, g) => n + g.items.length, 0);
       let hechos = 0;
       const indice: any[] = [];
       for (const g of inventario) {
         const archivos: any[] = [];
+        if (soloTickets && !soloTickets.has(g.ticket)) {
+          g.items.forEach((it: any) => archivos.push({ archivo: null, origen: it.origen, adjId: it.adjId, nombreOriginal: it.nombreOriginal, aviso: "imagen NO incluida en esta copia" }));
+          indice.push({ ticket: g.ticket, empresa: g.empresa, archivos });
+          continue;
+        }
         let n = 0;
         for (const it of g.items) {
           mostrarEstado(`🖼️ Descargando imágenes de tickets… ${++hechos}/${total}`);
           const adj: any = await cargarAdjuntoTicket(it.adjId);
-          const m = adj?.data ? String(adj.data).match(/^data:([^;]+);base64,([sS]*)$/) : null;
+          const m = adj?.data ? String(adj.data).match(/^data:([^;]+);base64,([\s\S]*)$/) : null;
           if (!m) { archivos.push({ archivo: null, origen: it.origen, adjId: it.adjId, nombreOriginal: it.nombreOriginal, aviso: "no disponible en el servidor" }); continue; }
           n++;
           const nombre = `ticket-${g.ticket}_${n}.${extensionAdjunto(m[1], it.nombreOriginal)}`;
@@ -14818,8 +14829,39 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     if (dias >= 7) toast(`⚠️ El último backup fue hace ${dias} días — Ve a Configuración para descargarlo`, "warning");
   }
 
-  document.getElementById("btn-backup-completo")?.addEventListener("click", () =>
-    descargarBackupCompleto((document.getElementById("chk-backup-imagenes") as HTMLInputElement | null)?.checked === true));
+  // "1059", "1055-1059", "1050, 1059" → conjunto de folios. null = sin filtro (todos).
+  function parsearFoliosRespaldo(txt: string): Set<number> | null | "invalido" {
+    const t = (txt || "").trim();
+    if (!t) return null;
+    const set = new Set<number>();
+    for (const p of t.split(/[,;\s]+/).filter(Boolean)) {
+      const m = p.match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) return "invalido";
+      const a = parseInt(m[1], 10), b = m[2] ? parseInt(m[2], 10) : a;
+      const desde = Math.min(a, b), hasta = Math.max(a, b);
+      if (hasta - desde > 500) return "invalido";
+      for (let n = desde; n <= hasta; n++) set.add(n);
+    }
+    return set;
+  }
+  document.getElementById("inp-backup-folios")?.addEventListener("input", (e) => {
+    if ((e.target as HTMLInputElement).value.trim()) (document.getElementById("chk-backup-imagenes") as HTMLInputElement).checked = true;
+  });
+  document.getElementById("btn-backup-ultimo")?.addEventListener("click", () => {
+    const inv = inventarioImagenesTickets();
+    if (!inv.length) { toast("Ningún ticket tiene imágenes ni adjuntos", "warning"); return; }
+    (document.getElementById("inp-backup-folios") as HTMLInputElement).value = String(Math.max(...inv.map(g => g.ticket)));
+    (document.getElementById("chk-backup-imagenes") as HTMLInputElement).checked = true;
+  });
+  document.getElementById("btn-backup-completo")?.addEventListener("click", () => {
+    const incluir = (document.getElementById("chk-backup-imagenes") as HTMLInputElement | null)?.checked === true;
+    const filtro = parsearFoliosRespaldo((document.getElementById("inp-backup-folios") as HTMLInputElement | null)?.value || "");
+    if (filtro === "invalido") { toast("⚠️ Folios no válidos. Usa por ejemplo: 1059  ·  1055-1059  ·  1050, 1059", "warning"); return; }
+    if (incluir && filtro && !inventarioImagenesTickets().some(g => filtro.has(g.ticket))) {
+      toast("⚠️ Ninguno de esos tickets tiene imágenes ni adjuntos — se hará el respaldo sin imágenes.", "warning");
+    }
+    descargarBackupCompleto(incluir, filtro);
+  });
   document.getElementById("btnBackupCompletoDashboard")?.addEventListener("click", () => descargarBackupCompleto(false));
   setTimeout(checkBackupAlerta, 5000);
 
