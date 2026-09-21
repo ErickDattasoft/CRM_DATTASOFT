@@ -60,11 +60,18 @@ const _clavesConocidas = { tickets: new Set(), clientes: new Set(), contactos: n
 const _claveTicket = t => t?.numero ?? "";
 const _claveEmpresa = c => c?.EMPRESA ?? "";
 const _claveContacto = c => c?.correo ? `correo:${c.correo.toLowerCase()}` : `nombre:${(c?.nombre||"").toLowerCase()}__${(c?.empresa||"").toLowerCase()}`;
-function recordarConocidas(datos) {
-  if (!datos) return;
-  if (Array.isArray(datos.tickets)) _clavesConocidas.tickets = new Set(datos.tickets.map(_claveTicket));
-  if (Array.isArray(datos.clientes)) _clavesConocidas.clientes = new Set(datos.clientes.map(_claveEmpresa));
-  if (Array.isArray(datos.contactos)) _clavesConocidas.contactos = new Set(datos.contactos.map(_claveContacto));
+// Se llama desde index.astro DESPUÉS de aplicar datos de Firebase a la memoria, con los arreglos
+// que la sesión realmente tiene — así "conocido" significa "está en la memoria de esta pestaña",
+// no "llegó en un snapshot que quizá la app ignoró".
+export function registrarClavesConocidas({ tickets, clientes, contactos }) {
+  if (Array.isArray(tickets)) _clavesConocidas.tickets = new Set(tickets.map(_claveTicket));
+  if (Array.isArray(clientes)) _clavesConocidas.clientes = new Set(clientes.map(_claveEmpresa));
+  if (Array.isArray(contactos)) _clavesConocidas.contactos = new Set(contactos.map(_claveContacto));
+}
+
+const _sesionId = Math.random().toString(36).slice(2, 8);
+function _usuarioSesion() {
+  try { return JSON.parse(sessionStorage.getItem("crm_session") || "null")?.nombre || ""; } catch { return ""; }
 }
 
 const app  = firebaseEnabled ? initializeApp(firebaseConfig) : null;
@@ -132,11 +139,10 @@ export function suscribirCRM(callback, onError) {
   const docRef = doc(db, "agenda", "datos");
   return onSnapshot(
     docRef,
-    (docSnap) => {
-      const datos = docSnap.exists() ? docSnap.data() : null;
-      recordarConocidas(datos);
-      callback(datos, docSnap.metadata.hasPendingWrites);
-    },
+    (docSnap) => callback(
+      docSnap.exists() ? docSnap.data() : null,
+      docSnap.metadata.hasPendingWrites
+    ),
     (error) => {
       console.error("[CRM] Error en listener Firebase:", error);
       if (onError) onError(error);
@@ -153,9 +159,7 @@ export async function cargarDatosCRM() {
     const docRef = doc(db, "agenda", "datos");
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-      const datos = docSnap.data();
-      recordarConocidas(datos);
-      return datos;
+      return docSnap.data();
     }
     return null;
   } catch (error) {
@@ -200,6 +204,8 @@ async function registrarHistorial(tipo, anteriores, nuevos, idFn) {
       accion: c.accion,
       snapshotAnterior: limpiar(c.snapshotAnterior),
       snapshotNuevo: limpiar(c.snapshotNuevo),
+      usuario: _usuarioSesion(),
+      sesion: _sesionId,
       fecha: serverTimestamp()
     })));
   } catch (error) {
