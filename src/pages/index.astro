@@ -3578,6 +3578,10 @@ try {
             <button class="btn btn-secondary btn-sm" id="btnImportarJSON" title="Restaurar un backup completo del CRM desde un archivo JSON — no confundir con Importar CSV/Excel de Empresas">📂 Restaurar Backup</button>
             <span style="font-size:0.72rem; color:var(--text-muted);">Archivo: <code>crm-backup-AAAA-MM-DD_HH-MM-SS.json</code></span>
           </div>
+          <label style="display:flex; align-items:flex-start; gap:8px; margin-top:10px; font-size:0.78rem; color:var(--text-muted); cursor:pointer; max-width:640px; line-height:1.4;">
+            <input type="checkbox" id="chk-backup-imagenes" style="margin-top:2px;">
+            <span>🖼️ <strong style="color:var(--text-main);">Incluir imágenes y adjuntos de tickets</strong> en este respaldo — pide elegir una carpeta y guarda ahí el JSON y los archivos (<code>ticket-1059_1.jpg</code>…) dentro de "IMAGENES DE TICKETS", sin repetir los que ya se guardaron. Déjalo sin marcar para un respaldo rápido; el JSON siempre indica qué tickets tienen imágenes. El botón "🛡️ Respaldar" de arriba nunca descarga imágenes.</span>
+          </label>
           <div id="backup-alerta" style="display:none; margin-top:12px; padding:10px 14px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px; font-size:0.8rem; color:#f59e0b;">
             ⚠️ <span id="backup-alerta-msg"></span> — Se recomienda hacer backup cada semana.
           </div>
@@ -14673,7 +14677,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     return true;
   }
 
-  async function descargarBackupCompleto() {
+  async function descargarBackupCompleto(incluirImagenes = false) {
     const backup = {
       version: "2.2",
       app: "CRM DATTASOFT",
@@ -14706,7 +14710,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     };
     const archivosImagen: { nombre: string; bytes: Uint8Array }[] = [];
     const inventario = inventarioImagenesTickets();
-    if (inventario.length && !crmLocalOnly && firebaseEnabled) {
+    if (inventario.length && incluirImagenes && !crmLocalOnly && firebaseEnabled) {
       const total = inventario.reduce((n, g) => n + g.items.length, 0);
       let hechos = 0;
       const indice: any[] = [];
@@ -14730,6 +14734,12 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       }
       ocultarEstado();
       (backup as any).indiceImagenes = indice;
+    } else if (inventario.length) {
+      // Sin descargar imágenes: el índice igual dice qué tickets las tienen (para saber qué falta).
+      (backup as any).indiceImagenes = inventario.map(g => ({
+        ticket: g.ticket, empresa: g.empresa,
+        archivos: g.items.map((it: any) => ({ archivo: null, origen: it.origen, adjId: it.adjId, nombreOriginal: it.nombreOriginal, aviso: "imagen NO incluida en esta copia" }))
+      }));
     }
     const json = JSON.stringify(backup, null, 2);
     // Incluye hora además de la fecha — dos backups el mismo día ya no se sobreescriben.
@@ -14808,8 +14818,9 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     if (dias >= 7) toast(`⚠️ El último backup fue hace ${dias} días — Ve a Configuración para descargarlo`, "warning");
   }
 
-  document.getElementById("btn-backup-completo")?.addEventListener("click", descargarBackupCompleto);
-  document.getElementById("btnBackupCompletoDashboard")?.addEventListener("click", descargarBackupCompleto);
+  document.getElementById("btn-backup-completo")?.addEventListener("click", () =>
+    descargarBackupCompleto((document.getElementById("chk-backup-imagenes") as HTMLInputElement | null)?.checked === true));
+  document.getElementById("btnBackupCompletoDashboard")?.addEventListener("click", () => descargarBackupCompleto(false));
   setTimeout(checkBackupAlerta, 5000);
 
   document.getElementById("btnExportarTicketsJSON")?.addEventListener("click", () => {
