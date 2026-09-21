@@ -7683,7 +7683,7 @@ verificarSesion();
       const i = parseInt((e.target as HTMLElement).closest("button").dataset.idx);
       const t = papelera.splice(i, 1)[0];
       delete t.fechaEliminado;
-      tickets.push(t);
+      reponerTicketRestaurado(t);
       logBitacora(`Ticket #${t.numero} restaurado de papelera`, "↩️");
       toast(`↩️ Ticket #${t.numero} restaurado`);
       actualizarBadgePapelera();
@@ -7702,6 +7702,30 @@ verificarSesion();
       renderPapelera();
       if (firebaseEnabled) guardarPapelera(papelera).catch(() => {});
     }));
+  }
+
+  // Al eliminar un ticket su folio NO se libera: en su lugar queda un marcador con el mismo folio
+  // y la fecha original, para que la numeración siga consecutiva y el orden por fecha/folio coincida.
+  // El ticket real vive intacto en la papelera y se puede restaurar (ver reponerTicketRestaurado).
+  function crearMarcadorTicketEliminado(t: any) {
+    const ahora = new Date().toISOString();
+    const quien = getUsuarioActual()?.nombre || "Administrador";
+    return {
+      numero: t.numero, asunto: "Ticket eliminado por administrador", empresa: "—", contacto: "—", contactoCorreo: "",
+      tipo: "", sistema: "", estado: "Cerrado", facturado: "NO APLICA FACTURACION", prioridad: "Media", grupo: "", agente: "",
+      descripcion: "<p>Ticket eliminado por el administrador. Se conserva el folio para mantener la numeración consecutiva.</p>",
+      notasInternas: "", cc: "", cco: "", solicitado: "", canalizado: "", referido: "", realizado: "",
+      fechaProgramada: "", horaProgramada: "", agenteAsignado: "", recordatorioDestinatariosIds: [], adjuntos: [], notas: [],
+      fechaCreacion: t.fechaCreacion || ahora, fechaActualizacion: ahora,
+      historialEstados: [{ estado: "Cerrado", fecha: ahora }],
+      actividad: [{ fecha: ahora, usuario: quien, texto: `Ticket eliminado por ${quien} — folio conservado` }],
+      eliminadoPorAdmin: true
+    };
+  }
+  // Al restaurar de la papelera, el ticket real reemplaza a su marcador (mismo folio) en vez de duplicarlo.
+  function reponerTicketRestaurado(t: any) {
+    const i = tickets.findIndex((x: any) => x.numero === t.numero && x.eliminadoPorAdmin);
+    if (i !== -1) tickets[i] = t; else tickets.push(t);
   }
 
   function actualizarBadgePapelera() {
@@ -7742,7 +7766,7 @@ verificarSesion();
     if (!idxs.length) { toast("Selecciona al menos un ticket", "error"); return; }
     const restaurados = [];
     idxs.forEach(i => { const t = papelera.splice(i, 1)[0]; if (t) { delete t.fechaEliminado; restaurados.push(t); } });
-    tickets.push(...restaurados);
+    restaurados.forEach(reponerTicketRestaurado);
     restaurados.forEach(t => logBitacora(`Ticket #${t.numero} restaurado de papelera`, "↩️"));
     toast(`↩️ ${restaurados.length} ticket(s) restaurado(s)`);
     actualizarBadgePapelera();
@@ -8785,11 +8809,11 @@ verificarSesion();
     const el = id => document.getElementById(id);
     el("dash-total-empresas").textContent = clientes.length;
     el("dash-total-contactos").textContent = contactos.length;
-    el("dash-total-tickets").textContent = tickets.filter(t => !t.eliminadoPorAdmin).length;
+    el("dash-total-tickets").textContent = tickets.length;
     const nTkAbiertos = tickets.filter(t => t.estado === "Abierto").length;
     const nTkPendientes = tickets.filter(t => t.estado === "Pendiente").length;
     const nTkResueltos = tickets.filter(t => t.estado === "Resuelto").length;
-    const nTkCerrados = tickets.filter(t => t.estado === "Cerrado" && !t.eliminadoPorAdmin).length;
+    const nTkCerrados = tickets.filter(t => t.estado === "Cerrado").length;
     el("dash-tickets-abiertos").textContent = nTkAbiertos;
     el("dash-tickets-pendientes").textContent = nTkPendientes;
     el("dash-tickets-resueltos").textContent = nTkResueltos;
@@ -11795,11 +11819,11 @@ verificarSesion();
 
     // Update counters
     const el = id => document.getElementById(id);
-    el("tk-count-total").textContent = tickets.filter(t => !t.eliminadoPorAdmin).length;
+    el("tk-count-total").textContent = tickets.length;
     el("tk-count-abiertos").textContent = tickets.filter(t => t.estado === "Abierto").length;
     el("tk-count-pendientes").textContent = tickets.filter(t => t.estado === "Pendiente").length;
     el("tk-count-resueltos").textContent = tickets.filter(t => t.estado === "Resuelto").length;
-    el("tk-count-cerrados").textContent = tickets.filter(t => t.estado === "Cerrado" && !t.eliminadoPorAdmin).length;
+    el("tk-count-cerrados").textContent = tickets.filter(t => t.estado === "Cerrado").length;
   }
 
   // Ticket Form
@@ -12445,8 +12469,10 @@ verificarSesion();
 
   async function eliminarTicket(e) {
     const idx = parseInt(e.target.closest("button").dataset.idx);
-    if (!await confirmar("¿Mover este ticket a la papelera?", "🗑️")) return;
+    if (tickets[idx]?.eliminadoPorAdmin) { toast("Este folio ya está marcado como eliminado — su ticket original está en la papelera.", "warning"); return; }
+    if (!await confirmar("¿Mover este ticket a la papelera? Su folio quedará en la lista como \"Ticket eliminado por administrador\".", "🗑️")) return;
     const [t] = tickets.splice(idx, 1);
+    tickets.splice(idx, 0, crearMarcadorTicketEliminado(t));
     t.fechaEliminado = new Date().toISOString();
     papelera.unshift(t);
     logBitacora(`Ticket #${t.numero} "${t.asunto}" movido a papelera`, "🗑️");
