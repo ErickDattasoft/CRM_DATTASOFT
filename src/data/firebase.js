@@ -692,6 +692,23 @@ export async function sincronizarContadorTickets(ticketsRestaurados, { forzar = 
  * mismo tiempo. Úsalo solo para el primer guardado de una cotización nueva (o al duplicar); para
  * editar una cotización ya existente usa guardarCotizaciones() con el arreglo completo.
  */
+/**
+ * Agrega UN ticket nuevo de forma atómica (arrayUnion), igual que agregarCotizacion(): nunca
+ * sobrescribe ni depende de la copia en memoria del resto de tickets. Se usa al crear un ticket
+ * ANTES del guardado del arreglo completo — así, si esa guardia bloquea el guardado completo por
+ * una pestaña desactualizada, el ticket nuevo (que ya mandó correo y quedó en Bitácora) no se pierde.
+ */
+export async function agregarTicket(ticket) {
+  try {
+    const docRef = doc(db, "agenda", "datos");
+    await updateDoc(docRef, { tickets: arrayUnion(limpiar(ticket)) });
+    return true;
+  } catch (error) {
+    avisarErrorGuardado("ticket nuevo", error);
+    return false;
+  }
+}
+
 export async function agregarCotizacion(cotizacion) {
   try {
     const docRef = doc(db, "agenda", "datos");

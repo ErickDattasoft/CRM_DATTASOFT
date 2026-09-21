@@ -5622,7 +5622,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarPapeleraEmpresas, guardarPapeleraContactos, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, actualizarInscripcionEvento, eliminarInscripcionEvento, obtenerListaNegraEventos, agregarAListaNegraEventos, obtenerHistorialAsistencias, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, obtenerSiguienteFolioTicket, sincronizarContadorTickets, registrarClavesConocidas, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, guardarConfigCompac, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket, actualizarMetaAdjuntoTicket } from "../data/firebase.js";
+import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarPapeleraEmpresas, guardarPapeleraContactos, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, actualizarInscripcionEvento, eliminarInscripcionEvento, obtenerListaNegraEventos, agregarAListaNegraEventos, obtenerHistorialAsistencias, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, obtenerSiguienteFolioTicket, sincronizarContadorTickets, registrarClavesConocidas, agregarTicket, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, guardarConfigCompac, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket, actualizarMetaAdjuntoTicket } from "../data/firebase.js";
 import { parseEmailList, hoyLocalStr, parseFechaLocal, escapeHtml, slugBadge, esConsultoria, formatearDuracion, colorPuntoEstado, formatMoney } from "../data/utils.js";
 import JSZip from "jszip";
 
@@ -12263,6 +12263,7 @@ verificarSesion();
       }
     }
 
+    let ticketNuevoParaAgregar: any = null;
     if (idx === "") {
       let num;
       if (crmLocalOnly || !firebaseEnabled) {
@@ -12288,6 +12289,7 @@ verificarSesion();
         actividad: []
       };
       tickets.push(nuevoTicket);
+      ticketNuevoParaAgregar = nuevoTicket;
       registrarActividadTicket(nuevoTicket, `Ticket creado${agente ? ` y asignado a ${agente}` : ""}`);
       // Si el ticket nace ya como "Resuelto" (ej. se registra después de una consultoría en
       // sitio que ya terminó), el automático da ~0s — no hay forma de medir el trabajo real
@@ -12386,6 +12388,7 @@ verificarSesion();
       return true;
     }
     mostrarEstado("💾 Guardando ticket...");
+    if (ticketNuevoParaAgregar) await agregarTicket(ticketNuevoParaAgregar);
     const ok = await guardarTickets(tickets, papelera);
     if (ok) {
       toast("💾 Ticket guardado");
@@ -16092,7 +16095,7 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         dispararN8n("ticket_creado_cliente", datosEventoTicket(nuevoTicketPub));
 
         guardarLocal("crm_tickets", tickets);
-        if (!crmLocalOnly) await guardarTickets(tickets, papelera);
+        if (!crmLocalOnly) { await agregarTicket(nuevoTicketPub); await guardarTickets(tickets, papelera); }
         if (tp._fbId) await eliminarTicketPublico(tp._fbId).catch(() => {});
         ticketsPublicos.splice(idx, 1);
         logBitacora(`Ticket público aceptado como #${num}: "${tp.asunto}"`, "🌐");
