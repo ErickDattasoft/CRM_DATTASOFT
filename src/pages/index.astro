@@ -10389,6 +10389,11 @@ verificarSesion();
         📨 Este correo es un reenvío — favor de revisar la descripción del ticket por si hay cambios o información nueva.
       </p>` : "";
     const descripcionResuelta = resolverImagenesParaCorreo(t.descripcion);
+    // Aviso con links por si el programa de correo bloquea las imágenes remotas (Zoho, Outlook y
+    // Gmail suelen pedir "mostrar imágenes"): así siempre hay una forma de verlas.
+    const idsImagenes = Array.from((t.descripcion || "").matchAll(/data-adj-id="([^"]+)"/g)).map(m => m[1]);
+    const bloqueImagenes = idsImagenes.length ? `
+      <p style="font-family:sans-serif; font-size:13px; color:#374151; margin-top:10px;">🖼️ Las imágenes de este ticket se pueden ver en: ${idsImagenes.map((id, i) => `<a href="https://crm-dattasoft.pages.dev/adjunto?id=${encodeURIComponent(id)}" style="color:#4f46e5;">Imagen ${i + 1}</a>`).join(" · ")}</p>` : "";
     const htmlTicket = `
       ${avisoSinContacto}
       ${avisoReenvio}
@@ -10405,6 +10410,7 @@ verificarSesion();
       </table>
       <h3 style="margin-top:16px; font-family:sans-serif;">Descripción</h3>
       <div style="background:#f9fafb; padding:12px; border-radius:6px; font-family:sans-serif;">${descripcionTicketAHtml(descripcionResuelta)}</div>
+      ${bloqueImagenes}
       <hr style="margin-top:24px; border:none; border-top:1px solid #e5e7eb;">
       <p style="font-size:12px; color:#6b7280; font-family:sans-serif;">DATTASOFT BY INFOXPERT — Sistema de Tickets</p>
     `;
