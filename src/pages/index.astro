@@ -14617,6 +14617,62 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
   // ============================================================
   const BACKUP_KEY = "crm_ultimo_backup";
 
+  // ── Imágenes y adjuntos de tickets en el respaldo ─────────────────────────────────────────
+  // El JSON solo trae referencias (data-adj-id / adjId); los archivos viven en tickets_adjuntos.
+  // Al respaldar se bajan y se guardan junto al JSON como ticket-<folio>_<n>.<ext>, y el JSON
+  // lleva un "indiceImagenes" que dice qué tickets tienen imágenes y cómo se llama cada archivo.
+  function inventarioImagenesTickets() {
+    const out: any[] = [];
+    tickets.forEach((t: any) => {
+      const items: any[] = [];
+      const ids = Array.from((t.descripcion || "").matchAll(/data-adj-id="([^"]+)"/g)).map((m: any) => m[1]);
+      [...new Set(ids)].forEach(id => items.push({ adjId: id, origen: "descripcion", nombreOriginal: "" }));
+      (t.adjuntos || []).forEach((a: any) => { if (a?.adjId) items.push({ adjId: a.adjId, origen: "adjunto", nombreOriginal: a.nombre || "" }); });
+      if (items.length) out.push({ ticket: t.numero, empresa: t.empresa || "", items });
+    });
+    return out;
+  }
+
+  function extensionAdjunto(mime: string, nombre?: string) {
+    const mapa: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/gif": "gif", "image/webp": "webp", "application/pdf": "pdf" };
+    const m = (nombre || "").match(/.([A-Za-z0-9]{1,5})$/);
+    return mapa[(mime || "").toLowerCase()] || (m ? m[1].toLowerCase() : "bin");
+  }
+
+  // Guarda el JSON y las imágenes en una carpeta elegida por el usuario (Chrome/Edge). Devuelve
+  // null si canceló. Si el navegador no permite carpetas, descarga un ZIP con JSON + imágenes.
+  async function guardarBackupConImagenes(filename: string, json: string, archivos: { nombre: string; bytes: Uint8Array }[]): Promise<boolean | null> {
+    const w: any = window;
+    if ("showDirectoryPicker" in w) {
+      try {
+        const dir = await w.showDirectoryPicker({ id: "crm-respaldos", mode: "readwrite" });
+        const fh = await dir.getFileHandle(filename, { create: true });
+        const wr = await fh.createWritable(); await wr.write(json); await wr.close();
+        const sub = await dir.getDirectoryHandle("IMAGENES DE TICKETS", { create: true });
+        for (const a of archivos) {
+          let existente: any = null;
+          try { existente = await (await sub.getFileHandle(a.nombre)).getFile(); } catch { /* no existe aún */ }
+          if (existente && existente.size === a.bytes.length) continue; // ya estaba de un respaldo anterior
+          const f = await sub.getFileHandle(a.nombre, { create: true });
+          const ww = await f.createWritable(); await ww.write(a.bytes); await ww.close();
+        }
+        return true;
+      } catch (e: any) {
+        if (e?.name === "AbortError") return null;
+        console.warn("[Backup] No se pudo escribir en carpeta, se descarga un ZIP:", e);
+      }
+    }
+    const zip = new JSZip();
+    zip.file(filename, json);
+    const carpeta = zip.folder("IMAGENES DE TICKETS");
+    archivos.forEach(a => carpeta!.file(a.nombre, a.bytes));
+    const blob = await zip.generateAsync({ type: "blob" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob); link.download = filename.replace(/.json$/, ".zip"); link.click();
+    URL.revokeObjectURL(link.href);
+    return true;
+  }
+
   async function descargarBackupCompleto() {
     const backup = {
       version: "2.2",
@@ -14648,6 +14704,33 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         logoEmpresa: localStorage.getItem("crm_logo") || ""
       }
     };
+    const archivosImagen: { nombre: string; bytes: Uint8Array }[] = [];
+    const inventario = inventarioImagenesTickets();
+    if (inventario.length && !crmLocalOnly && firebaseEnabled) {
+      const total = inventario.reduce((n, g) => n + g.items.length, 0);
+      let hechos = 0;
+      const indice: any[] = [];
+      for (const g of inventario) {
+        const archivos: any[] = [];
+        let n = 0;
+        for (const it of g.items) {
+          mostrarEstado(`🖼️ Descargando imágenes de tickets… ${++hechos}/${total}`);
+          const adj: any = await cargarAdjuntoTicket(it.adjId);
+          const m = adj?.data ? String(adj.data).match(/^data:([^;]+);base64,([sS]*)$/) : null;
+          if (!m) { archivos.push({ archivo: null, origen: it.origen, adjId: it.adjId, nombreOriginal: it.nombreOriginal, aviso: "no disponible en el servidor" }); continue; }
+          n++;
+          const nombre = `ticket-${g.ticket}_${n}.${extensionAdjunto(m[1], it.nombreOriginal)}`;
+          const bin = atob(m[2]);
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          archivosImagen.push({ nombre, bytes });
+          archivos.push({ archivo: nombre, origen: it.origen, adjId: it.adjId, nombreOriginal: it.nombreOriginal });
+        }
+        indice.push({ ticket: g.ticket, empresa: g.empresa, archivos });
+      }
+      ocultarEstado();
+      (backup as any).indiceImagenes = indice;
+    }
     const json = JSON.stringify(backup, null, 2);
     // Incluye hora además de la fecha — dos backups el mismo día ya no se sobreescriben.
     const ahora = new Date();
@@ -14655,7 +14738,10 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
     const timestamp = `${ahora.getFullYear()}-${pad2(ahora.getMonth() + 1)}-${pad2(ahora.getDate())}_${pad2(ahora.getHours())}-${pad2(ahora.getMinutes())}-${pad2(ahora.getSeconds())}`;
     const filename = `crm-backup-${timestamp}.json`;
 
-    if ("showSaveFilePicker" in window) {
+    if (archivosImagen.length) {
+      const ok = await guardarBackupConImagenes(filename, json, archivosImagen);
+      if (ok === null) return; // usuario canceló
+    } else if ("showSaveFilePicker" in window) {
       try {
         const fh = await (window as any).showSaveFilePicker({
           suggestedName: filename,
@@ -14682,8 +14768,8 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
 
     localStorage.setItem(BACKUP_KEY, new Date().toISOString());
     actualizarUIBackup();
-    toast("✅ Backup completo guardado");
-    logBitacora("Backup completo guardado", "🛡️");
+    toast(archivosImagen.length ? `✅ Backup completo guardado + ${archivosImagen.length} imagen(es)/adjunto(s) de tickets` : "✅ Backup completo guardado");
+    logBitacora(archivosImagen.length ? `Backup completo guardado (con ${archivosImagen.length} imagen(es)/adjunto(s) de tickets)` : "Backup completo guardado", "🛡️");
   }
 
   function actualizarUIBackup() {
