@@ -6347,6 +6347,21 @@ verificarSesion();
   // Resuelve las imágenes de una descripción completamente (a diferencia de la anterior, espera
   // a que todas terminen) y devuelve el HTML final con los <img> ya con su src real — para
   // Imprimir y el correo de notificación, que necesitan el HTML listo de una sola vez.
+  // Para el correo: los clientes de correo no muestran imágenes data:URI, así que cada imagen
+  // pegada se enlaza a /adjunto?id=... (Function que la sirve desde tickets_adjuntos).
+  function resolverImagenesParaCorreo(html: string): string {
+    if (!html || !html.includes("data-adj-id")) return html || "";
+    const div = document.createElement("div");
+    div.innerHTML = html;
+    div.querySelectorAll("img[data-adj-id]").forEach(img => {
+      const id = img.getAttribute("data-adj-id");
+      if (!id) return;
+      img.setAttribute("src", `https://crm-dattasoft.pages.dev/adjunto?id=${encodeURIComponent(id)}`);
+      img.removeAttribute("data-adj-id");
+    });
+    return div.innerHTML;
+  }
+
   async function resolverImagenesDescripcion(html: string): Promise<string> {
     if (!html || !html.includes("data-adj-id")) return html || "";
     const div = document.createElement("div");
@@ -10373,7 +10388,7 @@ verificarSesion();
       <p style="background:#e0e7ff; color:#4338ca; padding:8px 12px; border-radius:6px; font-family:sans-serif; font-size:13px;">
         📨 Este correo es un reenvío — favor de revisar la descripción del ticket por si hay cambios o información nueva.
       </p>` : "";
-    const descripcionResuelta = await resolverImagenesDescripcion(t.descripcion);
+    const descripcionResuelta = resolverImagenesParaCorreo(t.descripcion);
     const htmlTicket = `
       ${avisoSinContacto}
       ${avisoReenvio}
