@@ -12288,7 +12288,19 @@ verificarSesion();
       sistema = sistemaOtro;
       if (!configTickets.sistemas) configTickets.sistemas = [];
       if (!configTickets.sistemas.some(s => s.toLowerCase() === sistema.toLowerCase())) {
-        configTickets.sistemas.push(sistema);
+        // Antes de agregar, se trae la lista fresca de Firestore y se fusiona (unión) — mismo
+        // arreglo que ya tiene el guardado de Configuración → Tickets (ver comentario ahí abajo).
+        // Sin esto, una pestaña con una copia vieja de "sistemas" (sin uno que otra sesión acababa
+        // de agregar, ej. "Hamachi") pisaba el campo completo al agregar el suyo, borrándolo.
+        if (!crmLocalOnly && firebaseEnabled) {
+          try {
+            const datosFrescos = await cargarDatosCRM();
+            const remoto = datosFrescos?.configTickets?.sistemas || [];
+            const extra = remoto.filter(v => !configTickets.sistemas.some(s => s.toLowerCase() === v.toLowerCase()));
+            if (extra.length) configTickets.sistemas.push(...extra);
+          } catch { /* si falla la lectura fresca, se sigue con lo que ya había en memoria */ }
+        }
+        if (!configTickets.sistemas.some(s => s.toLowerCase() === sistema.toLowerCase())) configTickets.sistemas.push(sistema);
         if (crmLocalOnly) guardarLocal("crm_config_tickets", configTickets);
         else guardarConfigTickets({ sistemas: configTickets.sistemas }).catch(() => {});
       }
