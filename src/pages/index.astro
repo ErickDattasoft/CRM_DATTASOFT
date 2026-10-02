@@ -4932,7 +4932,14 @@ try {
     </div>
     <div id="det-tk-respuestas-section" style="border-top:1px solid var(--border-color); padding-top:12px; display:none;">
       <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:8px;">💬 Respuestas (<span id="det-tk-respuestas-count">0</span>)</div>
-      <div id="det-tk-respuestas" style="display:flex; flex-direction:column; gap:10px; max-height:260px; overflow-y:auto;"></div>
+      <div id="det-tk-respuestas" style="display:flex; flex-direction:column; gap:10px; max-height:260px; overflow-y:auto; margin-bottom:12px;"></div>
+      <div id="det-tk-respuesta-compose" style="display:none; flex-direction:column; gap:6px;">
+        <textarea id="det-tk-respuesta-texto" placeholder="Escribe una respuesta… se manda por correo al cliente y queda aquí en el hilo." rows="3" style="width:100%; resize:vertical; font-size:0.85rem; padding:8px 10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-main);"></textarea>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input id="det-tk-respuesta-cc" placeholder="Con copia (opcional) — correos separados por coma" style="flex:1; font-size:0.78rem; padding:6px 8px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-main);">
+          <button id="btn-enviar-respuesta-ticket" class="btn btn-primary btn-sm" style="white-space:nowrap;">✉️ Enviar</button>
+        </div>
+      </div>
     </div>
     <div style="border-top:1px solid var(--border-color); padding-top:12px;">
       <div id="det-tk-tiempo-trabajado"></div>
@@ -5645,7 +5652,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarPapeleraEmpresas, guardarPapeleraContactos, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, actualizarInscripcionEvento, eliminarInscripcionEvento, obtenerListaNegraEventos, agregarAListaNegraEventos, obtenerHistorialAsistencias, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, obtenerSiguienteFolioTicket, sincronizarContadorTickets, registrarClavesConocidas, agregarTicket, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, guardarConfigCompac, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket, actualizarMetaAdjuntoTicket, obtenerRespuestasTicket, marcarRespuestaTicketLeida } from "../data/firebase.js";
+import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarPapeleraEmpresas, guardarPapeleraContactos, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, actualizarInscripcionEvento, eliminarInscripcionEvento, obtenerListaNegraEventos, agregarAListaNegraEventos, obtenerHistorialAsistencias, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, obtenerSiguienteFolioTicket, sincronizarContadorTickets, registrarClavesConocidas, agregarTicket, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, guardarConfigCompac, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket, actualizarMetaAdjuntoTicket, obtenerRespuestasTicket, marcarRespuestaTicketLeida, enviarRespuestaTicket } from "../data/firebase.js";
 import { parseEmailList, hoyLocalStr, parseFechaLocal, escapeHtml, slugBadge, esConsultoria, formatearDuracion, colorPuntoEstado, formatMoney } from "../data/utils.js";
 import JSZip from "jszip";
 
@@ -8191,29 +8198,75 @@ verificarSesion();
     const sec = document.getElementById("det-tk-respuestas-section");
     const cont = document.getElementById("det-tk-respuestas");
     const countEl = document.getElementById("det-tk-respuestas-count");
-    if (!sec || !cont || !countEl) return;
+    const compose = document.getElementById("det-tk-respuesta-compose");
+    if (!sec || !cont || !countEl || !compose) return;
     if (!firebaseEnabled || crmLocalOnly) { sec.style.display = "none"; return; }
+    sec.style.display = "block";
+    compose.style.display = "flex";
     const respuestas = await obtenerRespuestasTicket(t.numero);
     if (ticketDetalleNumero !== t.numero) return; // el usuario ya cambió de ticket mientras cargaba
-    if (!respuestas.length) { sec.style.display = "none"; return; }
-    sec.style.display = "block";
     countEl.textContent = String(respuestas.length);
     cont.innerHTML = "";
+    if (!respuestas.length) {
+      cont.innerHTML = `<div style="font-size:0.78rem; color:var(--text-muted);">Aún no hay mensajes en este hilo.</div>`;
+    }
     respuestas.forEach((r: any) => {
       const div = document.createElement("div");
-      div.style.cssText = `background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:10px 12px;${r.leido ? "" : " border-left:3px solid #4f46e5;"}`;
+      // Los mensajes enviados DESDE el CRM (r.saliente) se alinean a la derecha y con otro color,
+      // como en cualquier chat, para distinguir "lo que mandamos" de "lo que contestaron".
+      const estiloBase = "border-radius:var(--radius-sm); padding:10px 12px; max-width:85%;";
+      div.style.cssText = r.saliente
+        ? `${estiloBase} background:#4f46e5; color:#fff; align-self:flex-end;`
+        : `${estiloBase} background:var(--bg-input); border:1px solid var(--border-color); align-self:flex-start;${r.leido ? "" : " border-left:3px solid #4f46e5;"}`;
       const fecha = r.fecha ? new Date(r.fecha).toLocaleString("es-MX") : "";
+      const nombreMostrado = r.saliente ? (r.nombreDe || "Tú") : (r.nombreDe || r.de || "Remitente");
       div.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px; gap:10px;">
-          <span style="font-weight:700; font-size:0.82rem; color:var(--text-bright);">${escapeHtml(r.nombreDe || r.de || "Remitente")}</span>
-          <span style="font-size:0.68rem; color:var(--text-muted); white-space:nowrap;">${fecha}${r.leido ? "" : " · nuevo"}</span>
+          <span style="font-weight:700; font-size:0.82rem; ${r.saliente ? "" : "color:var(--text-bright);"}">${escapeHtml(nombreMostrado)}</span>
+          <span style="font-size:0.68rem; ${r.saliente ? "opacity:0.8;" : "color:var(--text-muted);"} white-space:nowrap;">${fecha}${!r.saliente && !r.leido ? " · nuevo" : ""}</span>
         </div>
         <div style="font-size:0.82rem; white-space:pre-wrap; line-height:1.5;">${escapeHtml(r.mensaje || "")}</div>
       `;
       cont.appendChild(div);
-      if (!r.leido) marcarRespuestaTicketLeida(r._id).catch(() => {});
+      if (!r.leido && !r.saliente) marcarRespuestaTicketLeida(r._id).catch(() => {});
     });
   }
+
+  document.getElementById("btn-enviar-respuesta-ticket")?.addEventListener("click", async () => {
+    const t = ticketPorNumero(ticketDetalleNumero);
+    if (!t) return;
+    const textoEl = document.getElementById("det-tk-respuesta-texto") as HTMLTextAreaElement;
+    const ccEl = document.getElementById("det-tk-respuesta-cc") as HTMLInputElement;
+    const mensaje = textoEl?.value.trim() || "";
+    if (!mensaje) { toast("Escribe un mensaje antes de enviar", "warning"); return; }
+
+    const mailTo = t.contactoCorreo || contactos.find(c => c.nombre === t.contacto)?.correo || "";
+    if (!mailTo) { toast("⚠️ Este ticket no tiene correo de contacto registrado", "error"); return; }
+
+    const soporteEmails = parseEmailList(configTickets.correoSoporte);
+    const ccTicket = parseEmailList(t.cc || "");
+    const ccEscrito = parseEmailList(ccEl?.value || "");
+    // El "Canalizado a" / CC del ticket se incluye siempre (igual que en la notificación original)
+    // más lo que se escriba aquí en el momento — así cualquiera de ellos también recibe el mensaje
+    // y, si contesta, su respuesta vuelve a caer en este mismo hilo (ver correo-entrante-ticket.js).
+    const mailCC = [...new Set([...soporteEmails, ...ccTicket, ...ccEscrito])].filter(e => e !== mailTo).join(",");
+    const subject = `[Ticket #${t.numero}] ${t.asunto}`;
+    const html = `<div style="font-family:sans-serif; white-space:pre-wrap;">${escapeHtml(mensaje)}</div>`;
+
+    const btn = document.getElementById("btn-enviar-respuesta-ticket") as HTMLButtonElement;
+    if (btn) btn.disabled = true;
+    try {
+      const sent = await enviarEmailConProveedor({ to: mailTo, subject, html, replyTo: soporteEmails[0] || "", cc: mailCC });
+      if (!sent?.ok) return;
+      const quien = getUsuarioActual()?.nombre || "Soporte";
+      await enviarRespuestaTicket(t.numero, { de: soporteEmails[0] || "", nombreDe: quien, asunto: subject, mensaje });
+      if (textoEl) textoEl.value = "";
+      if (ccEl) ccEl.value = "";
+      renderRespuestasDetalle(t);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  });
 
   const tkAttachZone = document.getElementById("tk-attachment-zone");
   const tkAttachInput = document.getElementById("tk-attachment-input");

@@ -441,10 +441,12 @@ export async function cargarTicketsPublicos() {
 }
 
 /**
- * Respuestas que un cliente mandó contestando el correo de notificación de un ticket — las
- * guarda la Function correo-entrante-ticket.js (webhook de Inbound Parsing de Brevo) en su
- * propia colección, nunca dentro del arreglo de tickets (ver comentario en esa Function). Cada
- * una es su propio documento, así que leer/marcar una no puede pisar ni perder las demás.
+ * Hilo de respuestas de un ticket por correo (cliente o agentes en copia contestando) — las
+ * entrantes las guarda la Function correo-entrante-ticket.js (webhook de Zoho filtro +
+ * CloudMailin) y las salientes (enviadas desde este mismo CRM) las guarda enviarRespuestaTicket()
+ * de aquí abajo. Todo en su propia colección, nunca dentro del arreglo de tickets (ver comentario
+ * en esa Function) — cada una es su propio documento, así que leer/marcar una no puede pisar ni
+ * perder las demás.
  */
 export async function obtenerRespuestasTicket(numero) {
   try {
@@ -463,6 +465,22 @@ export async function marcarRespuestaTicketLeida(id) {
     return true;
   } catch (error) {
     console.error("Error al marcar respuesta como leída:", error);
+    return false;
+  }
+}
+
+// Registra en el mismo hilo un mensaje enviado DESDE el CRM (no uno recibido por correo) — así
+// el envío queda visible de inmediato en el chat del ticket, ya marcado como leído (lo escribió
+// el propio agente, no hace falta "leerlo").
+export async function enviarRespuestaTicket(numero, { de, nombreDe, asunto, mensaje }) {
+  try {
+    await addDoc(collection(db, "respuestas_tickets"), limpiar({
+      ticketNumero: numero, de, nombreDe, asunto: asunto || "", mensaje,
+      fecha: new Date().toISOString(), leido: true, saliente: true,
+    }));
+    return true;
+  } catch (error) {
+    avisarErrorGuardado("enviar respuesta de ticket", error);
     return false;
   }
 }
