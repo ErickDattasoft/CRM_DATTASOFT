@@ -485,6 +485,36 @@ export async function enviarRespuestaTicket(numero, { de, nombreDe, asunto, mens
   }
 }
 
+// Trae TODO el hilo de respuestas de TODOS los tickets, para incluirlo en el backup completo —
+// a diferencia de obtenerRespuestasTicket() (que filtra por un ticket), aquí no hace falta
+// ningún índice compuesto porque no se ordena ni se filtra, solo se lista la colección entera.
+export async function obtenerTodasRespuestasTickets() {
+  try {
+    const snap = await getDocs(collection(db, "respuestas_tickets"));
+    return snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+  } catch (error) {
+    console.error("Error al cargar todas las respuestas de tickets:", error);
+    return [];
+  }
+}
+
+// Restaura el hilo de respuestas desde un backup — usa el mismo _id de cada mensaje como id del
+// documento (setDoc, no addDoc) para que correr la restauración más de una vez no duplique nada,
+// solo sobrescriba cada mensaje con su propio contenido.
+export async function restaurarRespuestasTickets(lista) {
+  try {
+    for (const r of lista) {
+      const { _id, ...datos } = r;
+      if (!_id) continue;
+      await setDoc(doc(db, "respuestas_tickets", _id), limpiar(datos));
+    }
+    return true;
+  } catch (error) {
+    avisarErrorGuardado("restaurar respuestas de tickets", error);
+    return false;
+  }
+}
+
 /**
  * Guarda la lista de usuarios del CRM en Firestore.
  */

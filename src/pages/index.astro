@@ -5652,7 +5652,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarPapeleraEmpresas, guardarPapeleraContactos, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, actualizarInscripcionEvento, eliminarInscripcionEvento, obtenerListaNegraEventos, agregarAListaNegraEventos, obtenerHistorialAsistencias, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, obtenerSiguienteFolioTicket, sincronizarContadorTickets, registrarClavesConocidas, agregarTicket, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, guardarConfigCompac, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket, actualizarMetaAdjuntoTicket, obtenerRespuestasTicket, marcarRespuestaTicketLeida, enviarRespuestaTicket } from "../data/firebase.js";
+import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarPapeleraEmpresas, guardarPapeleraContactos, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, actualizarInscripcionEvento, eliminarInscripcionEvento, obtenerListaNegraEventos, agregarAListaNegraEventos, obtenerHistorialAsistencias, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, obtenerSiguienteFolioTicket, sincronizarContadorTickets, registrarClavesConocidas, agregarTicket, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, guardarConfigCompac, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket, actualizarMetaAdjuntoTicket, obtenerRespuestasTicket, marcarRespuestaTicketLeida, enviarRespuestaTicket, obtenerTodasRespuestasTickets, restaurarRespuestasTickets } from "../data/firebase.js";
 import { parseEmailList, hoyLocalStr, parseFechaLocal, escapeHtml, slugBadge, esConsultoria, formatearDuracion, colorPuntoEstado, formatMoney } from "../data/utils.js";
 import JSZip from "jszip";
 
@@ -8263,6 +8263,7 @@ verificarSesion();
       if (!sent?.ok) return;
       const quien = getUsuarioActual()?.nombre || "Soporte";
       await enviarRespuestaTicket(t.numero, { de: soporteEmails[0] || "", nombreDe: quien, asunto: subject, mensaje });
+      logBitacora(`💬 Respuesta enviada a ${mailTo} — Ticket #${t.numero}`, "💬");
       if (textoEl) textoEl.value = "";
       if (ccEl) ccEl.value = "";
       renderRespuestasDetalle(t);
@@ -14620,6 +14621,13 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
       if (okGuardado) {
         msg += `✅ ${tickets.length} tickets reemplazados (folios originales conservados). `;
         if (!crmLocalOnly) await sincronizarContadorTickets(tickets, { forzar: true });
+        // Las conversaciones solo se restauran aquí y en "agregar con folio original" — los
+        // demás modos RENUMERAN tickets nuevos, y el ticketNumero de cada mensaje quedaría
+        // apuntando al folio viejo en vez del nuevo.
+        if (!crmLocalOnly && Array.isArray(jsonImportData.respuestasTickets) && jsonImportData.respuestasTickets.length) {
+          await restaurarRespuestasTickets(jsonImportData.respuestasTickets);
+          msg += `✅ ${jsonImportData.respuestasTickets.length} mensaje(s) de conversaciones restaurados. `;
+        }
       } else {
         msg += `❌ El reemplazo de tickets NO se guardó en Firebase (revisa el aviso de error) — vuelve a intentarlo antes de seguir usando el CRM. `;
       }
@@ -14644,6 +14652,14 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         if (okGuardado) {
           msg += `✅ ${faltantes.length} ticket(s) recuperado(s) con su folio original (#${faltantes.map(t=>t.numero).join(", #")}). `;
           if (!crmLocalOnly) await sincronizarContadorTickets(tickets);
+          if (!crmLocalOnly && Array.isArray(jsonImportData.respuestasTickets) && jsonImportData.respuestasTickets.length) {
+            const numsFaltantes = new Set(faltantes.map(t => t.numero));
+            const relevantes = jsonImportData.respuestasTickets.filter((r: any) => numsFaltantes.has(r.ticketNumero));
+            if (relevantes.length) {
+              await restaurarRespuestasTickets(relevantes);
+              msg += `✅ ${relevantes.length} mensaje(s) de conversaciones restaurados. `;
+            }
+          }
         } else {
           msg += `❌ No se pudo guardar la recuperación de tickets (revisa el aviso de error). `;
         }
@@ -14864,7 +14880,10 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         cotizaciones,
         configCotizaciones,
         configN8n,
-        logoEmpresa: localStorage.getItem("crm_logo") || ""
+        logoEmpresa: localStorage.getItem("crm_logo") || "",
+        // Hilo de respuestas por correo de todos los tickets (respuestas_tickets) — vive en su
+        // propia colección, no en el arreglo de tickets, así que hay que pedirlo aparte.
+        respuestasTickets: (!crmLocalOnly && firebaseEnabled) ? await obtenerTodasRespuestasTickets() : []
       }
     };
     const archivosImagen: { nombre: string; bytes: Uint8Array }[] = [];

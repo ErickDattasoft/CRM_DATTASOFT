@@ -126,6 +126,28 @@ function limpiarCuerpoRespuesta(texto) {
   return texto.slice(0, corte).trim();
 }
 
+// Replica agregarEntradaBitacora() de firebase.js (misma colección/campo, mismo patrón
+// arrayUnion) pero por REST, porque no hay firebase-admin SDK disponible en este runtime —
+// arrayUnion es atómico en el servidor, así que es seguro aunque dos escrituras lleguen a la vez
+// (no hace falta leer el documento primero, a diferencia del resto del arreglo de tickets).
+async function agregarEntradaBitacoraServidor(auth, { msg, icon = "📌" }) {
+  try {
+    const resourceBase = auth.base.replace("https://firestore.googleapis.com/v1/", "");
+    const entry = { fecha: new Date().toISOString(), msg, icon, usuario: "Sistema" };
+    const body = {
+      writes: [{
+        transform: {
+          document: `${resourceBase}/agenda/datos`,
+          fieldTransforms: [{ fieldPath: "bitacora", appendMissingElements: { values: [{ mapValue: { fields: toFirestoreFields(entry) } }] } }],
+        },
+      }],
+    };
+    await fetch(`${auth.base}:commit`, { method: "POST", headers: auth.headers, body: JSON.stringify(body) });
+  } catch (err) {
+    console.error("[correo-entrante-ticket] No se pudo registrar en bitácora:", err);
+  }
+}
+
 async function avisarNuevaRespuesta(auth, numero, remitente, mensaje) {
   // No bloquea el guardado de la respuesta si esto falla — la respuesta ya quedó en Firestore y
   // es visible en el CRM aunque el aviso por correo no llegue.
@@ -134,6 +156,7 @@ async function avisarNuevaRespuesta(auth, numero, remitente, mensaje) {
     if (!docResp.ok) return;
     const datos = fromFirestoreFields((await docResp.json()).fields || {});
     const ticket = (datos.tickets || []).find(t => t.numero === numero);
+    await agregarEntradaBitacoraServidor(auth, { msg: `💬 ${remitente} respondió el ticket #${numero}${ticket ? ` — ${ticket.asunto}` : ""}`, icon: "💬" });
     const correoSoporte = datos.configTickets?.correoSoporte || "";
     const destinatarios = correoSoporte.split(",").map(s => s.trim()).filter(Boolean);
     if (!destinatarios.length) return;
