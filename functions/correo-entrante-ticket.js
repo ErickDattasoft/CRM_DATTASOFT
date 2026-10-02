@@ -123,7 +123,7 @@ export const onRequestPost = async (context) => {
     // Correo que el filtro de Zoho reenvió pero que no corresponde a ningún ticket reconocible —
     // se deja un log con el payload completo para poder ajustar extraerNumeroTicket() con un
     // caso real en vez de adivinar de nuevo.
-    console.log("[correo-entrante-ticket] No se identificó ningún ticket:", JSON.stringify(payload).slice(0, 3000));
+    console.log("[correo-entrante-ticket] No se identificó ningún ticket. Asunto:", asuntoDelPayload(payload), "| Texto:", textoDelPayload(payload).slice(0, 1500));
     return jsonResponse({ ok: true, guardada: false });
   }
 
