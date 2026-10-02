@@ -71,8 +71,18 @@ function textoDelPayload(payload) {
     return String(payload.html)
       .replace(/<style[\s\S]*?<\/style>/gi, " ")
       .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      // Gmail/Zoho/Outlook envuelven el historial citado de un hilo en <blockquote> — quitarlo
+      // aquí, a nivel de HTML, es mucho más confiable que tratar de adivinarlo después en texto
+      // plano (ver limpiarCuerpoRespuesta, que sigue como respaldo para cuando no viene en un
+      // <blockquote> sino como texto citado con ">").
+      .replace(/<blockquote[\s\S]*?<\/blockquote>/gi, " ")
+      // Conservar los saltos de línea de bloques (si no, limpiarCuerpoRespuesta no puede ubicar
+      // dónde empieza cada línea para cortar ahí el resto del historial citado).
+      .replace(/<(br|\/p|\/div|\/tr|\/li)\s*\/?>/gi, "\n")
       .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
+      .replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&").replace(/&lt;/gi, "<").replace(/&gt;/gi, ">").replace(/&quot;/gi, '"').replace(/&#39;/gi, "'")
+      .replace(/[ \t]+/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
       .trim();
   }
   return "(sin contenido legible)";
