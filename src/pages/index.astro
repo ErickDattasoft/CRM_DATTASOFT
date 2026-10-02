@@ -3411,6 +3411,17 @@ try {
             </div>
             <div class="attachment-list" id="tk-attachment-list"></div>
           </div>
+          <div id="det-tk-respuestas-section" style="border-top:1px dashed rgba(255,255,255,0.06); margin-top:14px; padding-top:12px; display:none;">
+            <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px;">💬 Respuestas (<span id="det-tk-respuestas-count">0</span>)</div>
+            <div id="det-tk-respuestas" style="display:flex; flex-direction:column; gap:14px; max-height:520px; overflow-y:auto; margin-bottom:12px;"></div>
+            <div id="det-tk-respuesta-compose" style="display:none; flex-direction:column; gap:6px;">
+              <textarea id="det-tk-respuesta-texto" placeholder="Escribe una respuesta… se manda por correo al cliente y queda aquí en el hilo." rows="3" style="width:100%; resize:vertical; font-size:0.85rem; padding:8px 10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-main);"></textarea>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <input id="det-tk-respuesta-cc" placeholder="Con copia (opcional) — correos separados por coma" style="flex:1; font-size:0.78rem; padding:6px 8px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-main);">
+                <button id="btn-enviar-respuesta-ticket" class="btn btn-primary btn-sm" style="white-space:nowrap;">✉️ Enviar</button>
+              </div>
+            </div>
+          </div>
           <div class="form-actions" style="align-items:center; gap:16px;">
             <button class="btn btn-primary" id="btnGuardarTicket">💾 Guardar Ticket</button>
             <button class="btn btn-secondary hidden" id="btnGuardarYNuevoTicket" title="Guarda este ticket y deja el formulario listo para capturar el siguiente">💾➕ Guardar y Crear Nuevo</button>
@@ -4929,17 +4940,6 @@ try {
     <div id="det-tk-adjuntos-section" style="border-top:1px solid var(--border-color); padding-top:12px; display:none;">
       <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:8px;">📎 Adjuntos</div>
       <div class="attachment-list" id="det-tk-adjuntos"></div>
-    </div>
-    <div id="det-tk-respuestas-section" style="border-top:1px solid var(--border-color); padding-top:12px; display:none;">
-      <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:8px;">💬 Respuestas (<span id="det-tk-respuestas-count">0</span>)</div>
-      <div id="det-tk-respuestas" style="display:flex; flex-direction:column; gap:10px; max-height:520px; overflow-y:auto; margin-bottom:12px;"></div>
-      <div id="det-tk-respuesta-compose" style="display:none; flex-direction:column; gap:6px;">
-        <textarea id="det-tk-respuesta-texto" placeholder="Escribe una respuesta… se manda por correo al cliente y queda aquí en el hilo." rows="3" style="width:100%; resize:vertical; font-size:0.85rem; padding:8px 10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-main);"></textarea>
-        <div style="display:flex; gap:8px; align-items:center;">
-          <input id="det-tk-respuesta-cc" placeholder="Con copia (opcional) — correos separados por coma" style="flex:1; font-size:0.78rem; padding:6px 8px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-main);">
-          <button id="btn-enviar-respuesta-ticket" class="btn btn-primary btn-sm" style="white-space:nowrap;">✉️ Enviar</button>
-        </div>
-      </div>
     </div>
     <div style="border-top:1px solid var(--border-color); padding-top:12px;">
       <div id="det-tk-tiempo-trabajado"></div>
@@ -8190,10 +8190,11 @@ verificarSesion();
     });
   }
 
-  // Respuestas que el cliente mandó contestando el correo del ticket (solo si "Activar
-  // respuestas de cliente por correo" está prendido en Configuración — ver
-  // correo-entrante-ticket.js). Viven en su propia colección (respuestas_tickets), así que se
-  // piden bajo demanda al abrir el detalle, igual que los adjuntos.
+  // Respuestas que el cliente (o un agente en copia) mandó contestando el correo del ticket, más
+  // las que se mandan desde el CRM con la caja de abajo — todo en el mismo hilo (colección
+  // respuestas_tickets, aparte del arreglo de tickets). Vive dentro del formulario de Editar
+  // Ticket (no en el panel de Detalle) para tener más espacio horizontal. Se piden bajo demanda
+  // al abrir la edición, igual que los adjuntos. Orden: más reciente primero (arriba).
   async function renderRespuestasDetalle(t: any) {
     const sec = document.getElementById("det-tk-respuestas-section");
     const cont = document.getElementById("det-tk-respuestas");
@@ -8204,26 +8205,28 @@ verificarSesion();
     sec.style.display = "block";
     compose.style.display = "flex";
     const respuestas = await obtenerRespuestasTicket(t.numero);
-    if (ticketDetalleNumero !== t.numero) return; // el usuario ya cambió de ticket mientras cargaba
+    if (editTkIdx.value !== String(t.numero)) return; // el usuario ya cambió de ticket mientras cargaba
     countEl.textContent = String(respuestas.length);
     cont.innerHTML = "";
     if (!respuestas.length) {
       cont.innerHTML = `<div style="font-size:0.78rem; color:var(--text-muted);">Aún no hay mensajes en este hilo.</div>`;
+      return;
     }
-    respuestas.forEach((r: any) => {
+    [...respuestas].reverse().forEach((r: any) => {
       const div = document.createElement("div");
-      // Los mensajes enviados DESDE el CRM (r.saliente) se alinean a la derecha y con otro color,
-      // como en cualquier chat, para distinguir "lo que mandamos" de "lo que contestaron".
-      const estiloBase = "border-radius:var(--radius-sm); padding:10px 12px; max-width:85%;";
-      div.style.cssText = r.saliente
-        ? `${estiloBase} background:#4f46e5; color:#fff; align-self:flex-end;`
-        : `${estiloBase} background:var(--bg-input); border:1px solid var(--border-color); align-self:flex-start;${r.leido ? "" : " border-left:3px solid #4f46e5;"}`;
+      // Separación clara entre cada mensaje: tarjeta propia, franja de color a la izquierda
+      // (distinto color según si lo mandamos nosotros o si es una respuesta recibida) e ícono de
+      // dirección — no basta con el espacio entre tarjetas, tiene que notarse de un vistazo quién
+      // mandó cada una sin tener que leer el nombre.
+      const colorBarra = r.saliente ? "#4f46e5" : "#16a34a";
+      div.style.cssText = `background:var(--bg-input); border:1px solid var(--border-color); border-left:4px solid ${colorBarra}; border-radius:var(--radius-sm); padding:10px 12px;`;
       const fecha = r.fecha ? new Date(r.fecha).toLocaleString("es-MX") : "";
+      const icono = r.saliente ? "📤" : "📥";
       const nombreMostrado = r.saliente ? (r.nombreDe || "Tú") : (r.nombreDe || r.de || "Remitente");
       div.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px; gap:10px;">
-          <span style="font-weight:700; font-size:0.82rem; ${r.saliente ? "" : "color:var(--text-bright);"}">${escapeHtml(nombreMostrado)}</span>
-          <span style="font-size:0.68rem; ${r.saliente ? "opacity:0.8;" : "color:var(--text-muted);"} white-space:nowrap;">${fecha}${!r.saliente && !r.leido ? " · nuevo" : ""}</span>
+          <span style="font-weight:700; font-size:0.82rem; color:var(--text-bright);">${icono} ${escapeHtml(nombreMostrado)}</span>
+          <span style="font-size:0.68rem; color:var(--text-muted); white-space:nowrap;">${fecha}${!r.saliente && !r.leido ? " · nuevo" : ""}</span>
         </div>
         <div style="font-size:0.82rem; white-space:pre-wrap; line-height:1.5;">${escapeHtml(r.mensaje || "")}</div>
       `;
@@ -8233,7 +8236,7 @@ verificarSesion();
   }
 
   document.getElementById("btn-enviar-respuesta-ticket")?.addEventListener("click", async () => {
-    const t = ticketPorNumero(ticketDetalleNumero);
+    const t = ticketPorNumero(parseInt(editTkIdx.value, 10));
     if (!t) return;
     const textoEl = document.getElementById("det-tk-respuesta-texto") as HTMLTextAreaElement;
     const ccEl = document.getElementById("det-tk-respuesta-cc") as HTMLInputElement;
@@ -11983,6 +11986,9 @@ verificarSesion();
   function cerrarFormTicket() {
     formTk?.classList.add("hidden");
     editTkIdx.value = "";
+    // Un ticket nuevo (sin folio todavía) no tiene hilo de respuestas — se oculta aquí para que
+    // "Crear Ticket" no arrastre el hilo del último ticket que se estaba editando.
+    document.getElementById("det-tk-respuestas-section")?.style.setProperty("display", "none");
     document.getElementById("tabla-tickets-body")?.querySelectorAll("tr.tk-fila-editando")
       .forEach(tr => tr.classList.remove("tk-fila-editando"));
     ["form-tk-contacto-buscar", "form-tk-contacto", "form-tk-correo-contacto", "form-tk-empresa",
@@ -12627,6 +12633,7 @@ verificarSesion();
     adjuntosTicketActual = [...(t.adjuntos || [])];
     renderAdjuntosForm();
     initTicketFormDropdowns(t);
+    renderRespuestasDetalle(t);
     formTk?.classList.remove("hidden");
     document.getElementById("btnGuardarYNuevoTicket")?.classList.add("hidden");
     formTk?.scrollIntoView({ behavior: "smooth" });
@@ -12827,7 +12834,6 @@ verificarSesion();
     const detNI = document.getElementById("det-tk-notas-internas") as HTMLTextAreaElement;
     if (detNI) detNI.value = t.notasInternas || "";
     renderAdjuntosDetalle(t);
-    renderRespuestasDetalle(t);
 
     const bPrior = document.getElementById("det-tk-prioridad-badge");
     bPrior.textContent = t.prioridad;
