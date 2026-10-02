@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, onSnapshot, addDoc, updateDoc, arrayUnion, serverTimestamp, enableMultiTabIndexedDbPersistence, runTransaction } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, onSnapshot, addDoc, updateDoc, arrayUnion, serverTimestamp, enableMultiTabIndexedDbPersistence, runTransaction, query, where, orderBy } from "firebase/firestore";
 import { getAuth, signInAnonymously, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
 
 // Configuración de Firebase — los valores web son públicos por diseño (seguridad via Firestore Rules)
@@ -437,6 +437,33 @@ export async function cargarTicketsPublicos() {
   } catch (error) {
     console.error("Error al cargar tickets públicos:", error);
     return [];
+  }
+}
+
+/**
+ * Respuestas que un cliente mandó contestando el correo de notificación de un ticket — las
+ * guarda la Function correo-entrante-ticket.js (webhook de Inbound Parsing de Brevo) en su
+ * propia colección, nunca dentro del arreglo de tickets (ver comentario en esa Function). Cada
+ * una es su propio documento, así que leer/marcar una no puede pisar ni perder las demás.
+ */
+export async function obtenerRespuestasTicket(numero) {
+  try {
+    const q = query(collection(db, "respuestas_tickets"), where("ticketNumero", "==", numero), orderBy("fecha", "asc"));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+  } catch (error) {
+    console.error("Error al cargar respuestas del ticket:", error);
+    return [];
+  }
+}
+
+export async function marcarRespuestaTicketLeida(id) {
+  try {
+    await updateDoc(doc(db, "respuestas_tickets", id), { leido: true });
+    return true;
+  } catch (error) {
+    console.error("Error al marcar respuesta como leída:", error);
+    return false;
   }
 }
 
