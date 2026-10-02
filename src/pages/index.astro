@@ -11795,7 +11795,14 @@ verificarSesion();
       if (fEstado && t.estado !== fEstado) return false;
       if (fPrior && t.prioridad !== fPrior) return false;
       if (fTipo && t.tipo !== fTipo) return false;
-      if (fAgente && (t.agente || "").trim().toLowerCase() !== fAgente.trim().toLowerCase()) return false;
+      if (fAgente) {
+        const fa = fAgente.trim().toLowerCase();
+        const coincideAgente = (t.agente || "").trim().toLowerCase() === fa;
+        // "Canalizado a" es texto libre donde también se registra a quién se le pasó el ticket
+        // (no solo el campo "Agente") — el filtro debe encontrarlo ahí también.
+        const coincideCanalizado = (t.canalizado || "").toLowerCase().includes(fa);
+        if (!coincideAgente && !coincideCanalizado) return false;
+      }
       if (fFacturado && (t.facturado || "NO FACTURADO") !== fFacturado) return false;
       if (busq) {
         return (t.asunto || "").toLowerCase().includes(busq) ||
