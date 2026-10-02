@@ -6078,8 +6078,14 @@ async function intentarSolicitarAcceso() {
   // sesión de CRM ni configTickets cargado en memoria.
   try {
     const pub = await cargarConfigPublica();
-    const destino = pub?.correoSoporte;
-    if (destino) {
+    // correoSoporte puede traer varios correos separados por coma (así lo llena Configuración →
+    // Correo de Soporte) — mandarlo tal cual como "to" es justo el bug ya corregido en el resto
+    // del sistema (Brevo rechaza "email is not valid in to" si "to" trae una coma adentro). El
+    // resto de los envíos del CRM ya usa parseEmailList(configTickets.correoSoporte); este punto
+    // (el único que corre ANTES de iniciar sesión, por eso usa el documento público en vez de
+    // configTickets) se había quedado sin ese arreglo.
+    const destino = parseEmailList(pub?.correoSoporte || "");
+    if (destino.length) {
       await fetch("/send-email", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -13562,6 +13568,18 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         await guardarUsuarios(usuariosAct);
         await otorgarAccesoStaff(correo);
         await eliminarSolicitudAcceso(id);
+        // Aviso a la persona aprobada — antes nadie le avisaba que ya podía entrar; no bloquea el
+        // flujo si falla (mismo patrón que el aviso de solicitud nueva, más arriba).
+        try {
+          await fetch("/send-email", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              to: [correo],
+              subject: "✅ Tu acceso al CRM fue aprobado",
+              html: `<div style="font-family:sans-serif;"><p>Hola <strong>${nombre}</strong>,</p><p>Tu acceso al CRM de DATTASOFT ya fue aprobado — puedes entrar con tu correo y la contraseña que elegiste al solicitarlo.</p><p><a href="https://crm-dattasoft.pages.dev" style="color:#4f46e5;">Entrar al CRM →</a></p></div>`
+            })
+          });
+        } catch (e) { console.error("[Solicitud de acceso] No se pudo avisar a la persona aprobada:", e); }
         toast(`✅ "${nombre}" aprobado — ya puede entrar con su cuenta segura`);
         logBitacora(`Solicitud de acceso aprobada: ${nombre} (${correo})`, "✅");
         renderSolicitudesAccesoPanel();
