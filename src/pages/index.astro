@@ -11797,11 +11797,15 @@ verificarSesion();
       if (fTipo && t.tipo !== fTipo) return false;
       if (fAgente) {
         const fa = fAgente.trim().toLowerCase();
-        const coincideAgente = (t.agente || "").trim().toLowerCase() === fa;
-        // "Canalizado a" es texto libre donde también se registra a quién se le pasó el ticket
-        // (no solo el campo "Agente") — el filtro debe encontrarlo ahí también.
-        const coincideCanalizado = (t.canalizado || "").toLowerCase().includes(fa);
-        if (!coincideAgente && !coincideCanalizado) return false;
+        const agenteNorm = (t.agente || "").trim().toLowerCase();
+        const canalizadoNorm = (t.canalizado || "").trim().toLowerCase();
+        // Coincidencia en ambos sentidos: el nombre de una persona puede aparecer completo en un
+        // lado ("Diego Armando") y abreviado en otro ("DIEGO") — con .includes() de un solo
+        // sentido, "diego" (canalizado) nunca contendría "diego armando" (filtro seleccionado) y
+        // el ticket se perdería igual. "Canalizado a" es texto libre donde también se registra a
+        // quién se le pasó el ticket, no solo el campo "Agente" — el filtro debe encontrarlo ahí.
+        const coincide = (valor: string) => !!valor && (valor.includes(fa) || fa.includes(valor));
+        if (!coincide(agenteNorm) && !coincide(canalizadoNorm)) return false;
       }
       if (fFacturado && (t.facturado || "NO FACTURADO") !== fFacturado) return false;
       if (busq) {
