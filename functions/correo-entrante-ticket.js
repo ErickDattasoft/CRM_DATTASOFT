@@ -55,13 +55,24 @@ function extraerNumeroTicket(payload) {
 }
 
 function remitenteDelPayload(payload) {
-  return payload?.envelope?.from || payload?.headers?.from || payload?.from || "Cliente";
+  // headers.from es el "De:" real que ve cualquier persona (ej. "Erick Casas <...>") — se prefiere
+  // sobre envelope.from, que es la dirección técnica de retorno (a veces una dirección VERP
+  // reescrita como "nombre+uml_hash=dominio@...", que no sirve para mostrar).
+  return payload?.headers?.from || payload?.envelope?.from || payload?.from || "Cliente";
 }
 
 // Extrae el correo plano de un remitente tipo "Nombre <correo@dominio>" o ya plano.
 function extraerEmail(texto) {
   const m = String(texto || "").match(/[\w.+-]+@[\w.-]+\.\w+/);
   return m ? m[0].toLowerCase() : "";
+}
+
+// Extrae solo el nombre visible de un remitente tipo "Nombre <correo@dominio>" — si no trae
+// nombre (ya viene como correo plano), se muestra el correo tal cual.
+function nombreAmigable(remitenteStr) {
+  const texto = String(remitenteStr || "").trim();
+  const m = texto.match(/^"?([^"<]+?)"?\s*<[^>]+>$/);
+  return m ? m[1].trim() : texto;
 }
 
 function textoDelPayload(payload) {
@@ -202,7 +213,7 @@ export const onRequestPost = async (context) => {
         fields: toFirestoreFields({
           ticketNumero: numero,
           de: remitente,
-          nombreDe: remitente,
+          nombreDe: nombreAmigable(remitente),
           asunto: asuntoDelPayload(payload),
           mensaje,
           fecha: new Date().toISOString(),
