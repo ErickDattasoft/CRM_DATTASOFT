@@ -61,7 +61,14 @@ function remitenteDelPayload(payload) {
 function textoDelPayload(payload) {
   if (payload?.plain) return String(payload.plain).trim();
   if (payload?.summary) return String(payload.summary).trim();
-  if (payload?.html) return String(payload.html).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  if (payload?.html) {
+    return String(payload.html)
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
   return "(sin contenido legible)";
 }
 
