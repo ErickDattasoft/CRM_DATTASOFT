@@ -14,6 +14,16 @@ export const onRequestGet = async ({ request, env }) => {
     id: d.name.split("/").pop(),
     ...fromFirestoreFields(d.fields || {}),
   })).filter(d => !numero || d.ticketNumero === numero);
+
+  if (url.searchParams.get("borrar") === "1" && numero) {
+    let borrados = 0;
+    for (const d of docs) {
+      const r = await fetch(`${auth.base}/respuestas_tickets/${d.id}`, { method: "DELETE", headers: auth.headers });
+      if (r.ok) borrados++;
+    }
+    return new Response(JSON.stringify({ ok: true, borrados }, null, 2), { headers: { "Content-Type": "application/json" } });
+  }
+
   return new Response(JSON.stringify({ total: docs.length, docs }, null, 2), {
     headers: { "Content-Type": "application/json" },
   });
