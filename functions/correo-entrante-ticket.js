@@ -58,6 +58,12 @@ function remitenteDelPayload(payload) {
   return payload?.envelope?.from || payload?.headers?.from || payload?.from || "Cliente";
 }
 
+// Extrae el correo plano de un remitente tipo "Nombre <correo@dominio>" o ya plano.
+function extraerEmail(texto) {
+  const m = String(texto || "").match(/[\w.+-]+@[\w.-]+\.\w+/);
+  return m ? m[0].toLowerCase() : "";
+}
+
 function textoDelPayload(payload) {
   if (payload?.plain) return String(payload.plain).trim();
   if (payload?.summary) return String(payload.summary).trim();
@@ -88,16 +94,21 @@ async function avisarNuevaRespuesta(auth, numero, remitente, mensaje) {
     const destinatarios = correoSoporte.split(",").map(s => s.trim()).filter(Boolean);
     if (!destinatarios.length) return;
 
-    const asunto = ticket ? `[Ticket #${numero}] ${ticket.asunto}` : `Ticket #${numero}`;
+    // IMPORTANTE: este asunto NO debe contener el patrón "[Ticket #" — este aviso se manda a la
+    // misma casilla de soporte que tiene el filtro de Zoho que reenvía a CloudMailin cuando el
+    // asunto contiene ese patrón. Si lo contuviera, el propio aviso se reenviaría a sí mismo en
+    // un bucle infinito (pasó en producción el 2026-10-02: ~20 correos en minutos). El ticket se
+    // identifica igual sin los corchetes, con el texto "Ticket #<numero>" sin más.
+    const asuntoTicket = ticket ? ticket.asunto : "";
     const html = `<div style="font-family:sans-serif;">
-      <p>💬 <strong>${remitente}</strong> respondió el ticket <strong>#${numero}</strong>${ticket ? ` — ${ticket.asunto}` : ""}:</p>
+      <p>💬 <strong>${remitente}</strong> respondió el ticket <strong>#${numero}</strong>${asuntoTicket ? ` — ${asuntoTicket}` : ""}:</p>
       <div style="background:#f9fafb; padding:12px; border-radius:6px; white-space:pre-wrap;">${mensaje.slice(0, 2000)}</div>
       <p><a href="https://crm-dattasoft.pages.dev" style="color:#4f46e5;">Ver en el CRM →</a></p>
     </div>`;
 
     await fetch("https://crm-dattasoft.pages.dev/send-email", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ to: destinatarios, subject: `💬 Respuesta de cliente — ${asunto}`, html }),
+      body: JSON.stringify({ to: destinatarios, subject: `💬 Respuesta de cliente — Ticket #${numero}${asuntoTicket ? ` — ${asuntoTicket}` : ""}`, html }),
     });
   } catch (err) {
     console.error("[correo-entrante-ticket] No se pudo avisar por correo:", err);
@@ -128,14 +139,24 @@ export const onRequestPost = async (context) => {
   const numero = extraerNumeroTicket(payload);
   if (!numero) {
     // Correo que el filtro de Zoho reenvió pero que no corresponde a ningún ticket reconocible —
-    // se deja un log con el payload completo para poder ajustar extraerNumeroTicket() con un
-    // caso real en vez de adivinar de nuevo.
-    console.log("[correo-entrante-ticket] No se identificó ningún ticket. Asunto:", asuntoDelPayload(payload), "| Texto:", textoDelPayload(payload).slice(0, 1500));
+    // se deja un log breve del asunto para poder diagnosticar casos futuros sin adivinar.
+    console.log("[correo-entrante-ticket] No se identificó ningún ticket. Asunto:", asuntoDelPayload(payload).slice(0, 200));
     return jsonResponse({ ok: true, guardada: false });
   }
 
   const mensaje = textoDelPayload(payload);
   const remitente = remitenteDelPayload(payload);
+
+  // Barrera anti-bucle: el aviso de "nueva respuesta" se manda desde esta misma casilla de
+  // soporte (vía Brevo) a la misma casilla — si por cualquier motivo ese correo volviera a
+  // reenviarse aquí (ej. el asunto vuelve a coincidir con el filtro de Zoho), NO se procesa como
+  // respuesta real de cliente. Pasó en producción el 2026-10-02 antes de este guardia.
+  const emailRemitente = extraerEmail(remitente);
+  const emailSoporteDefault = String(env.BREVO_FROM || "erick.casas@dattasoft.mx").toLowerCase();
+  if (emailRemitente && emailRemitente === emailSoporteDefault) {
+    console.log("[correo-entrante-ticket] Ignorado: remitente es la propia casilla de soporte (posible bucle).", emailRemitente);
+    return jsonResponse({ ok: true, guardada: false, motivo: "remitente_es_soporte" });
+  }
 
   try {
     const auth = await firestoreAdminAuth(env);
