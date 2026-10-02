@@ -82,6 +82,29 @@ function asuntoDelPayload(payload) {
   return payload?.headers?.subject || payload?.subject || "";
 }
 
+// El texto plano de una respuesta trae, debajo del mensaje nuevo, todo el historial citado del
+// hilo (lo que ya se había mandado antes) — Gmail/Outlook/Zoho lo agregan automáticamente al
+// contestar o reenviar. Sin este recorte, el chat del ticket mostraba el mensaje nuevo pegado a
+// todo ese historial repetido. Se corta en el primer indicio de contenido citado: una línea de
+// atribución ("El ... escribió:" / "On ... wrote:"), un bloque de encabezados reenviados
+// (De:/Para:/Asunto:), el separador clásico de Outlook, o la primera línea con "> " de cita.
+function limpiarCuerpoRespuesta(texto) {
+  const marcadores = [
+    /\n\s*El .{0,120}escribió:/i,
+    /\n\s*On .{0,120}wrote:/i,
+    /\n-{2,}\s*Mensaje original\s*-{2,}/i,
+    /\n-{2,}\s*Original Message\s*-{2,}/i,
+    /\n\s*De:\s*.+\n\s*(Enviado|Sent|Para|To):/i,
+    /\n\s*>/,
+  ];
+  let corte = texto.length;
+  for (const re of marcadores) {
+    const m = texto.match(re);
+    if (m && m.index != null && m.index < corte) corte = m.index;
+  }
+  return texto.slice(0, corte).trim();
+}
+
 async function avisarNuevaRespuesta(auth, numero, remitente, mensaje) {
   // No bloquea el guardado de la respuesta si esto falla — la respuesta ya quedó en Firestore y
   // es visible en el CRM aunque el aviso por correo no llegue.
@@ -144,7 +167,10 @@ export const onRequestPost = async (context) => {
     return jsonResponse({ ok: true, guardada: false });
   }
 
-  const mensaje = textoDelPayload(payload);
+  const textoCrudo = textoDelPayload(payload);
+  // Si el recorte dejó todo vacío (ej. reenvió sin escribir nada nuevo, todo era cita), mejor
+  // guardar el texto original que perder el mensaje por completo.
+  const mensaje = limpiarCuerpoRespuesta(textoCrudo) || textoCrudo;
   const remitente = remitenteDelPayload(payload);
 
   // Barrera anti-bucle: el aviso de "nueva respuesta" se manda desde esta misma casilla de
