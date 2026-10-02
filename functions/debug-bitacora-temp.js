@@ -9,6 +9,17 @@ export const onRequestGet = async ({ request, env }) => {
   }
   const auth = await firestoreAdminAuth(env);
   const resourceBase = auth.base.replace("https://firestore.googleapis.com/v1/", "");
+  // ?limpiar=1 quita la entrada de prueba en vez de agregarla.
+  if (url.searchParams.get("limpiar") === "1") {
+    const docResp = await fetch(`${auth.base}/agenda/datos`, { headers: auth.headers });
+    const doc = await docResp.json();
+    const bitacora = (doc.fields?.bitacora?.arrayValue?.values || []);
+    const prueba = bitacora.find(v => v.mapValue?.fields?.msg?.stringValue?.startsWith("🧪 Prueba de bitácora"));
+    if (!prueba) return new Response(JSON.stringify({ ok: true, encontrada: false }), { headers: { "Content-Type": "application/json" } });
+    const body = { writes: [{ transform: { document: `${resourceBase}/agenda/datos`, fieldTransforms: [{ fieldPath: "bitacora", removeAllFromArray: { values: [prueba] } }] } }] };
+    const resp = await fetch(`${auth.base}:commit`, { method: "POST", headers: auth.headers, body: JSON.stringify(body) });
+    return new Response(JSON.stringify({ ok: resp.ok, status: resp.status }), { headers: { "Content-Type": "application/json" } });
+  }
   const entry = { fecha: new Date().toISOString(), msg: "🧪 Prueba de bitácora desde servidor (borrar si la ves)", icon: "🧪", usuario: "Sistema" };
   const body = {
     writes: [{
