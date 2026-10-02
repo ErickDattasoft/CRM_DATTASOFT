@@ -13,7 +13,22 @@ export const onRequestGet = async ({ request, env }) => {
     id: d.name.split("/").pop(),
     ...fromFirestoreFields(d.fields || {}),
   }));
-  return new Response(JSON.stringify({ total: docs.length, docs }, null, 2), {
+
+  // Reproduce exactamente la consulta compuesta (where + orderBy) que usa el CRM, para ver si
+  // Firestore exige un índice compuesto que todavía no existe (causaría FAILED_PRECONDITION).
+  const parent = auth.base.replace(/\/documents$/, "/documents");
+  const runQueryUrl = auth.base.replace(/\/documents$/, "/documents:runQuery");
+  const structuredQuery = {
+    structuredQuery: {
+      from: [{ collectionId: "respuestas_tickets" }],
+      where: { fieldFilter: { field: { fieldPath: "ticketNumero" }, op: "EQUAL", value: { integerValue: "1070" } } },
+      orderBy: [{ field: { fieldPath: "fecha" }, direction: "ASCENDING" }],
+    },
+  };
+  const qResp = await fetch(runQueryUrl, { method: "POST", headers: auth.headers, body: JSON.stringify(structuredQuery) });
+  const qText = await qResp.text();
+
+  return new Response(JSON.stringify({ total: docs.length, docs, consultaCompuesta: { status: qResp.status, body: qText.slice(0, 2000) } }, null, 2), {
     headers: { "Content-Type": "application/json" },
   });
 };
