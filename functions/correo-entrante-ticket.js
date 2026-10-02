@@ -138,21 +138,23 @@ async function avisarNuevaRespuesta(auth, numero, remitente, mensaje) {
     const destinatarios = correoSoporte.split(",").map(s => s.trim()).filter(Boolean);
     if (!destinatarios.length) return;
 
-    // IMPORTANTE: este asunto NO debe contener el patrón "[Ticket #" — este aviso se manda a la
-    // misma casilla de soporte que tiene el filtro de Zoho que reenvía a CloudMailin cuando el
-    // asunto contiene ese patrón. Si lo contuviera, el propio aviso se reenviaría a sí mismo en
-    // un bucle infinito (pasó en producción el 2026-10-02: ~20 correos en minutos). El ticket se
-    // identifica igual sin los corchetes, con el texto "Ticket #<numero>" sin más.
-    const asuntoTicket = ticket ? ticket.asunto : "";
+    // El asunto SÍ lleva "[Ticket #N]" a propósito — así, si alguien contesta este mismo aviso (no
+    // el correo original del ticket), su respuesta también se captura en el hilo. La protección
+    // contra el bucle de correos (ver 2026-10-02, ~20 correos en minutos) ya NO depende de que el
+    // asunto evite ese patrón, sino de la barrera por remitente de más abajo (onRequestPost):
+    // cuando este mismo aviso se reenvía solo a sí mismo, el remitente coincide con la casilla de
+    // soporte y se ignora ahí, sin importar qué diga el asunto.
+    const asuntoTicket = ticket ? ticket.asunto : `Ticket #${numero}`;
+    const mailSubject = `[Ticket #${numero}] ${asuntoTicket}`;
     const html = `<div style="font-family:sans-serif;">
-      <p>💬 <strong>${remitente}</strong> respondió el ticket <strong>#${numero}</strong>${asuntoTicket ? ` — ${asuntoTicket}` : ""}:</p>
+      <p>💬 <strong>${remitente}</strong> respondió el ticket <strong>#${numero}</strong>${ticket ? ` — ${ticket.asunto}` : ""}:</p>
       <div style="background:#f9fafb; padding:12px; border-radius:6px; white-space:pre-wrap;">${mensaje.slice(0, 2000)}</div>
       <p><a href="https://crm-dattasoft.pages.dev" style="color:#4f46e5;">Ver en el CRM →</a></p>
     </div>`;
 
     await fetch("https://crm-dattasoft.pages.dev/send-email", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ to: destinatarios, subject: `💬 Respuesta de cliente — Ticket #${numero}${asuntoTicket ? ` — ${asuntoTicket}` : ""}`, html }),
+      body: JSON.stringify({ to: destinatarios, subject: `💬 Respuesta de cliente — ${mailSubject}`, html }),
     });
   } catch (err) {
     console.error("[correo-entrante-ticket] No se pudo avisar por correo:", err);
