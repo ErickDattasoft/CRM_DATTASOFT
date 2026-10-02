@@ -1,31 +1,36 @@
-// Cloudflare Pages Function: recibe el webhook SALIENTE de Zoho Mail cuando llega un correo nuevo
-// a la bandeja de soporte, y si es la respuesta de un cliente a un ticket la guarda ligada al
-// ticket correcto — sin tocar agenda/datos ni el arreglo de tickets (mismo motivo que
-// tickets_adjuntos/tickets_publicos viven en su propia colección: un documento aparte por
-// respuesta no puede chocar con el bug de "arreglo completo sobrescrito" que ya causó pérdidas
-// de datos reales en este CRM).
+// Cloudflare Pages Function: recibe el correo que un cliente contesta a la notificación de un
+// ticket, y lo guarda ligado al ticket correcto — sin tocar agenda/datos ni el arreglo de
+// tickets (mismo motivo que tickets_adjuntos/tickets_publicos viven en su propia colección: un
+// documento aparte por respuesta no puede chocar con el bug de "arreglo completo sobrescrito"
+// que ya causó pérdidas de datos reales en este CRM).
 //
-// Por qué Zoho y no Brevo/Gmail (los dos intentos anteriores, descartados):
-// - Brevo Inbound Parsing requería un subdominio con registros MX propios en el DNS de
-//   dattasoft.mx — ese DNS vive en una cuenta de AWS que Erick no administra y le pidieron
-//   explícitamente no tocar.
-// - Leer Gmail vía su API (para el mismo correo con un alias "+ticket<numero>") requiere el
-//   scope gmail.modify, clasificado por Google como "restricted" — exige una auditoría de
-//   seguridad externa (CASA) de varias semanas y costo recurrente, inviable aquí. Además resultó
-//   que el correo real de soporte NO es Gmail/Workspace, es Zoho Mail.
+// Tres intentos antes de llegar a este diseño (no repetir ninguno):
+// 1. Brevo Inbound Parsing: requería un subdominio con registros MX propios en el DNS de
+//    dattasoft.mx — vive en una cuenta de AWS que Erick no administra y le pidieron
+//    explícitamente no tocar nada ahí.
+// 2. Gmail API (OAuth): el scope necesario (gmail.modify) es "restricted" para Google — exige
+//    una auditoría de seguridad externa (CASA) de semanas y costo recurrente. Además resultó que
+//    el correo real de soporte no es Gmail/Workspace, es Zoho Mail.
+// 3. Webhook saliente nativo de Zoho Mail (Developer Space): requiere ser ADMINISTRADOR de la
+//    organización en Zoho — Erick no lo es, y el admin (Arturo) ya dijo que no va a configurar
+//    nada adicional.
 //
-// Cómo sabe a qué ticket corresponde: enviarNotificacionTicket() en index.astro pone el Reply-To
-// como erick.casas+ticket<numero>@dattasoft.mx — Zoho entrega ese correo en la bandeja normal de
-// erick.casas@dattasoft.mx (alias "+", función nativa de Zoho igual que Gmail, confirmada). Zoho
-// reporta el destinatario real (toAddress) en el payload del webhook, de donde se extrae el
-// número de ticket.
+// Diseño final — nada de lo anterior, cero privilegios especiales de ningún lado:
+// - Zoho SÍ permite, a cualquier usuario normal (sin ser admin), crear un FILTRO propio
+//   (Configuración → Filtros) que reenvíe automáticamente un correo según una condición. Erick
+//   configura: "si el Asunto contiene '[Ticket #', reenviar a <dirección de CloudMailin>".
+// - CloudMailin (plan gratis, 10,000 correos/mes, sin tarjeta, sin dominio propio — asigna una
+//   dirección ya lista tipo xxxxx@cloudmailin.net) convierte ese correo reenviado en un HTTP
+//   POST a esta Function.
+// - Cómo se identifica el ticket: NO se necesita ningún alias "+ticket<numero>" ni depender de
+//   que un reenvío preserve el destinatario original (frágil) — el Asunto de todo correo de
+//   ticket ya es "[Ticket #<numero>] <asunto>" desde que existe enviarNotificacionTicket() en
+//   index.astro, y el Asunto SÍ sobrevive cualquier reenvío/respuesta (es parte del contenido
+//   del mensaje, no un header de enrutamiento SMTP que se pierda en el camino).
 //
-// Seguridad: Zoho firma cada webhook con un esquema HMAC propio (x-hook-secret/x-hook-signature)
-// pero su documentación no explica bien el handshake inicial — en vez de depender de eso, se
-// protege con un secreto fijo en la URL (?key=...), mismo patrón que el resto de los webhooks de
-// este proyecto (brevo-webhook.js, cron-eventos.js): ese query param se configura directo en la
-// "URL del webhook" al darlo de alta en Zoho Mail → Configuración → Integraciones → Developer
-// Space → Webhooks salientes.
+// Formato del payload: JSON (Normalised) de CloudMailin — confirmado contra el código fuente de
+// una librería que lo implementa (github.com/peterhellberg/cloudmailin), no solo su marketing:
+// { headers: { from, to, subject, ... }, envelope: {...}, plain, html, attachments: [...] }
 
 import { firestoreAdminAuth, toFirestoreFields, fromFirestoreFields } from "./_lib/firestore-admin.js";
 
@@ -33,14 +38,13 @@ function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
 }
 
-const RE_TICKET = /\+ticket-?(\d+)@/i;
+const RE_TICKET = /\[Ticket #(\d+)\]/i;
 
-// El campo exacto donde Zoho reporta el destinatario no está 100% confirmado por su
-// documentación (incompleta en ese punto) — se revisan varios nombres plausibles por seguridad,
-// y de haber un formato distinto se vería en los logs de Cloudflare la primera vez que llegue un
-// correo real de prueba, para ajustar sin perder ningún dato mientras tanto.
+// Se revisan varias ubicaciones posibles del asunto por seguridad — además del formato
+// confirmado de CloudMailin (headers.subject), se admiten variantes planas por si el payload
+// real difiere un poco de lo documentado (se vería en el log de abajo la primera vez).
 function extraerNumeroTicket(payload) {
-  const candidatos = [payload?.toAddress, payload?.to, payload?.deliveredTo, payload?.subject, payload?.summary]
+  const candidatos = [payload?.headers?.subject, payload?.subject, payload?.headers?.to, payload?.toAddress]
     .filter(Boolean)
     .map(String);
   for (const texto of candidatos) {
@@ -48,6 +52,21 @@ function extraerNumeroTicket(payload) {
     if (m) return parseInt(m[1], 10);
   }
   return null;
+}
+
+function remitenteDelPayload(payload) {
+  return payload?.envelope?.from || payload?.headers?.from || payload?.from || "Cliente";
+}
+
+function textoDelPayload(payload) {
+  if (payload?.plain) return String(payload.plain).trim();
+  if (payload?.summary) return String(payload.summary).trim();
+  if (payload?.html) return String(payload.html).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  return "(sin contenido legible)";
+}
+
+function asuntoDelPayload(payload) {
+  return payload?.headers?.subject || payload?.subject || "";
 }
 
 async function avisarNuevaRespuesta(auth, numero, remitente, mensaje) {
@@ -78,18 +97,15 @@ async function avisarNuevaRespuesta(auth, numero, remitente, mensaje) {
   }
 }
 
-// Zoho entrega el cuerpo en "summary" (texto) y/o "html" según su documentación — se prefiere
-// texto plano si viene, igual que el resto del CRM guarda las respuestas.
-function textoDelPayload(payload) {
-  if (payload?.summary) return String(payload.summary);
-  if (payload?.content) return String(payload.content);
-  if (payload?.html) return String(payload.html).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-  return "(sin contenido legible)";
-}
-
 export const onRequestPost = async (context) => {
   const { request, env } = context;
 
+  // Protección: la dirección de CloudMailin ya es un identificador aleatorio no adivinable, y
+  // además se exige este secreto fijo en la URL (?key=...) — mismo patrón que el resto de los
+  // webhooks de este proyecto (brevo-webhook.js, cron-eventos.js). El nombre de la variable
+  // (ZOHO_WEBHOOK_SECRET) quedó del diseño anterior (webhook directo de Zoho, descartado) — se
+  // mantiene el mismo nombre porque ya está dado de alta en Cloudflare, sin motivo para pedirle
+  // a Erick que repita ese paso solo por una etiqueta.
   const url = new URL(request.url);
   if (!env.ZOHO_WEBHOOK_SECRET || url.searchParams.get("key") !== env.ZOHO_WEBHOOK_SECRET) {
     return jsonResponse({ ok: false, error: "No autorizado" }, 401);
@@ -102,51 +118,43 @@ export const onRequestPost = async (context) => {
     return jsonResponse({ ok: false, error: "JSON inválido" }, 400);
   }
 
-  // No queda documentado si Zoho agrupa varios correos por POST — se admiten ambas formas por
-  // seguridad, igual que ya se hizo con el webhook de Brevo en este mismo proyecto.
-  const items = Array.isArray(payload) ? payload : Array.isArray(payload?.items) ? payload.items : [payload];
-
-  let auth = null;
-  let guardadas = 0;
-
-  for (const item of items) {
-    const numero = extraerNumeroTicket(item);
-    if (!numero) continue; // correo normal de la bandeja, no es respuesta de ningún ticket
-
-    const mensaje = textoDelPayload(item);
-    const remitente = item.fromAddress || item.from || "Cliente";
-
-    try {
-      if (!auth) auth = await firestoreAdminAuth(env);
-      const createResp = await fetch(`${auth.base}/respuestas_tickets`, {
-        method: "POST", headers: auth.headers,
-        body: JSON.stringify({
-          fields: toFirestoreFields({
-            ticketNumero: numero,
-            de: remitente,
-            nombreDe: remitente,
-            asunto: item.subject || "",
-            mensaje,
-            fecha: new Date().toISOString(),
-            leido: false,
-          }),
-        }),
-      });
-      if (createResp.ok) {
-        guardadas++;
-        await avisarNuevaRespuesta(auth, numero, remitente, mensaje);
-      } else {
-        console.error("[correo-entrante-ticket] No se pudo guardar respuesta:", await createResp.text().catch(() => ""));
-      }
-    } catch (err) {
-      console.error("[correo-entrante-ticket] Error de auth/Firestore:", err);
-    }
+  const numero = extraerNumeroTicket(payload);
+  if (!numero) {
+    // Correo que el filtro de Zoho reenvió pero que no corresponde a ningún ticket reconocible —
+    // se deja un log con el payload completo para poder ajustar extraerNumeroTicket() con un
+    // caso real en vez de adivinar de nuevo.
+    console.log("[correo-entrante-ticket] No se identificó ningún ticket:", JSON.stringify(payload).slice(0, 3000));
+    return jsonResponse({ ok: true, guardada: false });
   }
 
-  // Log explícito del payload completo cuando NO se identificó ningún ticket — necesario para la
-  // primera prueba real (confirmar en qué campo exacto llega el destinatario con el "+alias",
-  // ya que la documentación de Zoho no lo deja claro) sin tener que adivinar dos veces.
-  if (!guardadas) console.log("[correo-entrante-ticket] Payload recibido, ningún ticket identificado:", JSON.stringify(payload).slice(0, 3000));
+  const mensaje = textoDelPayload(payload);
+  const remitente = remitenteDelPayload(payload);
 
-  return jsonResponse({ ok: true, recibidos: items.length, guardadas });
+  try {
+    const auth = await firestoreAdminAuth(env);
+    const createResp = await fetch(`${auth.base}/respuestas_tickets`, {
+      method: "POST", headers: auth.headers,
+      body: JSON.stringify({
+        fields: toFirestoreFields({
+          ticketNumero: numero,
+          de: remitente,
+          nombreDe: remitente,
+          asunto: asuntoDelPayload(payload),
+          mensaje,
+          fecha: new Date().toISOString(),
+          leido: false,
+        }),
+      }),
+    });
+    if (!createResp.ok) {
+      console.error("[correo-entrante-ticket] No se pudo guardar respuesta:", await createResp.text().catch(() => ""));
+      return jsonResponse({ ok: false, error: "No se pudo guardar en Firestore" }, 500);
+    }
+    await avisarNuevaRespuesta(auth, numero, remitente, mensaje);
+  } catch (err) {
+    console.error("[correo-entrante-ticket] Error de auth/Firestore:", err);
+    return jsonResponse({ ok: false, error: String(err) }, 500);
+  }
+
+  return jsonResponse({ ok: true, guardada: true, ticket: numero });
 };

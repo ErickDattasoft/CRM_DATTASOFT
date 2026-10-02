@@ -3500,7 +3500,7 @@ try {
               <span>💬 Activar respuestas de cliente por correo</span>
             </label>
             <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">
-              Cuando el cliente responde el correo de un ticket, su respuesta aparece directo dentro del ticket en el CRM (sigue llegando normal a tu bandeja también, no se desvía a ningún lado). <strong style="color:#f59e0b;">Requiere tener configurado el webhook saliente en Zoho Mail primero</strong> — actívalo solo cuando ya esté listo.
+              Cuando el cliente responde el correo de un ticket, su respuesta aparece directo dentro del ticket en el CRM (sigue llegando normal a tu bandeja también, no se desvía a ningún lado). <strong style="color:#f59e0b;">Requiere el filtro de reenvío en Zoho y la cuenta de CloudMailin configurados primero</strong> — es solo informativo, no cambia nada del envío.
             </span>
           </div>
           <div class="form-group" style="max-width:460px; margin-bottom:16px;">
@@ -10476,18 +10476,13 @@ verificarSesion();
       <p style="font-size:12px; color:#6b7280; font-family:sans-serif;">DATTASOFT BY INFOXPERT — Sistema de Tickets</p>
     `;
 
-    // Con "Activar respuestas de cliente por correo" prendido en Configuración, la respuesta del
-    // cliente va a erick.casas+ticket<numero>@dattasoft.mx — el "+alias" es una función nativa de
-    // Gmail/Workspace (sin tocar DNS: el dominio dattasoft.mx vive en una cuenta de AWS que no se
-    // puede tocar), así que el correo cae en la bandeja normal de siempre, y de ahí lo recoge el
-    // cron (correo-entrante-ticket.js, vía Gmail API) para copiarlo también al ticket. Dirección
-    // fija a propósito: solo esa cuenta está autorizada por OAuth para que el cron la lea —
-    // derivarla de configTickets.correoSoporte fallaría en silencio si alguien lo cambia.
-    const replyToRespuestas = configTickets.respuestasClienteActivo ? `erick.casas+ticket${t.numero}@dattasoft.mx` : "";
-
     let sent;
     if (mailTo) {
-      const mailReplyTo = replyToRespuestas || soporteEmails[0] || "";
+      // No hace falta ningún alias/Reply-To especial para que las respuestas de cliente lleguen
+      // al ticket (ver correo-entrante-ticket.js): el asunto del correo ya es "[Ticket #<numero>]
+      // <asunto>" y eso sobrevive cualquier respuesta/reenvío, a diferencia de un destinatario
+      // con "+alias" que sí podía perderse en el camino.
+      const mailReplyTo = soporteEmails[0] || "";
       const mailCC = [...new Set([...soporteEmails, ...ccTicket])].filter(e => e !== mailTo).join(",");
       sent = await enviarEmailConProveedor({ to: mailTo, subject: mailSubject, html: htmlTicket, replyTo: mailReplyTo, cc: mailCC, bcc: bccTicket });
       if (sent?.ok) { toast(`✉️ Notificación enviada a ${mailTo}`); logBitacora(`✉️ Correo enviado a ${mailTo} — Ticket #${t.numero}`, "📧"); }
