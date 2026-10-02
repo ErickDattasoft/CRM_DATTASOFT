@@ -3247,6 +3247,18 @@ try {
           </div>
         </div>
 
+        <div class="card" id="panel-solicitudes-ticket-correo" style="margin-bottom:16px; display:none;">
+          <div class="card-title" style="display:flex; align-items:center; justify-content:space-between;">
+            <span>📥 Solicitudes de ticket por correo (<span id="count-solicitudes-ticket-correo">0</span>)</span>
+            <button class="btn btn-ghost btn-sm" id="btnRefrescarSolicitudesTicket" title="Revisar si llegaron más">🔄</button>
+          </div>
+          <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">
+            Correos que llegaron pidiendo soporte y no corresponden a ningún ticket existente — revísalos y decide si se
+            convierten en un ticket nuevo o se descartan (ej. spam, avisos automáticos).
+          </p>
+          <div id="lista-solicitudes-ticket-correo" style="display:flex; flex-direction:column; gap:10px;"></div>
+        </div>
+
         <div class="controls-bar">
           <div class="controls-left">
             <div class="search-bar">
@@ -5652,7 +5664,7 @@ try {
 <div id="data-bridge" data-iniciales={JSON.stringify(datosIniciales)} data-contactos={JSON.stringify(datosInicialesContactos)} data-sistemas={JSON.stringify(listaSistemasOpciones)} data-soporte-mail={CONFIG_CRM.CORREO_SOPORTE_PRINCIPAL}></div>
 
 <script>
-import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarPapeleraEmpresas, guardarPapeleraContactos, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, actualizarInscripcionEvento, eliminarInscripcionEvento, obtenerListaNegraEventos, agregarAListaNegraEventos, obtenerHistorialAsistencias, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, obtenerSiguienteFolioTicket, sincronizarContadorTickets, registrarClavesConocidas, agregarTicket, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, guardarConfigCompac, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket, actualizarMetaAdjuntoTicket, obtenerRespuestasTicket, marcarRespuestaTicketLeida, enviarRespuestaTicket, obtenerTodasRespuestasTickets, restaurarRespuestasTickets } from "../data/firebase.js";
+import { firebaseEnabled, authListo, sesionEsAnonima, cargarDatosCRM, suscribirCRM, guardarClientes, guardarConfiguracion, guardarPlantilla, guardarTickets, guardarContactos, guardarConfigTickets, cargarTicketsPublicos, eliminarTicketPublico, guardarUsuarios, guardarEventosFB, guardarBitacora, guardarPapelera, guardarPapeleraEmpresas, guardarPapeleraContactos, guardarAcercaDe, guardarConfigCorreo, guardarConfigN8n, agregarEntradaBitacora, suscribirKB, crearDocKB, actualizarDocKB, actualizarSourcePathKB, eliminarDocKB, guardarKBAcceso, guardarLogo, guardarInteracciones, guardarTareas, guardarFiltrosGuardados, guardarAlertasVencimiento, guardarInscripcionEvento, obtenerInscripcionesEvento, actualizarInscripcionEvento, eliminarInscripcionEvento, obtenerListaNegraEventos, agregarAListaNegraEventos, obtenerHistorialAsistencias, guardarConfigPublica, activarCuentaSegura, restaurarSesionAnonima, iniciarSesionSegura, otorgarAccesoStaff, quitarAccesoStaff, solicitarAcceso, crearSolicitudAcceso, obtenerSolicitudesAcceso, eliminarSolicitudAcceso, cargarConfigPublica, obtenerSiguienteFolioCotizacion, obtenerSiguienteFolioTicket, sincronizarContadorTickets, registrarClavesConocidas, agregarTicket, agregarCotizacion, guardarCotizaciones, guardarConfigCotizaciones, guardarConfigCompac, registrarAvisoVersion, cargarAvisosVersiones, renombrarEmpresaEnAvisosVersiones, guardarPlantillaLicencias, guardarAdjuntoTicket, cargarAdjuntoTicket, eliminarAdjuntoTicket, actualizarMetaAdjuntoTicket, obtenerRespuestasTicket, marcarRespuestaTicketLeida, enviarRespuestaTicket, obtenerTodasRespuestasTickets, restaurarRespuestasTickets, obtenerSolicitudesTicketCorreo, eliminarSolicitudTicketCorreo } from "../data/firebase.js";
 import { parseEmailList, hoyLocalStr, parseFechaLocal, escapeHtml, slugBadge, esConsultoria, formatearDuracion, colorPuntoEstado, formatMoney } from "../data/utils.js";
 import JSZip from "jszip";
 
@@ -6697,6 +6709,7 @@ verificarSesion();
       const sel = document.getElementById("selectFiltroEstado");
       if (sel) sel.value = filtroEstado; // "" resetea el filtro, valor específico lo aplica
       renderTickets();
+      renderSolicitudesTicketCorreo();
     }
     if (sectionId === "configuracion") renderConfig();
     if (sectionId === "bitacora") {
@@ -8271,6 +8284,69 @@ verificarSesion();
       if (btn) btn.disabled = false;
     }
   });
+
+  // Correos que llegaron pidiendo soporte por primera vez (no respuesta a un ticket existente) —
+  // se listan aquí para revisarlos y decidir si se convierten en ticket o se descartan. Se piden
+  // cada vez que se entra a la sección de Tickets (ver navegarA), no en vivo.
+  async function renderSolicitudesTicketCorreo() {
+    const panel = document.getElementById("panel-solicitudes-ticket-correo");
+    const cont = document.getElementById("lista-solicitudes-ticket-correo");
+    const countEl = document.getElementById("count-solicitudes-ticket-correo");
+    if (!panel || !cont || !countEl) return;
+    if (!firebaseEnabled || crmLocalOnly) { panel.style.display = "none"; return; }
+    const solicitudes = await obtenerSolicitudesTicketCorreo();
+    solicitudes.sort((a: any, b: any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+    if (!solicitudes.length) { panel.style.display = "none"; return; }
+    panel.style.display = "block";
+    countEl.textContent = String(solicitudes.length);
+    cont.innerHTML = "";
+    solicitudes.forEach((s: any) => {
+      const div = document.createElement("div");
+      div.style.cssText = "background:var(--bg-input); border:1px solid var(--border-color); border-left:4px solid #f59e0b; border-radius:var(--radius-sm); padding:10px 12px;";
+      const fecha = s.fecha ? new Date(s.fecha).toLocaleString("es-MX") : "";
+      div.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px; gap:10px;">
+          <span style="font-weight:700; font-size:0.82rem; color:var(--text-bright);">${escapeHtml(s.nombreDe || s.de || "Remitente")}</span>
+          <span style="font-size:0.68rem; color:var(--text-muted); white-space:nowrap;">${fecha}</span>
+        </div>
+        <div style="font-size:0.8rem; color:var(--text-light); margin-bottom:6px;">${escapeHtml(s.asunto || "(sin asunto)")}</div>
+        <div style="font-size:0.82rem; white-space:pre-wrap; line-height:1.5; max-height:120px; overflow-y:auto; margin-bottom:10px;">${escapeHtml((s.mensaje || "").slice(0, 1000))}</div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-primary btn-sm btn-convertir-solicitud" data-id="${s._id}">🎫 Convertir a ticket</button>
+          <button class="btn btn-ghost btn-sm btn-descartar-solicitud" data-id="${s._id}">🗑️ Descartar</button>
+        </div>
+      `;
+      cont.appendChild(div);
+      const solicitudRef = s;
+      div.querySelector(".btn-convertir-solicitud")?.addEventListener("click", () => convertirSolicitudATicket(solicitudRef));
+      div.querySelector(".btn-descartar-solicitud")?.addEventListener("click", () => descartarSolicitudTicketCorreo(solicitudRef._id));
+    });
+  }
+
+  async function descartarSolicitudTicketCorreo(id: string) {
+    if (!await confirmar("¿Descartar esta solicitud? No se puede deshacer.", "🗑️")) return;
+    await eliminarSolicitudTicketCorreo(id);
+    renderSolicitudesTicketCorreo();
+  }
+
+  function convertirSolicitudATicket(s: any) {
+    cerrarFormTicket();
+    const tituloTk = document.getElementById("form-tk-titulo");
+    if (tituloTk) tituloTk.textContent = "➕ Crear Ticket de Soporte";
+    initTicketFormDropdowns();
+    (document.getElementById("form-tk-contacto") as HTMLInputElement).value = s.nombreDe || "";
+    (document.getElementById("form-tk-correo-contacto") as HTMLInputElement).value = s.correoDe || "";
+    (document.getElementById("form-tk-asunto") as HTMLInputElement).value = s.asunto || "Solicitud de soporte por correo";
+    const rteEdit = document.getElementById("form-tk-descripcion");
+    if (rteEdit) rteEdit.innerHTML = `<p>${escapeHtml(s.mensaje || "").replace(/\n/g, "<br>")}</p>`;
+    formTk?.classList.remove("hidden");
+    formTk?.scrollIntoView({ behavior: "smooth" });
+    // Se quita de pendientes al abrir el formulario (ya está copiado ahí) — si se cancela la
+    // creación, no reaparece solo; el correo original sigue en la bandeja de Zoho de todos modos.
+    eliminarSolicitudTicketCorreo(s._id).then(() => renderSolicitudesTicketCorreo());
+  }
+
+  document.getElementById("btnRefrescarSolicitudesTicket")?.addEventListener("click", renderSolicitudesTicketCorreo);
 
   const tkAttachZone = document.getElementById("tk-attachment-zone");
   const tkAttachInput = document.getElementById("tk-attachment-input");

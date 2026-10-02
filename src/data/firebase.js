@@ -516,6 +516,32 @@ export async function restaurarRespuestasTickets(lista) {
 }
 
 /**
+ * Correos que llegaron al webhook de correo entrante pero NO correspondían a ningún ticket
+ * existente (alguien pidiendo soporte por primera vez, no una respuesta) — los guarda
+ * correo-entrante-ticket.js en su propia colección (solicitudes_ticket_correo), separada de
+ * respuestas_tickets, para poder revisarlos y decidir si se convierten en ticket o se descartan.
+ */
+export async function obtenerSolicitudesTicketCorreo() {
+  try {
+    const snap = await getDocs(collection(db, "solicitudes_ticket_correo"));
+    return snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+  } catch (error) {
+    console.error("Error al cargar solicitudes de ticket por correo:", error);
+    return [];
+  }
+}
+
+export async function eliminarSolicitudTicketCorreo(id) {
+  try {
+    await deleteDoc(doc(db, "solicitudes_ticket_correo", id));
+    return true;
+  } catch (error) {
+    avisarErrorGuardado("eliminar solicitud de ticket por correo", error);
+    return false;
+  }
+}
+
+/**
  * Guarda la lista de usuarios del CRM en Firestore.
  */
 export async function guardarUsuarios(usuarios) {

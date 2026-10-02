@@ -206,13 +206,6 @@ export const onRequestPost = async (context) => {
   }
 
   const numero = extraerNumeroTicket(payload);
-  if (!numero) {
-    // Correo que el filtro de Zoho reenvió pero que no corresponde a ningún ticket reconocible —
-    // se deja un log breve del asunto para poder diagnosticar casos futuros sin adivinar.
-    console.log("[correo-entrante-ticket] No se identificó ningún ticket. Asunto:", asuntoDelPayload(payload).slice(0, 200));
-    return jsonResponse({ ok: true, guardada: false });
-  }
-
   const textoCrudo = textoDelPayload(payload);
   // Si el recorte dejó todo vacío (ej. reenvió sin escribir nada nuevo, todo era cita), mejor
   // guardar el texto original que perder el mensaje por completo.
@@ -222,7 +215,8 @@ export const onRequestPost = async (context) => {
   // Barrera anti-bucle: el aviso de "nueva respuesta" se manda desde esta misma casilla de
   // soporte (vía Brevo) a la misma casilla — si por cualquier motivo ese correo volviera a
   // reenviarse aquí (ej. el asunto vuelve a coincidir con el filtro de Zoho), NO se procesa como
-  // respuesta real de cliente. Pasó en producción el 2026-10-02 antes de este guardia.
+  // respuesta real de cliente. Pasó en producción el 2026-10-02 antes de este guardia. Aplica
+  // igual para solicitudes nuevas (abajo) — un correo nuestro nunca debe generar una "solicitud".
   const emailRemitente = extraerEmail(remitente);
   const emailSoporteDefault = String(env.BREVO_FROM || "erick.casas@dattasoft.mx").toLowerCase();
   if (emailRemitente && emailRemitente === emailSoporteDefault) {
@@ -232,6 +226,33 @@ export const onRequestPost = async (context) => {
 
   try {
     const auth = await firestoreAdminAuth(env);
+
+    if (!numero) {
+      // No corresponde a ningún ticket existente — probablemente alguien pidiendo soporte por
+      // primera vez. Se guarda como "solicitud" aparte (no como respuesta de ningún ticket) para
+      // que se revise en el CRM y, si corresponde, se convierta en ticket nuevo a mano — nunca se
+      // crea un ticket automáticamente sin que alguien lo confirme.
+      const createResp = await fetch(`${auth.base}/solicitudes_ticket_correo`, {
+        method: "POST", headers: auth.headers,
+        body: JSON.stringify({
+          fields: toFirestoreFields({
+            de: remitente,
+            correoDe: emailRemitente,
+            nombreDe: nombreAmigable(remitente),
+            asunto: asuntoDelPayload(payload),
+            mensaje,
+            fecha: new Date().toISOString(),
+          }),
+        }),
+      });
+      if (!createResp.ok) {
+        console.error("[correo-entrante-ticket] No se pudo guardar solicitud:", await createResp.text().catch(() => ""));
+        return jsonResponse({ ok: false, error: "No se pudo guardar en Firestore" }, 500);
+      }
+      await agregarEntradaBitacoraServidor(auth, { msg: `📥 Solicitud de ticket por correo de ${nombreAmigable(remitente)}`, icon: "📥" });
+      return jsonResponse({ ok: true, guardada: true, solicitud: true });
+    }
+
     const createResp = await fetch(`${auth.base}/respuestas_tickets`, {
       method: "POST", headers: auth.headers,
       body: JSON.stringify({
