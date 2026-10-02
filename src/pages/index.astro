@@ -3497,10 +3497,10 @@ try {
           <div class="form-group" style="max-width:460px; margin-bottom:16px; padding-top:12px; border-top:1px dashed rgba(255,255,255,0.08);">
             <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600;">
               <input type="checkbox" id="cfg-respuestas-cliente-activo">
-              <span>💬 Activar respuestas de cliente por correo</span>
+              <span>💬 Activar respuestas por correo (cliente o agentes en copia)</span>
             </label>
             <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">
-              Cuando el cliente responde el correo de un ticket, su respuesta aparece directo dentro del ticket en el CRM (sigue llegando normal a tu bandeja también, no se desvía a ningún lado). <strong style="color:#f59e0b;">Requiere el filtro de reenvío en Zoho y la cuenta de CloudMailin configurados primero</strong> — es solo informativo, no cambia nada del envío.
+              Cuando alguien responde el correo de un ticket —el cliente, o un agente en copia dando seguimiento—, su respuesta aparece directo dentro del ticket en el CRM, como un chat (sigue llegando normal a tu bandeja también, no se desvía a ningún lado). <strong style="color:#f59e0b;">Requiere el filtro de reenvío en Zoho y la cuenta de CloudMailin configurados primero</strong> — es solo informativo, no cambia nada del envío.
             </span>
           </div>
           <div class="form-group" style="max-width:460px; margin-bottom:16px;">
@@ -4931,7 +4931,7 @@ try {
       <div class="attachment-list" id="det-tk-adjuntos"></div>
     </div>
     <div id="det-tk-respuestas-section" style="border-top:1px solid var(--border-color); padding-top:12px; display:none;">
-      <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:8px;">💬 Respuestas del cliente (<span id="det-tk-respuestas-count">0</span>)</div>
+      <div style="font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; margin-bottom:8px;">💬 Respuestas (<span id="det-tk-respuestas-count">0</span>)</div>
       <div id="det-tk-respuestas" style="display:flex; flex-direction:column; gap:10px; max-height:260px; overflow-y:auto;"></div>
     </div>
     <div style="border-top:1px solid var(--border-color); padding-top:12px;">
@@ -8205,7 +8205,7 @@ verificarSesion();
       const fecha = r.fecha ? new Date(r.fecha).toLocaleString("es-MX") : "";
       div.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px; gap:10px;">
-          <span style="font-weight:700; font-size:0.82rem; color:var(--text-bright);">${escapeHtml(r.nombreDe || r.de || "Cliente")}</span>
+          <span style="font-weight:700; font-size:0.82rem; color:var(--text-bright);">${escapeHtml(r.nombreDe || r.de || "Remitente")}</span>
           <span style="font-size:0.68rem; color:var(--text-muted); white-space:nowrap;">${fecha}${r.leido ? "" : " · nuevo"}</span>
         </div>
         <div style="font-size:0.82rem; white-space:pre-wrap; line-height:1.5;">${escapeHtml(r.mensaje || "")}</div>
