@@ -10743,6 +10743,33 @@ verificarSesion();
     return sent;
   }
 
+  // Aviso automático al cliente cuando cambia el Estado de su ticket (pedido explícito de Erick
+  // 2026-10-03: "que sea más específico cada actualización para que el cliente vea todo lo que se
+  // hace") — a diferencia de enviarNotificacionTicket() (el ticket completo, para creación/
+  // reenvío manual), este es corto y puntual: dice exactamente qué cambió, no todo el ticket de
+  // nuevo. Mismo asunto "[Ticket #N]" para que si el cliente contesta, la respuesta se siga
+  // capturando en el hilo (ver correo-entrante-ticket.js). No bloquea el guardado del ticket si
+  // falla — se le avisa al usuario, pero el cambio de estado ya quedó guardado de todos modos.
+  async function avisarCambioEstadoCliente(t: any, estadoAnterior: string, estadoNuevo: string) {
+    const mailTo = t.contactoCorreo || contactos.find(c => c.nombre === t.contacto)?.correo || "";
+    if (!mailTo) return; // sin correo de contacto no hay a quién avisar — ya se guardó el cambio igual
+    const soporteEmails = parseEmailList(configTickets.correoSoporte);
+    const ccTicket = parseEmailList(t.cc || "");
+    const mailCC = [...new Set([...soporteEmails, ...ccTicket])].filter(e => e !== mailTo).join(",");
+    const subject = `[Ticket #${t.numero}] ${t.asunto}`;
+    const html = `<div style="font-family:sans-serif;">
+      <p>📌 Actualización de tu ticket <strong>#${t.numero}</strong> — ${escapeHtml(t.asunto)}:</p>
+      <p style="background:#f0fdf4; color:#166534; padding:10px 14px; border-radius:6px; font-size:15px;">
+        Estado: <strong>${escapeHtml(estadoAnterior || "—")}</strong> → <strong>${escapeHtml(estadoNuevo)}</strong>
+      </p>
+      <p><a href="https://crm-dattasoft.pages.dev" style="color:#4f46e5;">Ver el ticket →</a></p>
+      <hr style="margin-top:20px; border:none; border-top:1px solid #e5e7eb;">
+      <p style="font-size:12px; color:#6b7280;">DATTASOFT BY INFOXPERT — Sistema de Tickets</p>
+    </div>`;
+    const sent = await enviarEmailConProveedor({ to: mailTo, subject, html, replyTo: soporteEmails[0] || "", cc: mailCC });
+    if (sent?.ok) logBitacora(`📌 Aviso de cambio de estado enviado a ${mailTo} — Ticket #${t.numero} ("${estadoAnterior}" → "${estadoNuevo}")`, "📌");
+  }
+
   // Datos comunes que se mandan a n8n para cualquier evento relacionado con un ticket.
   function datosEventoTicket(t, extra = {}) {
     return {
@@ -12733,6 +12760,7 @@ verificarSesion();
       if (facturado !== facturadoAnterior) logBitacora(`Ticket #${t.numero}: facturación cambiada a "${facturado}"`, "🧾");
       if (estado !== estadoAnterior) dispararN8n("ticket_estado_cambiado", datosEventoTicket(t));
       if (notasInternas !== notasInternasAnterior && notasInternas.trim()) dispararN8n("ticket_nota_interna", datosEventoTicket(t));
+      if (estado !== estadoAnterior) avisarCambioEstadoCliente(t, estadoAnterior, estado).catch(() => {});
       await procesarCierreTicket(t, estadoAnterior);
       await procesarFacturacion(t, estadoAnterior, facturadoAnterior);
 
@@ -13232,6 +13260,7 @@ verificarSesion();
     t.fechaActualizacion = new Date().toISOString();
     if (nuevoEstado && nuevoEstado !== estadoAnterior) dispararN8n("ticket_estado_cambiado", datosEventoTicket(t));
     if (notasInternasCambiaron && nuevoNotasInternas) dispararN8n("ticket_nota_interna", datosEventoTicket(t));
+    if (nuevoEstado && nuevoEstado !== estadoAnterior) avisarCambioEstadoCliente(t, estadoAnterior, nuevoEstado).catch(() => {});
     await procesarCierreTicket(t, estadoAnterior);
     await procesarFacturacion(t, estadoAnterior, facturadoAnterior);
     guardarLocal("crm_tickets", tickets);
