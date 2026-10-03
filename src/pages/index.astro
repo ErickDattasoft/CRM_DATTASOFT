@@ -5751,6 +5751,33 @@ function getContactosPropiosUsuarioActual(): { nombre: string; telefono: string 
   return full?.contactosPropios || [];
 }
 
+// Compara un nombre contra el campo "Agente" o "Canalizado a" de un ticket en ambos sentidos
+// (mismo criterio que el filtro de Agente en renderTickets — "Diego" debe calzar con
+// "Diego Armando" y viceversa, porque el nombre a veces queda completo y a veces abreviado).
+function nombreCoincideConCampo(nombre: string, campo: string): boolean {
+  const n = nombre.trim().toLowerCase();
+  const c = (campo || "").trim().toLowerCase();
+  return !!n && !!c && (c.includes(n) || n.includes(c));
+}
+
+// Un agente "Normal" (no admin) solo ve los tickets donde él es el Agente o a quien se
+// Canalizó — más los que todavía no tienen a nadie asignado (si no, quedarían invisibles para
+// todos hasta que un admin se los dé uno por uno). Los admins siempre ven todo. Pedido explícito
+// de Erick 2026-10-03: "que cada agente vea solo sus tickets".
+function usuarioVeSoloSusTickets(): boolean {
+  const u = getUsuarioActual();
+  return !!u && u.rol !== "admin";
+}
+
+function ticketVisibleParaUsuarioActual(t: any): boolean {
+  if (!usuarioVeSoloSusTickets()) return true;
+  const u = getUsuarioActual();
+  if (!u) return false;
+  const sinAsignar = !(t.agente || "").trim() && !(t.canalizado || "").trim();
+  if (sinAsignar) return true;
+  return nombreCoincideConCampo(u.nombre, t.agente) || nombreCoincideConCampo(u.nombre, t.canalizado);
+}
+
 // Deduplica nombres ignorando mayúsculas/minúsculas, conservando la primera forma vista
 function dedupeNombres(nombres: string[]): string[] {
   const vistos = new Map<string, string>();
@@ -9093,19 +9120,22 @@ verificarSesion();
   // ============================================================
   function renderDashboard() {
     const el = id => document.getElementById(id);
+    // Mismo recorte que renderTickets() — un agente Normal no debe ver en el Dashboard/sidebar
+    // totales de tickets que ni siquiera puede abrir en la lista (ver ticketVisibleParaUsuarioActual).
+    const ticketsVisiblesDash = tickets.filter(ticketVisibleParaUsuarioActual);
     el("dash-total-empresas").textContent = clientes.length;
     el("dash-total-contactos").textContent = contactos.length;
-    el("dash-total-tickets").textContent = tickets.length;
-    const nTkAbiertos = tickets.filter(t => t.estado === "Abierto").length;
-    const nTkPendientes = tickets.filter(t => t.estado === "Pendiente").length;
-    const nTkResueltos = tickets.filter(t => t.estado === "Resuelto").length;
-    const nTkCerrados = tickets.filter(t => t.estado === "Cerrado").length;
+    el("dash-total-tickets").textContent = ticketsVisiblesDash.length;
+    const nTkAbiertos = ticketsVisiblesDash.filter(t => t.estado === "Abierto").length;
+    const nTkPendientes = ticketsVisiblesDash.filter(t => t.estado === "Pendiente").length;
+    const nTkResueltos = ticketsVisiblesDash.filter(t => t.estado === "Resuelto").length;
+    const nTkCerrados = ticketsVisiblesDash.filter(t => t.estado === "Cerrado").length;
     el("dash-tickets-abiertos").textContent = nTkAbiertos;
     el("dash-tickets-pendientes").textContent = nTkPendientes;
     el("dash-tickets-resueltos").textContent = nTkResueltos;
     el("dash-tickets-cerrados").textContent = nTkCerrados;
     // Estados fuera de los 4 principales (ej. "Garantía", "Pendiente cotización") — evita que Total no cuadre con el desglose
-    const nTkOtros = tickets.length - nTkAbiertos - nTkPendientes - nTkResueltos - nTkCerrados;
+    const nTkOtros = ticketsVisiblesDash.length - nTkAbiertos - nTkPendientes - nTkResueltos - nTkCerrados;
     const cardTkOtros = document.querySelector(".stat-card.stat-others");
     el("dash-tickets-otros").textContent = nTkOtros;
     if (cardTkOtros) cardTkOtros.style.display = nTkOtros > 0 ? "flex" : "none";
@@ -9115,9 +9145,9 @@ verificarSesion();
     // Sidebar badges
     el("badge-empresas").textContent = clientes.length;
     el("badge-contactos").textContent = contactos.length;
-    const abiertos = tickets.filter(t => t.estado === "Abierto" || t.estado === "Pendiente").length;
+    const abiertos = ticketsVisiblesDash.filter(t => t.estado === "Abierto" || t.estado === "Pendiente").length;
     el("badge-tickets-abiertos").textContent = abiertos;
-    const resueltosPorFacturar = tickets.filter(t => t.estado === "Resuelto").length;
+    const resueltosPorFacturar = ticketsVisiblesDash.filter(t => t.estado === "Resuelto").length;
     const badgeResueltos = el("badge-tickets-resueltos");
     if (badgeResueltos) {
       badgeResueltos.textContent = resueltosPorFacturar;
@@ -12000,7 +12030,13 @@ verificarSesion();
     const fAgente = document.getElementById("selectFiltroAgente")?.value || "";
     const fFacturado = document.getElementById("selectFiltroFacturado")?.value || "";
 
-    const filtrados = tickets.map((t, i) => ({ ...t, _idx: i })).filter(t => {
+    // Un agente "Normal" (no admin) solo ve sus propios tickets (Agente/Canalizado a) + los que
+    // nadie tiene asignado todavía — ver ticketVisibleParaUsuarioActual(). _idx se calcula ANTES
+    // de restringir para que siga apuntando a la posición real en el arreglo `tickets` completo
+    // (los botones de editar/ver/eliminar de cada fila lo usan para encontrar el ticket).
+    const ticketsVisibles = tickets.map((t, i) => ({ ...t, _idx: i })).filter(ticketVisibleParaUsuarioActual);
+
+    const filtrados = ticketsVisibles.filter(t => {
       if (filtroAgendaActivo && !t.fechaProgramada) return false;
       if (fEstado && t.estado !== fEstado) return false;
       if (fPrior && t.prioridad !== fPrior) return false;
@@ -12126,11 +12162,11 @@ verificarSesion();
 
     // Update counters
     const el = id => document.getElementById(id);
-    el("tk-count-total").textContent = tickets.length;
-    el("tk-count-abiertos").textContent = tickets.filter(t => t.estado === "Abierto").length;
-    el("tk-count-pendientes").textContent = tickets.filter(t => t.estado === "Pendiente").length;
-    el("tk-count-resueltos").textContent = tickets.filter(t => t.estado === "Resuelto").length;
-    el("tk-count-cerrados").textContent = tickets.filter(t => t.estado === "Cerrado").length;
+    el("tk-count-total").textContent = ticketsVisibles.length;
+    el("tk-count-abiertos").textContent = ticketsVisibles.filter(t => t.estado === "Abierto").length;
+    el("tk-count-pendientes").textContent = ticketsVisibles.filter(t => t.estado === "Pendiente").length;
+    el("tk-count-resueltos").textContent = ticketsVisibles.filter(t => t.estado === "Resuelto").length;
+    el("tk-count-cerrados").textContent = ticketsVisibles.filter(t => t.estado === "Cerrado").length;
   }
 
   // Ticket Form
