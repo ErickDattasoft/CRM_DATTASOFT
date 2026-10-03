@@ -3428,8 +3428,11 @@ try {
             <div id="det-tk-respuestas" style="display:flex; flex-direction:column; gap:14px; max-height:520px; overflow-y:auto; margin-bottom:12px;"></div>
             <div id="det-tk-respuesta-compose" style="display:none; flex-direction:column; gap:6px;">
               <textarea id="det-tk-respuesta-texto" placeholder="Escribe una respuesta… se manda por correo al cliente y queda aquí en el hilo." rows="6" style="width:100%; resize:vertical; font-size:0.85rem; padding:8px 10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-main);"></textarea>
+              <div class="attachment-list" id="det-tk-respuesta-adjuntos" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
               <div style="display:flex; gap:8px; align-items:center;">
                 <input id="det-tk-respuesta-cc" placeholder="Con copia (opcional) — correos separados por coma" style="flex:1; font-size:0.78rem; padding:6px 8px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-main);">
+                <button id="btn-adjuntar-respuesta" class="btn btn-ghost btn-sm" type="button" title="Adjuntar captura de pantalla">📎</button>
+                <input type="file" id="det-tk-respuesta-adjunto-input" multiple accept=".png,.jpg,.jpeg,.gif,.webp" style="display:none;">
                 <button id="btn-enviar-respuesta-ticket" class="btn btn-primary btn-sm" style="white-space:nowrap;">✉️ Enviar</button>
               </div>
             </div>
@@ -6171,6 +6174,7 @@ verificarSesion();
   let primeraCargaFB = true;
   let adjuntosTicketActual = []; // lista completa (existentes + nuevos - quitados) del ticket en edición
   let adjuntosPendientesEliminar = []; // ids de tickets_adjuntos a borrar solo si el guardado tiene éxito (ver btnGuardarTicket)
+  let adjuntosRespuestaActual = []; // capturas de pantalla adjuntadas a la respuesta que se está redactando (ver renderSolicitudesTicketCorreo/btn-enviar-respuesta-ticket)
   // Subidas en curso de imágenes pegadas en la descripción (una promesa por cada <img> que aún no
   // termina de subirse a tickets_adjuntos) — se espera a que todas terminen antes de guardar el
   // ticket, para no persistir una referencia data-adj-id que todavía no existe en Firestore.
@@ -8236,17 +8240,75 @@ verificarSesion();
       const fecha = r.fecha ? new Date(r.fecha).toLocaleString("es-MX") : "";
       const icono = r.saliente ? "📤" : "📥";
       const nombreMostrado = r.saliente ? (r.nombreDe || "Tú") : (r.nombreDe || r.de || "Remitente");
+      const adjuntosHtml = (r.adjuntos || []).length
+        ? `<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">${r.adjuntos.map((id: string) =>
+            `<a href="/adjunto?id=${id}" target="_blank" rel="noopener"><img src="/adjunto?id=${id}" style="width:70px; height:70px; object-fit:cover; border-radius:4px; border:1px solid var(--border-color);"></a>`
+          ).join("")}</div>`
+        : "";
       div.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px; gap:10px;">
           <span style="font-weight:700; font-size:0.82rem; color:var(--text-bright);">${icono} ${escapeHtml(nombreMostrado)}</span>
           <span style="font-size:0.68rem; color:var(--text-muted); white-space:nowrap;">${fecha}${!r.saliente && !r.leido ? " · nuevo" : ""}</span>
         </div>
         <div style="font-size:0.82rem; white-space:pre-wrap; line-height:1.5;">${escapeHtml(r.mensaje || "")}</div>
+        ${adjuntosHtml}
       `;
       cont.appendChild(div);
       if (!r.leido && !r.saliente) marcarRespuestaTicketLeida(r._id).catch(() => {});
     });
   }
+
+  // Capturas de pantalla adjuntadas a la respuesta que se está redactando — se suben de inmediato
+  // (mismo patrón que procesarAdjuntos/tickets_adjuntos) para que al dar "Enviar" solo haga falta
+  // leerlas y mandarlas, sin esperar a subir nada en ese momento.
+  function renderAdjuntosRespuesta() {
+    const list = document.getElementById("det-tk-respuesta-adjuntos");
+    if (!list) return;
+    list.innerHTML = "";
+    adjuntosRespuestaActual.forEach((f: any, i: number) => {
+      const chip = document.createElement("span");
+      chip.className = "attachment-chip";
+      chip.innerHTML = `<span>${f.subiendo ? "⏳" : "🖼️"} <span title="${f.nombre}">${f.nombre}${f.subiendo ? " (subiendo…)" : ""}</span></span><button data-i="${i}" title="Quitar">×</button>`;
+      chip.querySelector("button")?.addEventListener("click", () => {
+        const [removido] = adjuntosRespuestaActual.splice(i, 1);
+        if (removido?.subiendo) removido._cancelado = true;
+        else if (removido?.adjId) eliminarAdjuntoTicket(removido.adjId).catch(() => {});
+        renderAdjuntosRespuesta();
+      });
+      list.appendChild(chip);
+    });
+  }
+
+  async function procesarAdjuntosRespuesta(files: File[]) {
+    const permitidos = ["image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp"];
+    const t = ticketPorNumero(parseInt(editTkIdx.value, 10));
+    for (const f of files) {
+      if (!permitidos.includes(f.type)) { toast(`⚠️ Solo imágenes (captura de pantalla): ${f.name}`, "error"); continue; }
+      if (f.size > 700 * 1024) { toast(`⚠️ ${f.name} supera 700KB`, "error"); continue; }
+      const item: any = { nombre: f.name, tipo: f.type, size: f.size, subiendo: true };
+      adjuntosRespuestaActual.push(item);
+      renderAdjuntosRespuesta();
+      const dataUrl: string = await new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = ev => resolve(ev.target.result as string);
+        reader.readAsDataURL(f);
+      });
+      if (item._cancelado) continue;
+      const res = await guardarAdjuntoTicket(f.name, f.type, dataUrl, f.size, { numeroTicket: t?.numero ?? null, empresa: t?.empresa || "", fechaTicket: t?.fechaCreacion || new Date().toISOString() });
+      if (item._cancelado) { if (res.ok) eliminarAdjuntoTicket(res.id).catch(() => {}); continue; }
+      if (res.ok) { item.adjId = res.id; delete item.subiendo; }
+      else { adjuntosRespuestaActual = adjuntosRespuestaActual.filter(a => a !== item); toast(`⚠️ No se pudo guardar ${f.name}: ${res.error}`, "error"); }
+      renderAdjuntosRespuesta();
+    }
+    const input = document.getElementById("det-tk-respuesta-adjunto-input") as HTMLInputElement;
+    if (input) input.value = "";
+  }
+
+  document.getElementById("btn-adjuntar-respuesta")?.addEventListener("click", () => document.getElementById("det-tk-respuesta-adjunto-input")?.click());
+  document.getElementById("det-tk-respuesta-adjunto-input")?.addEventListener("change", (e) => {
+    const input = e.target as HTMLInputElement;
+    if (input.files?.length) procesarAdjuntosRespuesta(Array.from(input.files));
+  });
 
   document.getElementById("btn-enviar-respuesta-ticket")?.addEventListener("click", async () => {
     const t = ticketPorNumero(parseInt(editTkIdx.value, 10));
@@ -8255,6 +8317,7 @@ verificarSesion();
     const ccEl = document.getElementById("det-tk-respuesta-cc") as HTMLInputElement;
     const mensaje = textoEl?.value.trim() || "";
     if (!mensaje) { toast("Escribe un mensaje antes de enviar", "warning"); return; }
+    if (adjuntosRespuestaActual.some((a: any) => a.subiendo)) { toast("Espera a que terminen de subirse los adjuntos", "warning"); return; }
 
     const mailTo = t.contactoCorreo || contactos.find(c => c.nombre === t.contacto)?.correo || "";
     if (!mailTo) { toast("⚠️ Este ticket no tiene correo de contacto registrado", "error"); return; }
@@ -8267,7 +8330,11 @@ verificarSesion();
     // y, si contesta, su respuesta vuelve a caer en este mismo hilo (ver correo-entrante-ticket.js).
     const mailCC = [...new Set([...soporteEmails, ...ccTicket, ...ccEscrito])].filter(e => e !== mailTo).join(",");
     const subject = `[Ticket #${t.numero}] ${t.asunto}`;
-    const html = `<div style="font-family:sans-serif; white-space:pre-wrap;">${escapeHtml(mensaje)}</div>`;
+    const adjIds = adjuntosRespuestaActual.map((a: any) => a.adjId).filter(Boolean);
+    const imagenesHtml = adjIds.length
+      ? adjIds.map((id: string) => `<p><img src="https://crm-dattasoft.pages.dev/adjunto?id=${id}" style="max-width:100%; border-radius:6px;"></p>`).join("")
+      : "";
+    const html = `<div style="font-family:sans-serif; white-space:pre-wrap;">${escapeHtml(mensaje)}</div>${imagenesHtml}`;
 
     const btn = document.getElementById("btn-enviar-respuesta-ticket") as HTMLButtonElement;
     if (btn) btn.disabled = true;
@@ -8275,10 +8342,12 @@ verificarSesion();
       const sent = await enviarEmailConProveedor({ to: mailTo, subject, html, replyTo: soporteEmails[0] || "", cc: mailCC });
       if (!sent?.ok) return;
       const quien = getUsuarioActual()?.nombre || "Soporte";
-      await enviarRespuestaTicket(t.numero, { de: soporteEmails[0] || "", nombreDe: quien, asunto: subject, mensaje });
+      await enviarRespuestaTicket(t.numero, { de: soporteEmails[0] || "", nombreDe: quien, asunto: subject, mensaje, adjuntos: adjIds });
       logBitacora(`💬 Respuesta enviada a ${mailTo} — Ticket #${t.numero}`, "💬");
       if (textoEl) textoEl.value = "";
       if (ccEl) ccEl.value = "";
+      adjuntosRespuestaActual = [];
+      renderAdjuntosRespuesta();
       renderRespuestasDetalle(t);
     } finally {
       if (btn) btn.disabled = false;
@@ -8311,6 +8380,7 @@ verificarSesion();
         </div>
         <div style="font-size:0.8rem; color:var(--text-light); margin-bottom:6px;">${escapeHtml(s.asunto || "(sin asunto)")}</div>
         <div style="font-size:0.82rem; white-space:pre-wrap; line-height:1.5; max-height:120px; overflow-y:auto; margin-bottom:10px;">${escapeHtml((s.mensaje || "").slice(0, 1000))}</div>
+        ${(s.adjuntos || []).length ? `<div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;">${s.adjuntos.map((id: string) => `<a href="/adjunto?id=${id}" target="_blank" rel="noopener"><img src="/adjunto?id=${id}" style="width:60px; height:60px; object-fit:cover; border-radius:4px; border:1px solid var(--border-color);"></a>`).join("")}</div>` : ""}
         <div style="display:flex; gap:8px;">
           <button class="btn btn-primary btn-sm btn-convertir-solicitud" data-id="${s._id}">🎫 Convertir a ticket</button>
           <button class="btn btn-ghost btn-sm btn-descartar-solicitud" data-id="${s._id}">🗑️ Descartar</button>
@@ -8329,7 +8399,7 @@ verificarSesion();
     renderSolicitudesTicketCorreo();
   }
 
-  function convertirSolicitudATicket(s: any) {
+  async function convertirSolicitudATicket(s: any) {
     cerrarFormTicket();
     const tituloTk = document.getElementById("form-tk-titulo");
     if (tituloTk) tituloTk.textContent = "➕ Crear Ticket de Soporte";
@@ -8339,6 +8409,13 @@ verificarSesion();
     (document.getElementById("form-tk-asunto") as HTMLInputElement).value = s.asunto || "Solicitud de soporte por correo";
     const rteEdit = document.getElementById("form-tk-descripcion");
     if (rteEdit) rteEdit.innerHTML = `<p>${escapeHtml(s.mensaje || "").replace(/\n/g, "<br>")}</p>`;
+    // Las capturas que venían en el correo pasan como adjuntos del ticket nuevo (ya están
+    // guardadas en tickets_adjuntos, solo hace falta referenciarlas aquí).
+    for (const adjId of (s.adjuntos || [])) {
+      const adj = await cargarAdjuntoTicket(adjId);
+      if (adj) adjuntosTicketActual.push({ nombre: adj.nombre, tipo: adj.tipo, size: adj.size, adjId });
+    }
+    renderAdjuntosForm();
     formTk?.classList.remove("hidden");
     formTk?.scrollIntoView({ behavior: "smooth" });
     // Se quita de pendientes al abrir el formulario (ya está copiado ahí) — si se cancela la
@@ -12066,6 +12143,13 @@ verificarSesion();
     // Un ticket nuevo (sin folio todavía) no tiene hilo de respuestas — se oculta aquí para que
     // "Crear Ticket" no arrastre el hilo del último ticket que se estaba editando.
     document.getElementById("det-tk-respuestas-section")?.style.setProperty("display", "none");
+    adjuntosRespuestaActual = []; // no arrastrar adjuntos a medio subir de un ticket al cambiar de edición
+    const respAdjList = document.getElementById("det-tk-respuesta-adjuntos");
+    if (respAdjList) respAdjList.innerHTML = "";
+    const respTextoEl = document.getElementById("det-tk-respuesta-texto") as HTMLTextAreaElement | null;
+    if (respTextoEl) respTextoEl.value = "";
+    const respCcEl = document.getElementById("det-tk-respuesta-cc") as HTMLInputElement | null;
+    if (respCcEl) respCcEl.value = "";
     document.getElementById("tabla-tickets-body")?.querySelectorAll("tr.tk-fila-editando")
       .forEach(tr => tr.classList.remove("tk-fila-editando"));
     ["form-tk-contacto-buscar", "form-tk-contacto", "form-tk-correo-contacto", "form-tk-empresa",

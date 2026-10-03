@@ -38,6 +38,52 @@ function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
 }
 
+const TIPOS_IMAGEN_PERMITIDOS = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
+const TAMANO_MAX_ADJUNTO = 700 * 1024; // mismo límite que tickets_adjuntos (ver procesarAdjuntos en index.astro)
+
+// Guarda las capturas de pantalla que alguien adjuntó a su respuesta — mismo patrón y misma
+// colección (tickets_adjuntos) que usan los adjuntos de un ticket normal, así que
+// functions/adjunto.js ya sabe servirlas sin cambios. Formato del campo "attachments" de
+// CloudMailin confirmado contra el struct Go real (github.com/peterhellberg/cloudmailin):
+// [{ content (base64), file_name, content_type, size, disposition, content_id }]. Se ignoran
+// deliberadamente los adjuntos "inline" (firmas/logos incrustados en el cuerpo del correo, no
+// algo que alguien adjuntó a propósito) y cualquiera que no sea imagen o pase el límite de tamaño.
+async function guardarAdjuntosDelPayload(auth, payload) {
+  const attachments = Array.isArray(payload?.attachments) ? payload.attachments : [];
+  const ids = [];
+  for (const a of attachments) {
+    if (a?.disposition === "inline") continue;
+    const tipo = String(a?.content_type || "").toLowerCase();
+    if (!TIPOS_IMAGEN_PERMITIDOS.includes(tipo)) continue;
+    const contenido = a?.content || "";
+    const tamañoAprox = Math.floor((contenido.length * 3) / 4); // estimado de bytes reales a partir del base64
+    if (tamañoAprox > TAMANO_MAX_ADJUNTO) {
+      console.log("[correo-entrante-ticket] Adjunto omitido por tamaño:", a?.file_name, tamañoAprox);
+      continue;
+    }
+    try {
+      const resp = await fetch(`${auth.base}/tickets_adjuntos`, {
+        method: "POST", headers: auth.headers,
+        body: JSON.stringify({
+          fields: toFirestoreFields({
+            nombre: a?.file_name || "captura.jpg",
+            tipo,
+            size: tamañoAprox,
+            data: `data:${tipo};base64,${contenido}`,
+            fecha: new Date().toISOString(),
+          }),
+        }),
+      });
+      if (!resp.ok) { console.error("[correo-entrante-ticket] No se pudo guardar adjunto:", await resp.text().catch(() => "")); continue; }
+      const doc = await resp.json();
+      ids.push(doc.name.split("/").pop());
+    } catch (err) {
+      console.error("[correo-entrante-ticket] Error guardando adjunto:", err);
+    }
+  }
+  return ids;
+}
+
 const RE_TICKET = /\[Ticket #(\d+)\]/i;
 
 // Se revisan varias ubicaciones posibles del asunto por seguridad — además del formato
@@ -226,6 +272,7 @@ export const onRequestPost = async (context) => {
 
   try {
     const auth = await firestoreAdminAuth(env);
+    const adjuntos = await guardarAdjuntosDelPayload(auth, payload);
 
     if (!numero) {
       // No corresponde a ningún ticket existente — probablemente alguien pidiendo soporte por
@@ -242,6 +289,7 @@ export const onRequestPost = async (context) => {
             asunto: asuntoDelPayload(payload),
             mensaje,
             fecha: new Date().toISOString(),
+            adjuntos,
           }),
         }),
       });
@@ -264,6 +312,7 @@ export const onRequestPost = async (context) => {
           mensaje,
           fecha: new Date().toISOString(),
           leido: false,
+          adjuntos,
         }),
       }),
     });

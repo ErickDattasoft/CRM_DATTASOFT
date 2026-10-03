@@ -472,10 +472,10 @@ export async function marcarRespuestaTicketLeida(id) {
 // Registra en el mismo hilo un mensaje enviado DESDE el CRM (no uno recibido por correo) — así
 // el envío queda visible de inmediato en el chat del ticket, ya marcado como leído (lo escribió
 // el propio agente, no hace falta "leerlo").
-export async function enviarRespuestaTicket(numero, { de, nombreDe, asunto, mensaje }) {
+export async function enviarRespuestaTicket(numero, { de, nombreDe, asunto, mensaje, adjuntos = [] }) {
   try {
     await addDoc(collection(db, "respuestas_tickets"), limpiar({
-      ticketNumero: numero, de, nombreDe, asunto: asunto || "", mensaje,
+      ticketNumero: numero, de, nombreDe, asunto: asunto || "", mensaje, adjuntos,
       fecha: new Date().toISOString(), leido: true, saliente: true,
     }));
     return true;
