@@ -36,3 +36,6 @@ src/data/importar_todo.json
 *.xlsx
 debug_patch.txt
 convertirXlsxACsv.js
+
+# Claude Code local settings (puede contener comandos/datos específicos de la máquina)
+.claude/settings.local.json
