@@ -3437,6 +3437,10 @@ try {
               </div>
             </div>
           </div>
+          <div id="det-tk-actividad-section" style="border-top:1px dashed rgba(255,255,255,0.06); margin-top:14px; padding-top:12px; display:none;">
+            <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px;">🕵️ Actividad del ticket (<span id="det-tk-actividad-count">0</span>)</div>
+            <div id="det-tk-actividad" style="display:flex; flex-direction:column; gap:4px; max-height:280px; overflow-y:auto;"></div>
+          </div>
           <div class="form-actions" style="align-items:center; gap:16px;">
             <button class="btn btn-primary" id="btnGuardarTicket">💾 Guardar Ticket</button>
             <button class="btn btn-secondary hidden" id="btnGuardarYNuevoTicket" title="Guarda este ticket y deja el formulario listo para capturar el siguiente">💾➕ Guardar y Crear Nuevo</button>
@@ -4958,12 +4962,6 @@ try {
     </div>
     <div style="border-top:1px solid var(--border-color); padding-top:12px;">
       <div id="det-tk-tiempo-trabajado"></div>
-    </div>
-    <div style="border-top:1px solid var(--border-color); padding-top:12px;">
-      <details id="det-tk-actividad-details">
-        <summary style="cursor:pointer; font-size:0.72rem; color:var(--text-light); text-transform:uppercase; font-weight:700; user-select:none;">🕵️ Actividad del ticket (<span id="det-tk-actividad-count">0</span>)</summary>
-        <div id="det-tk-actividad" style="margin-top:10px; display:flex; flex-direction:column; gap:8px; max-height:180px; overflow-y:auto;"></div>
-      </details>
     </div>
     <div style="border-top:1px solid var(--border-color); padding-top:14px;">
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
@@ -12206,6 +12204,7 @@ verificarSesion();
     // Un ticket nuevo (sin folio todavía) no tiene hilo de respuestas — se oculta aquí para que
     // "Crear Ticket" no arrastre el hilo del último ticket que se estaba editando.
     document.getElementById("det-tk-respuestas-section")?.style.setProperty("display", "none");
+    document.getElementById("det-tk-actividad-section")?.style.setProperty("display", "none");
     adjuntosRespuestaActual = []; // no arrastrar adjuntos a medio subir de un ticket al cambiar de edición
     const respAdjList = document.getElementById("det-tk-respuesta-adjuntos");
     if (respAdjList) respAdjList.innerHTML = "";
@@ -12859,6 +12858,7 @@ verificarSesion();
     renderAdjuntosForm();
     initTicketFormDropdowns(t);
     renderRespuestasDetalle(t);
+    renderActividadTicket(t);
     formTk?.classList.remove("hidden");
     document.getElementById("btnGuardarYNuevoTicket")?.classList.add("hidden");
     formTk?.scrollIntoView({ behavior: "smooth" });
@@ -12905,22 +12905,40 @@ verificarSesion();
     t.actividad.push({ fecha: new Date().toISOString(), usuario: u?.nombre || "Sistema", texto });
   }
 
+  // Vive en el formulario de Editar Ticket, debajo de Respuestas (pedido explícito de Erick
+  // 2026-10-03: "un apartado en el mismo ticket abajo de respuestas, ACTIVIDAD... como si fuera
+  // la bitácora") — mismas clases .bitacora-entry/.bitacora-time/.bitacora-msg que la Bitácora
+  // general, para que se vea igual, solo que ya filtrado a este ticket.
   function renderActividadTicket(t) {
+    // El contenedor vive en Editar Ticket, pero esta función también se llama desde el guardado
+    // rápido del panel de Detalle (estado/facturación) — si ese ticket no es el que está abierto
+    // en el formulario de edición en este momento, no se toca nada (evita pisar la Actividad de
+    // OTRO ticket que sí se esté editando al mismo tiempo).
+    if (editTkIdx.value && editTkIdx.value !== String(t.numero)) return;
+    const sec = document.getElementById("det-tk-actividad-section");
     const cont = document.getElementById("det-tk-actividad");
     const count = document.getElementById("det-tk-actividad-count");
     if (!cont) return;
+    if (sec) sec.style.display = "block";
     const act = (t.actividad || []).slice().sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
     if (count) count.textContent = String(act.length);
     if (!act.length) {
       cont.innerHTML = '<div style="text-align:center; color:var(--text-light); font-size:0.78rem; padding:8px;">Sin actividad registrada.</div>';
       return;
     }
-    cont.innerHTML = act.map(a => `
-      <div style="font-size:0.78rem; line-height:1.5; border-left:2px solid var(--brand-primary); padding-left:8px;">
-        <strong>👤 ${escapeHtml(a.usuario) || "Sistema"}</strong> · <span style="color:var(--text-muted);">${new Date(a.fecha).toLocaleString("es-MX")}</span><br>
-        ${escapeHtml(a.texto)}
-      </div>
-    `).join("");
+    const hoy = new Date().getFullYear();
+    cont.innerHTML = act.map(a => {
+      const d = new Date(a.fecha);
+      const opts: Intl.DateTimeFormatOptions = d.getFullYear() !== hoy
+        ? { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" }
+        : { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" };
+      return `
+      <div class="bitacora-entry">
+        <span class="bitacora-time">${d.toLocaleString("es-MX", opts)}</span>
+        <span style="font-size:0.68rem; color:#818cf8; font-weight:700; background:rgba(99,102,241,0.12); padding:1px 6px; border-radius:3px; white-space:nowrap; flex-shrink:0;">${escapeHtml(a.usuario || "Sistema")}</span>
+        <span class="bitacora-msg">${escapeHtml(a.texto)}</span>
+      </div>`;
+    }).join("");
   }
 
   // Igual al patrón repetido en btnGuardarTicket/btnAgregarNotaTicket para persistir el array
@@ -13083,7 +13101,6 @@ verificarSesion();
 
     populateSelectOptions("selectCambiarEstadoDetalle", configTickets.estados, t.estado);
     populateSelectOptions("det-tk-facturado", configTickets.facturacion, t.facturado || "NO FACTURADO");
-    renderActividadTicket(t);
     renderTiempoTrabajadoTicket(t);
 
     if (modalDetalle) modalDetalle.style.display = "flex";
