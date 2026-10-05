@@ -5771,9 +5771,20 @@ function ticketVisibleParaUsuarioActual(t: any): boolean {
   if (!usuarioVeSoloSusTickets()) return true;
   const u = getUsuarioActual();
   if (!u) return false;
-  const sinAsignar = !(t.agente || "").trim() && !(t.canalizado || "").trim();
-  if (sinAsignar) return true;
-  return nombreCoincideConCampo(u.nombre, t.agente) || nombreCoincideConCampo(u.nombre, t.canalizado);
+  const canalizado = (t.canalizado || "").trim();
+  const agente = (t.agente || "").trim();
+  if (!agente && !canalizado) return true; // sin asignar del todo
+  if (nombreCoincideConCampo(u.nombre, agente) || nombreCoincideConCampo(u.nombre, canalizado)) return true;
+  // Un ticket que Erick (u otro admin) crea para sí mismo, sin canalizarlo todavía a un agente
+  // específico, cuenta como "disponible para cualquiera" — si no, un ticket recién creado (donde
+  // el Agente por defecto queda en el nombre de quien lo capturó, casi siempre un admin) sería
+  // invisible para todos los agentes hasta que alguien lo reasignara uno por uno. Pedido explícito
+  // de Erick 2026-10-05 tras encontrar justo este caso con 6 tickets reales.
+  if (!canalizado) {
+    const nombresAdmin = getUsuarios().filter(x => x.rol === "admin").map(x => x.nombre);
+    if (nombresAdmin.some(n => nombreCoincideConCampo(n, agente))) return true;
+  }
+  return false;
 }
 
 // Deduplica nombres ignorando mayúsculas/minúsculas, conservando la primera forma vista
@@ -9160,7 +9171,7 @@ verificarSesion();
     const tbody = el("dash-tickets-recientes");
     if (!tbody) return;
     tbody.innerHTML = "";
-    const recientes = [...tickets].sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion)).slice(0, 8);
+    const recientes = [...ticketsVisiblesDash].sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion)).slice(0, 8);
     recientes.forEach(t => {
       const tr = document.createElement("tr");
       tr.style.cursor = "pointer";
