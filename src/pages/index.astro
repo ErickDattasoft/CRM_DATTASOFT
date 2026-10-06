@@ -6992,10 +6992,17 @@ verificarSesion();
   }
 
   // Detecta si algún formulario de edición está abierto (para no interrumpirlo con actualizaciones remotas)
-  function hayFormularioActivo() {
-    const formsInline = ["formulario-empresa", "formulario-contacto", "formulario-ticket", "formulario-evento"];
+  // excluir: ids de formularios a NO contar como "activos" aquí — usado para que el formulario de
+  // Editar Ticket no bloquee la actualización en vivo del resto de la pantalla (Tickets/Dashboard):
+  // renderTickets()/renderDashboard() no tocan ningún campo de ese formulario, así que no hay
+  // riesgo de pisar una edición en curso con solo refrescarlos. Pedido real de Erick 2026-10-06:
+  // dejaba el formulario de ticket abierto (ahora con Respuestas/Actividad, tarda más en cerrarlo)
+  // y los cambios de otros usuarios no se veían hasta recargar la página.
+  function hayFormularioActivo(excluir: string[] = []) {
+    const formsInline = ["formulario-empresa", "formulario-contacto", "formulario-ticket", "formulario-evento"]
+      .filter(id => !excluir.includes(id));
     if (formsInline.some(id => { const el = document.getElementById(id); return el && !el.classList.contains("hidden"); })) return true;
-    const modalesForm = ["modal-empresa-rapida", "modal-acerca-de"];
+    const modalesForm = ["modal-empresa-rapida", "modal-acerca-de"].filter(id => !excluir.includes(id));
     return modalesForm.some(id => { const m = document.getElementById(id); return m && m.style.display !== "none" && m.style.display !== ""; });
   }
 
@@ -7249,7 +7256,7 @@ verificarSesion();
           // actividad de otros usuarios/dispositivos sin esperar a un refresh manual.
           fusionarBitacoraFirebase(datos.bitacora);
 
-          if (hayFormularioActivo()) return; // Form abierto: datos listos en memoria, UI se actualiza al cerrar
+          if (hayFormularioActivo(["formulario-ticket"])) return; // Form abierto: datos listos en memoria, UI se actualiza al cerrar
           if (enConfiguracion) return; // Edición de config en progreso: no sobreescribir UI
 
           renderCompleto();
