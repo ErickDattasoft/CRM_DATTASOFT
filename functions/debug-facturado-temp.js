@@ -39,6 +39,11 @@ export const onRequestGet = async ({ request, env }) => {
     }
   }
 
+  if (url.searchParams.get("raw") === "1") {
+    const resumen = tickets.map(t => ({ numero: t.numero, empresa: t.empresa, facturado: t.facturado, estado: t.estado, fechaActualizacion: t.fechaActualizacion }));
+    return new Response(JSON.stringify(resumen, null, 2), { headers: { "Content-Type": "application/json" } });
+  }
+
   return new Response(JSON.stringify({ totalTickets: tickets.length, totalDiscrepancias: discrepancias.length, discrepancias }, null, 2), {
     headers: { "Content-Type": "application/json" },
   });
