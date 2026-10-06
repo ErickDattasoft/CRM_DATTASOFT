@@ -5713,7 +5713,7 @@ const BLOQUEO_LOGIN_MINUTOS = 15;
 // siempre deben apuntar aquí, nunca a location.origin (que en desarrollo sería localhost).
 const URL_PRODUCCION = "https://crm-dattasoft.pages.dev";
 
-interface Usuario { id: string; nombre: string; rol: "admin" | "normal"; passHash: string; activo: boolean; authEmail?: string; seccionesPermitidas?: string[]; contactosPropios?: { nombre: string; telefono: string }[]; firma?: string; }
+interface Usuario { id: string; nombre: string; rol: "admin" | "normal"; passHash: string; activo: boolean; authEmail?: string; seccionesPermitidas?: string[]; contactosPropios?: { nombre: string; telefono: string }[]; firma?: string; veTodosLosTickets?: boolean; }
 
 // Secciones que un admin puede restringir por usuario "normal" desde Configuración → Usuarios.
 // Dashboard siempre es visible (es el home). Bitácora ya es admin-only por rol (regla aparte,
@@ -5762,9 +5762,14 @@ function nombreCoincideConCampo(nombre: string, campo: string): boolean {
 // Canalizó — más los que todavía no tienen a nadie asignado (si no, quedarían invisibles para
 // todos hasta que un admin se los dé uno por uno). Los admins siempre ven todo. Pedido explícito
 // de Erick 2026-10-03: "que cada agente vea solo sus tickets".
+// Excepción: un usuario puede marcarse "Ve todos los tickets" (Configuración → Usuarios) sin ser
+// Admin — caso real: Gaby factura, necesita ver y marcar FACTURADO cualquier ticket sin importar
+// qué agente lo trabajó, pero no debe tener el resto de privilegios de Admin. 2026-10-06.
 function usuarioVeSoloSusTickets(): boolean {
   const u = getUsuarioActual();
-  return !!u && u.rol !== "admin";
+  if (!u || u.rol === "admin") return false;
+  const full = getUsuarios().find(x => x.nombre === u.nombre);
+  return !full?.veTodosLosTickets;
 }
 
 function ticketVisibleParaUsuarioActual(t: any): boolean {
@@ -14054,6 +14059,10 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
               <input type="checkbox" class="chk-seccion-usuario" data-i="${i}" data-seccion="${s.id}" ${(!Array.isArray(u.seccionesPermitidas) || u.seccionesPermitidas.includes(s.id)) ? "checked" : ""} style="width:auto; cursor:pointer;">
               ${s.label}
             </label>`).join("")}
+          <label style="display:flex; align-items:center; gap:4px; font-size:0.75rem; color:#fbbf24; cursor:pointer; width:100%; margin-top:4px; padding-top:6px; border-top:1px dashed rgba(255,255,255,0.08);" title="Ve y puede editar TODOS los tickets, sin importar a quién estén asignados — pensado para quien factura, sin darle el resto de privilegios de Admin.">
+            <input type="checkbox" class="chk-usuario-todos-tickets" data-i="${i}" ${u.veTodosLosTickets ? "checked" : ""} style="width:auto; cursor:pointer;">
+            🎫 Ve todos los tickets (no solo los suyos/sin asignar)
+          </label>
         </div>` : ""}
       </div>`).join("");
     cont.querySelectorAll<HTMLButtonElement>(".btn-activar-cuenta-segura").forEach(btn => {
@@ -14129,6 +14138,17 @@ const localOnlyCheckbox = document.getElementById("cfg-local-only");
         saveUsuariosLocal(usuarios);
         if (!crmLocalOnly) guardarUsuarios(usuarios).catch(() => {});
         logBitacora(`Secciones visibles de ${u.nombre} actualizadas`, "🛡️");
+      });
+    });
+    cont.querySelectorAll<HTMLInputElement>(".chk-usuario-todos-tickets").forEach(chk => {
+      chk.addEventListener("change", () => {
+        const i = parseInt(chk.dataset.i!);
+        const u = usuarios[i];
+        usuarios[i].veTodosLosTickets = chk.checked;
+        saveUsuariosLocal(usuarios);
+        if (!crmLocalOnly) guardarUsuarios(usuarios).catch(() => {});
+        toast(`${chk.checked ? "🎫 Ahora ve todos los tickets" : "🎫 Vuelve a ver solo sus tickets"}: ${u.nombre}`);
+        logBitacora(`"Ve todos los tickets" de ${u.nombre}: ${chk.checked ? "activado" : "desactivado"}`, "🎫");
       });
     });
   }
