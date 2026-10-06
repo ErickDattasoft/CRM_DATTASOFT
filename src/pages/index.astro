@@ -8377,7 +8377,7 @@ verificarSesion();
     // más lo que se escriba aquí en el momento — así cualquiera de ellos también recibe el mensaje
     // y, si contesta, su respuesta vuelve a caer en este mismo hilo (ver correo-entrante-ticket.js).
     const mailCC = [...new Set([...soporteEmails, ...ccTicket, ...ccEscrito])].filter(e => e !== mailTo).join(",");
-    const subject = `[Ticket #${t.numero}] ${t.asunto}`;
+    const subject = `[Ticket #${t.numero}] ${t.empresa ? `${t.empresa} — ` : ""}${t.asunto}`;
     const adjIds = adjuntosRespuestaActual.map((a: any) => a.adjId).filter(Boolean);
     const imagenesHtml = adjIds.length
       ? adjIds.map((id: string) => `<p><img src="https://crm-dattasoft.pages.dev/adjunto?id=${id}" style="max-width:100%; border-radius:6px;"></p>`).join("")
@@ -10698,7 +10698,7 @@ verificarSesion();
     const soporteEmails = parseEmailList(configTickets.correoSoporte);
     const ccTicket = parseEmailList(t.cc || "");
     const bccTicket = parseEmailList(t.cco || "").filter(e => e !== mailTo).join(",");
-    const mailSubject = `[Ticket #${t.numero}] ${t.asunto}`;
+    const mailSubject = `[Ticket #${t.numero}] ${t.empresa ? `${t.empresa} — ` : ""}${t.asunto}`;
     const avisoSinContacto = mailTo ? "" : `
       <p style="background:#fef3c7; color:#92400e; padding:8px 12px; border-radius:6px; font-family:sans-serif; font-size:13px;">
         ⚠️ El contacto no tiene correo registrado — este ticket no se notificó al cliente.
@@ -10777,7 +10777,7 @@ verificarSesion();
     const soporteEmails = parseEmailList(configTickets.correoSoporte);
     const ccTicket = parseEmailList(t.cc || "");
     const mailCC = [...new Set([...soporteEmails, ...ccTicket])].filter(e => e !== mailTo).join(",");
-    const subject = `[Ticket #${t.numero}] ${t.asunto}`;
+    const subject = `[Ticket #${t.numero}] ${t.empresa ? `${t.empresa} — ` : ""}${t.asunto}`;
     const html = `<div style="font-family:sans-serif;">
       <p>📌 Actualización de tu ticket <strong>#${t.numero}</strong> — ${escapeHtml(t.asunto)}:</p>
       <p style="background:#f0fdf4; color:#166534; padding:10px 14px; border-radius:6px; font-size:15px;">

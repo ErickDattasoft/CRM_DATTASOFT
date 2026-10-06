@@ -214,7 +214,7 @@ async function avisarNuevaRespuesta(auth, numero, remitente, mensaje) {
     // cuando este mismo aviso se reenvía solo a sí mismo, el remitente coincide con la casilla de
     // soporte y se ignora ahí, sin importar qué diga el asunto.
     const asuntoTicket = ticket ? ticket.asunto : `Ticket #${numero}`;
-    const mailSubject = `[Ticket #${numero}] ${asuntoTicket}`;
+    const mailSubject = `[Ticket #${numero}] ${ticket?.empresa ? `${ticket.empresa} — ` : ""}${asuntoTicket}`;
     const html = `<div style="font-family:sans-serif;">
       <p>💬 <strong>${remitente}</strong> respondió el ticket <strong>#${numero}</strong>${ticket ? ` — ${ticket.asunto}` : ""}:</p>
       <div style="background:#f9fafb; padding:12px; border-radius:6px; white-space:pre-wrap;">${mensaje.slice(0, 2000)}</div>
